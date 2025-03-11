@@ -47,6 +47,7 @@ async function toggleFavorite(openid, postId) {
     // 更新收藏状态
     await db.collection('posts').doc(postId).update({
       data: {
+        favoriteCounts: hasFavorited ? _.inc(-1) : _.inc(1),
         favoriteUsers: hasFavorited ? _.pull(openid) : _.addToSet(openid), // 使用addToSet防止重复添加
         updateTime: db.serverDate()
       }
@@ -91,4 +92,19 @@ exports.main = async (event, context) => {
       message: '服务器错误：' + err.message
     };
   }
-}; 
+};
+
+// 更新用户获赞统计
+async function updateUserFavoriteStats(userId, delta) {
+  try {
+    if (!userId) return
+
+    await db.collection('users').doc(userId).update({
+      data: {
+        favoriteCounts: _.inc(delta)
+      }
+    })
+  } catch (err) {
+    console.error('更新用户获赞数失败：', err)
+  }
+}

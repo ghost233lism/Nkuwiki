@@ -320,9 +320,11 @@ Page({
     try {
       // 立即更新UI，给用户即时反馈
       const newIsFavorited = !this.data.post.isFavorited;
-      
+      const newFavoriteCounts = this.data.post.favoriteCounts + (newIsFavorited ? 1 : -1);
+
       this.setData({
-        'post.isFavorited': newIsFavorited
+        'post.isFavorited': newIsFavorited,
+        'post.favoriteCounts': newFavoriteCounts
       });
       
       // 立即更新本地存储的收藏状态 - 确保刷新页面后依然记住
@@ -348,7 +350,8 @@ Page({
       if (!res.result || !res.result.success) {
         // 如果失败，回滚UI状态和本地存储
         this.setData({
-          'post.isFavorited': !newIsFavorited
+          'post.isFavorited': !newIsFavorited,
+          'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
         });
         
         // 回滚本地存储

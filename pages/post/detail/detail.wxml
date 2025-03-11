@@ -75,6 +75,7 @@
             src="{{post.isFavorited ? '/assets/icons/index/favorited.png' : '/assets/icons/index/favorite.png'}}"
             mode="aspectFit"
           ></image>
+          <text class="{{post.isFavorited ? 'favorited-text' : ''}}">{{post.favoriteCounts || 0}}</text>
         </view>
       </view>
 

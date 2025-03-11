@@ -103,7 +103,7 @@ exports.main = async (event, context) => {
     };
   }
 };
-
+/*
 // 更新用户获赞统计
 async function updateUserLikeStats(userId, delta) {
   try {
@@ -117,4 +117,4 @@ async function updateUserLikeStats(userId, delta) {
   } catch (err) {
     console.error('更新用户获赞数失败：', err)
   }
-}
+}*/

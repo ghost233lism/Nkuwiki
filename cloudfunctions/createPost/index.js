@@ -87,7 +87,8 @@ exports.main = async (event, context) => {
         isHot: false,
         isTop: false,
         views: 0,
-        category: ''
+        category: '',
+        favoriteCounts: 0
       }
     })
 
