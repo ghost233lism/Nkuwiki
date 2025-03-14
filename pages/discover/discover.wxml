@@ -62,10 +62,14 @@
       <text class="more">全部活动</text>
     </view>
     <view class="activity-card">
-      <image src="/assets/icons/discover/music-festival.png" class="activity-image"></image>
-      <text class="activity-title">校园音乐节</text>
-      <text class="activity-time">时间：2024-01-20 19:00</text>
-      <text class="activity-location">地点：大学生活动中心</text>
+      <view class="activity-info">
+        <image src="/assets/icons/discover/music-festival.png" class="activity-image"></image>
+        <view class="activity-content">
+          <text class="activity-title">校园音乐节</text>
+          <text class="activity-time">时间：2024-01-20 19:00</text>
+          <text class="activity-location">地点：大学生活动中心</text>
+        </view>
+      </view>
     </view>
   </view>
 

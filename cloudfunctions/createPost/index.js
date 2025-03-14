@@ -22,6 +22,21 @@ exports.main = async (event, context) => {
     OPENID: cloud.getWXContext().OPENID
   })
   
+  // 检查标题和内容是否为空
+  if (!title.trim()) {
+    return {
+      code: -1,
+      message: '帖子标题不能为空'
+    }
+  }
+  
+  if (!content.trim()) {
+    return {
+      code: -1,
+      message: '帖子内容不能为空'
+    }
+  }
+  
   // 尝试列出所有用户，检查是否能找到匹配的ID
   const allUsers = await db.collection('users').get()
   console.log('数据库中的所有用户:', allUsers.data.map(u => ({ 

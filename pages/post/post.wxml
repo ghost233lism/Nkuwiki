@@ -1,10 +1,14 @@
 <view class="post-container">
   <view class="post-header">
-    <text class="header-title">发布帖子</text>
+    <view class="back-icon" bindtap="goBack">
+      <image src="/assets/icons/back.png"></image>
+    </view>
+    <view class="header-title">发布帖子</view>
+    <button class="publish-button" bindtap="submitPost">发布</button>
   </view>
 
   <view class="post-form">
-    <view class="form-item">
+    <view class="input-box">
       <input 
         class="title-input" 
         placeholder="请输入标题" 
@@ -13,8 +17,8 @@
         value="{{title}}"
       />
     </view>
-
-    <view class="form-item">
+      
+    <view class="input-box">
       <textarea 
         class="content-input" 
         placeholder="分享你的想法..." 
@@ -22,57 +26,81 @@
         value="{{content}}"
         maxlength="4000"
       />
-      <view class="word-count {{contentWarn ? 'warn' : ''}}">
-        {{content.length}}/4000
-        <text wx:if="{{contentWarn}}" class="warn-text">{{contentWarn}}</text>
+    </view>
+      
+    <view class="editor-toolbar">
+      <view class="toolbar-item">B</view>
+      <view class="toolbar-item italic">I</view>
+      <view class="toolbar-item" bindtap="chooseImage">
+        <image src="/assets/icons/image.png" mode="aspectFit"></image>
+      </view>
+      <view class="toolbar-item">@</view>
+      <view class="toolbar-item wiki-button {{isWikiEnabled ? 'active' : ''}}" bindtap="toggleWiki">
+        <image src="/assets/icons/wiki.png" mode="aspectFit"></image>
+        <text>Wiki 润色</text>
       </view>
     </view>
 
-    <view class="image-uploader">
-      <view class="image-list">
-        <view 
-          class="image-item" 
-          wx:for="{{images}}" 
-          wx:key="*this"
-        >
-          <image 
-            src="{{item}}" 
-            mode="aspectFill"
-          />
-          <view 
-            class="delete-btn" 
-            catchtap="deleteImage" 
-            data-index="{{index}}"
-          >×</view>
-        </view>
-        
-        <view 
-          class="upload-btn" 
-          bindtap="chooseImage" 
-          wx:if="{{images.length < 9}}"
-        >
-          <text>+</text>
-          <text class="tip">{{images.length}}/9</text>
-        </view>
+    <view class="topic-section">
+      <text class="section-title">选择话题</text>
+      <view class="topic-list">
+        <view class="topic-tag">#校园生活</view>
+        <view class="topic-tag">#学习交流</view>
+        <view class="topic-tag">#求助</view>
+        <view class="topic-tag add-topic">#添加话题</view>
       </view>
     </view>
 
-    <view class="visibility-selector">
-      <text class="section-title">可见性</text>
-      <radio-group bindchange="onVisibilityChange">
-        <label class="radio-item">
-          <radio value="public" checked="{{visibility === 'public'}}" />公开
-        </label>
-        <label class="radio-item">
-          <radio value="private" checked="{{visibility === 'private'}}" />仅自己可见
-        </label>
-      </radio-group>
-    </view>
+    <view class="wiki-card" wx:if="{{isWikiEnabled}}">
+      <view class="wiki-header">
+        <view class="wiki-title">
+          <image src="/assets/icons/wiki-robot.png" class="wiki-icon"></image>
+          <text>Wiki 润色建议</text>
+        </view>
+        <text class="apply-btn">应用</text>
+      </view>
+      
+      <view class="wiki-content">
+        建议调整：1. 增加段落间的过渡，使文章更加连贯
+        2. 补充更多具体细节，增强文章说服力
+        3. 优化标点符号使用，提升可读性
+      </view>
 
-    <button 
-      class="submit-btn {{canSubmit ? 'submit-btn-active' : ''}}" 
-      disabled="{{false}}" 
-      bindtap="submitPost"
-    >发布</button>
+      <view class="wiki-divider"></view>
+
+      <view class="style-section">
+        <text class="style-title">文风选择</text>
+        <view class="style-options">
+          <view class="style-option {{currentStyle === 'formal' ? 'active' : ''}}" 
+                bindtap="selectStyle" data-style="formal">正式</view>
+          <view class="style-option {{currentStyle === 'casual' ? 'active' : ''}}" 
+                bindtap="selectStyle" data-style="casual">轻松</view>
+          <view class="style-option {{currentStyle === 'humorous' ? 'active' : ''}}" 
+                bindtap="selectStyle" data-style="humorous">幽默</view>
+          <view class="style-option {{currentStyle === 'professional' ? 'active' : ''}}" 
+                bindtap="selectStyle" data-style="professional">专业</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="post-footer">
+    <view class="visibility-options">
+      <view class="visibility-option-pill {{isPublic ? 'active' : ''}}" bindtap="togglePublic">
+        <image src="/assets/icons/eye.png"></image>
+        <text>公开</text>
+      </view>
+      
+      <view class="visibility-option-pill {{allowComment ? 'active' : ''}}" bindtap="toggleComment">
+        <image src="/assets/icons/comment.png"></image>
+        <text>允许评论</text>
+      </view>
+      
+      <view class="wiki-switch">
+        <view class="wiki-icon"></view>
+        <text>wiki小知</text>
+        <switch checked="{{wikiKnowledge}}" color="#6252ee" bindchange="toggleWikiKnowledge"></switch>
+      </view>
+    </view>
   </view>
 </view> 

@@ -3,10 +3,11 @@ Page({
     title: '',
     content: '',
     images: [],
-    visibility: 'public',  // 默认公开
-    isSubmitting: false,  // 添加提交状态标记
-    canSubmit: false,  // 新增一个状态来控制按钮
-    contentWarn: ''  // 新增一个状态来存储内容警告
+    isWikiEnabled: false,
+    isPublic: true,
+    allowComment: true,
+    wikiKnowledge: true,
+    currentStyle: 'formal'
   },
 
   // 监听标题输入
@@ -31,6 +32,41 @@ Page({
       content,
       contentWarn: warn,
       canSubmit: content.trim() && this.data.title.trim()
+    });
+  },
+
+  // Wiki润色开关
+  toggleWiki() {
+    this.setData({
+      isWikiEnabled: !this.data.isWikiEnabled
+    });
+  },
+
+  // 文风选择
+  selectStyle(e) {
+    this.setData({
+      currentStyle: e.currentTarget.dataset.style
+    });
+  },
+
+  // 公开设置
+  togglePublic() {
+    this.setData({
+      isPublic: !this.data.isPublic
+    });
+  },
+
+  // 评论设置
+  toggleComment() {
+    this.setData({
+      allowComment: !this.data.allowComment
+    });
+  },
+
+  // Wiki小知开关
+  toggleWikiKnowledge(e) {
+    this.setData({
+      wikiKnowledge: e.detail.value
     });
   },
 
@@ -91,77 +127,70 @@ Page({
     this.setData({ images })
   },
 
-  // 切换可见性
-  onVisibilityChange(e) {
-    this.setData({
-      visibility: e.detail.value
-    })
+  // 返回上一页
+  goBack() {
+    wx.navigateBack();
   },
 
   // 发布帖子
   async submitPost() {
-    console.log('开始提交帖子...');
-    
-    const userInfo = wx.getStorageSync('userInfo');
-    console.log('获取的用户信息:', userInfo);
-    
-    if (!userInfo) {
+    // 添加前端验证
+    if (!this.data.title.trim()) {
       wx.showToast({
-        title: '请先登录',
+        title: '帖子标题不能为空',
         icon: 'none'
       });
       return;
     }
-
-    wx.showLoading({ title: '提交中...' });
     
-    try {
-      console.log('准备提交数据:', {
+    if (!this.data.content.trim()) {
+      wx.showToast({
+        title: '帖子内容不能为空',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 原有的发布逻辑
+    wx.showLoading({
+      title: '发布中'
+    });
+    
+    wx.cloud.callFunction({
+      name: 'createPost',
+      data: {
         title: this.data.title,
         content: this.data.content,
         images: this.data.images,
-        userInfo相关字段: {
-          authorId: userInfo._id,
-          authorName: userInfo.nickName,
-          authorAvatar: userInfo.avatarUrl,
-          loginType: userInfo.loginType
-        }
-      });
-
-      const res = await wx.cloud.callFunction({
-        name: 'createPost',
-        data: {
-          title: this.data.title,
-          content: this.data.content,
-          images: this.data.images,
-          // 添加用户标识信息
-          authorId: userInfo._id,
-          authorName: userInfo.nickName,
-          authorAvatar: userInfo.avatarUrl,
-          loginType: userInfo.loginType  // 添加登录类型标识
-        }
-      });
-
-      console.log('云函数返回结果:', res);
-
-      if (res.result && res.result.code === 0) {
+        isPublic: this.data.isPublic,
+        allowComment: this.data.allowComment,
+        wikiKnowledge: this.data.wikiKnowledge
+      },
+      success: res => {
         wx.hideLoading();
-        wx.showToast({ title: '发布成功' });
-        console.log('帖子创建成功，ID:', res.result.data);
-        setTimeout(() => {
-          wx.navigateBack();
-        }, 1500);
-      } else {
-        throw new Error(res.result?.message || '发布失败，未知错误');
+        if (res.result.code === 0) {
+          wx.showToast({
+            title: '发布成功',
+            icon: 'success'
+          });
+          setTimeout(() => {
+            wx.navigateBack();
+          }, 1500);
+        } else {
+          wx.showToast({
+            title: res.result.message || '发布失败',
+            icon: 'none'
+          });
+        }
+      },
+      fail: err => {
+        wx.hideLoading();
+        wx.showToast({
+          title: '发布失败，请稍后重试',
+          icon: 'none'
+        });
+        console.error('发布失败:', err);
       }
-    } catch (err) {
-      console.error('发布失败详细信息:', err);
-      wx.hideLoading();
-      wx.showToast({
-        title: '发布失败: ' + (err.message || '未知错误'),
-        icon: 'none',
-        duration: 2500
-      });
-    }
+    });
   }
 }) 
