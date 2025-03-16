@@ -1,7 +1,8 @@
 Page({
   data: {
     userInfo: null,
-    loginType: ''
+    loginType: '',
+    totalLikes: 0  // 添加获赞总数字段
   },
 
   onLoad() {
@@ -10,6 +11,11 @@ Page({
       userInfo,
       loginType: userInfo?.loginType || ''
     })
+    
+    // 如果用户已登录，获取获赞总数
+    if (userInfo) {
+      this.getUserTotalLikes()
+    }
   },
 
   onShow() {
@@ -24,6 +30,9 @@ Page({
 
       // 获取最新的帖子数量
       this.getUserPostsCount()
+      
+      // 获取最新的获赞总数
+      this.getUserTotalLikes()
     }
   },
 
@@ -59,6 +68,43 @@ Page({
       wx.hideLoading()
     } catch (err) {
       console.error('获取帖子数量失败：', err)
+      wx.hideLoading()
+    }
+  },
+
+  // 获取用户获赞总数
+  async getUserTotalLikes() {
+    if (!this.data.userInfo) return
+
+    try {
+      console.log('开始获取用户获赞总数')
+      wx.showLoading({ title: '加载中...' })
+
+      const res = await wx.cloud.callFunction({
+        name: 'getUserPosts',
+        data: {
+          openid: this.data.userInfo._id || this.data.userInfo.openid,
+          includePostData: true  // 请求包含帖子数据
+        }
+      })
+
+      console.log('获取用户帖子结果:', res.result)
+
+      if (res.result && res.result.success && res.result.posts) {
+        // 计算所有帖子的点赞总数
+        let totalLikes = 0
+        res.result.posts.forEach(post => {
+          totalLikes += (post.likes || 0)
+        })
+
+        // 更新页面显示
+        this.setData({ totalLikes })
+        console.log('用户获赞总数:', totalLikes)
+      }
+
+      wx.hideLoading()
+    } catch (err) {
+      console.error('获取获赞总数失败：', err)
       wx.hideLoading()
     }
   },

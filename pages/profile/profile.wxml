@@ -43,7 +43,7 @@
         <text class="stat-label">帖子</text>
       </view>
       <view class="stat-item">
-        <text class="stat-num">{{userInfo.likes || 0}}</text>
+        <text class="stat-num">{{totalLikes || 0}}</text>
         <text class="stat-label">获赞</text>
       </view>
       <view class="stat-item">
