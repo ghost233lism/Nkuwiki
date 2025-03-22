@@ -110,7 +110,7 @@ Page({
       const userInfo = userManager.getCurrentUser();
       const userId = userInfo.id || '';
       
-      // 使用API接口加载帖子，不直接查询云数据库
+      // 使用API接口加载帖子
       const params = {
         limit: this.data.pageSize,
         offset: refresh ? 0 : (this.data.page - 1) * this.data.pageSize,
@@ -126,6 +126,7 @@ Page({
         console.debug('API返回原始数据:', res);
       } catch (apiError) {
         console.error('API调用异常:', apiError);
+        
         // 返回一个带错误标志但不影响界面显示的空数据
         res = { 
           data: [], 
@@ -134,7 +135,7 @@ Page({
         };
       }
       
-      // 处理返回的数据，这里需要适配后端直接返回数组的情况
+      // 处理返回的数据
       let posts = [];
       if (res) {
         if (Array.isArray(res)) {
@@ -155,6 +156,30 @@ Page({
         posts = [];
       }
       
+      // 处理帖子数据
+      await this.processPostsData(posts, refresh);
+      
+    } catch (err) {
+      console.error('加载帖子失败:', err);
+      this.setData({ 
+        loading: false,
+        loadingFailed: true
+      });
+      
+      wx.showToast({
+        title: '加载帖子失败',
+        icon: 'none'
+      });
+      
+      return Promise.reject(err);
+    }
+    
+    return Promise.resolve();
+  },
+  
+  // 处理帖子数据(保留的优化函数)
+  async processPostsData(posts, refresh = false) {
+    try {
       // 如果没有帖子数据，提前退出
       if (!posts.length) {
         this.setData({
@@ -164,7 +189,7 @@ Page({
           page: refresh ? 2 : this.data.page + 1,
           hasMore: false
         });
-        return Promise.resolve();
+        return;
       }
       
       // 处理帖子数据
@@ -243,18 +268,12 @@ Page({
         });
       }
     } catch (err) {
-      console.error('加载帖子失败:', err);
+      console.error('处理数据错误:', err);
       this.setData({ 
         loading: false,
         loadingFailed: true
       });
-      
-      wx.showToast({
-        title: '加载帖子失败',
-        icon: 'none'
-      });
-      
-      return Promise.reject(err);
+      throw err;
     }
   },
   

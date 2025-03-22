@@ -118,6 +118,7 @@ function request(option = {}) {
   // 处理查询参数
   if (options.params && Object.keys(options.params).length > 0) {
     const queryParams = [];
+    console.debug('处理查询参数:', options.params);
     for (const key in options.params) {
       if (options.params[key] !== undefined && options.params[key] !== null) {
         queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(options.params[key])}`);
@@ -126,15 +127,24 @@ function request(option = {}) {
     
     // 添加查询参数到URL
     if (queryParams.length > 0) {
-      url += (url.includes('?') ? '&' : '?') + queryParams.join('&');
+      const queryString = queryParams.join('&');
+      url += (url.includes('?') ? '&' : '?') + queryString;
+      console.debug('附加查询参数:', queryString);
     }
   }
 
-  // 日志
-  logger.debug(`[${options.method}] ${url}`, options.data);
+  // 详细日志
+  console.debug(`准备发送 [${options.method}] 请求到: ${url}`);
+  console.debug('请求头:', options.header);
+  console.debug('请求体数据:', options.data);
 
   // 获取token
   const token = wx.getStorageSync('token');
+  if (token) {
+    console.debug('使用令牌:', token.substring(0, 10) + '...');
+  } else {
+    console.debug('请求未使用令牌');
+  }
   
   // 合并请求头
   const header = {
@@ -149,23 +159,34 @@ function request(option = {}) {
 
   // 返回Promise
   return new Promise((resolve, reject) => {
-    wx.request({
+    // 创建请求任务
+    console.debug('正在创建网络请求任务...');
+    
+    const requestTask = wx.request({
       url,
       method: options.method,
       data: options.data,
       header,
       success: (res) => {
-        logger.debug(`[${options.method}] ${url} 响应:`, res);
+        console.debug(`请求成功，状态码: ${res.statusCode}`);
+        console.debug(`响应头:`, res.header);
+        console.debug(`响应数据(简略):`, 
+          typeof res.data === 'object' ? 
+            JSON.stringify(res.data).substring(0, 500) + '...' : 
+            res.data
+        );
         
         // 检查标准响应格式
         if (res.data && res.data.hasOwnProperty('code')) {
           // 标准响应格式，使用code判断
+          console.debug(`响应包含标准code字段: ${res.data.code}`);
           if (res.data.code === 200 || res.data.code === 0) {
             // 成功响应
+            console.debug('标准成功响应');
             resolve(res.data.data || res.data);
           } else if (res.data.code === 401 || res.data.code === 403) {
             // 未授权
-            logger.warn('未授权访问，清除登录信息');
+            console.warn(`未授权访问 (code=${res.data.code})，清除登录信息`);
             wx.removeStorageSync('token');
             wx.removeStorageSync('user_info');
             
@@ -187,7 +208,7 @@ function request(option = {}) {
             reject(new Error(res.data.message || '未授权'));
           } else {
             // 其他错误
-            logger.warn('请求失败:', res.data);
+            console.warn(`请求返回错误 (code=${res.data.code}): ${res.data.message || '未知错误'}`);
             wx.showToast({
               title: res.data.message || '请求失败',
               icon: 'none'
@@ -196,39 +217,44 @@ function request(option = {}) {
           }
         } else if (res.statusCode >= 200 && res.statusCode < 300) {
           // 兼容非标准响应，但状态码正常
+          console.debug('非标准响应格式，但状态码正常');
           
           // 检查响应类型，对特定API进行额外处理
           if (url.includes('/posts')) {
             // 处理posts相关接口
-            logger.debug('处理posts接口响应');
+            console.debug('处理posts接口响应');
             if (res.data && !Array.isArray(res.data) && res.data.data && Array.isArray(res.data.data)) {
               // 如果返回了嵌套的data数组，直接提取
+              console.debug('提取嵌套的data数组');
               resolve(res.data.data);
             } else if (Array.isArray(res.data)) {
               // 直接返回数组
+              console.debug('直接返回数组');
               resolve(res.data);
             } else if (res.data && typeof res.data === 'object') {
               // 返回对象
+              console.debug('返回对象');
               resolve(res.data);
             } else {
               // 其他情况，返回空数组避免错误
-              logger.warn('无法识别的posts响应格式', res.data);
+              console.warn('无法识别的posts响应格式', res.data);
               resolve([]);
             }
           } else {
             // 默认处理
+            console.debug('使用默认处理返回数据');
             resolve(res.data);
           }
         } else {
           // 状态码异常
-          logger.warn(`请求失败: 状态码 ${res.statusCode}`);
+          console.warn(`请求状态码异常: ${res.statusCode}`);
           
           // 对某些特定接口返回空结果而不是错误
           if (url.includes('/posts')) {
-            logger.debug('posts接口状态码异常，返回空数组');
+            console.debug('posts接口状态码异常，返回空数组');
             resolve([]);
           } else if (url.includes('/follow-stats')) {
-            logger.debug('follow-stats接口状态码异常，返回默认值');
+            console.debug('follow-stats接口状态码异常，返回默认值');
             resolve({ followedCount: 0, followerCount: 0 });
           } else {
             reject(new Error(`网络请求错误 (${res.statusCode})`));
@@ -236,11 +262,13 @@ function request(option = {}) {
         }
       },
       fail: (err) => {
-        logger.error(`[${options.method}] ${url} 失败:`, err);
+        console.error(`请求失败: ${url}`, err);
+        console.error('错误详情:', err.errMsg);
         
         // 域名错误处理
         if (err.errMsg && (err.errMsg.includes('domain') || err.errMsg.includes('ssl'))) {
           // 非白名单域名错误
+          console.error('域名校验错误:', err.errMsg);
           wx.showModal({
             title: '提示',
             content: '请求域名不在白名单中，请检查开发工具设置',
@@ -251,20 +279,26 @@ function request(option = {}) {
         
         // 对某些特定接口进行容错处理
         if (url.includes('/posts')) {
-          logger.debug('posts接口请求失败，返回空数组');
+          console.debug('posts接口请求失败，返回空数组');
           resolve([]);
         } else if (url.includes('/users') && url.includes('/follow-stats')) {
-          logger.debug('用户关注统计接口请求失败，返回默认值');
+          console.debug('用户关注统计接口请求失败，返回默认值');
           resolve({ followedCount: 0, followerCount: 0 });
         } else if (url.includes('/like') || url.includes('/favorite')) {
-          logger.debug('点赞/收藏接口请求失败，返回默认成功状态');
+          console.debug('点赞/收藏接口请求失败，返回默认成功状态');
           resolve({ success: true });
         } else {
           // 其他情况正常抛出错误
           reject(err);
         }
+      },
+      complete: () => {
+        console.debug(`请求完成: ${url}`);
       }
     });
+    
+    // 记录请求ID，方便跟踪
+    console.debug('请求已发送，请求ID:', requestTask.requestID || '未知');
   });
 }
 
@@ -451,10 +485,11 @@ const userAPI = {
       request({
         url: `${API.PREFIX.WXAPP}/posts`,
         method: 'GET',
-        data: { 
+        params: { 
           ...params,
           user_id: userId 
-        }
+        },
+        data: {}
       })
         .then(res => {
           // 检查返回的数据是否为数组，如果不是则转换为空数组
@@ -512,7 +547,8 @@ const postAPI = {
       request({
         url: `${API.PREFIX.WXAPP}/posts`,
         method: 'GET',
-        data: params
+        params: params, // 改为使用params参数，以查询参数形式传递
+        data: {}  // data置为空对象
       })
         .then(res => {
           // 正常返回数据
@@ -614,10 +650,11 @@ const postAPI = {
       request({
         url: `${API.PREFIX.WXAPP}/posts`,
         method: 'GET',
-        data: { 
+        params: { 
           ...params,
           user_id: userId 
-        }
+        },
+        data: {}
       })
         .then(res => {
           // 检查返回的数据是否为数组，如果不是则转换为空数组
@@ -683,7 +720,8 @@ const commentAPI = {
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,
       method: 'GET',
-      data: postIdOrParams
+      params: postIdOrParams,  // 使用params而不是data
+      data: {}
     });
   },
 
