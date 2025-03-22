@@ -134,100 +134,113 @@ Page({
         };
       }
       
-      if (res && !res.error) {
-        const posts = res.data || [];
-        console.debug(`获取帖子成功，数量: ${posts.length}`);
-        
-        // 如果没有帖子数据，提前退出
-        if (!posts.length) {
-          this.setData({
-            posts: [],
-            loading: false,
-            loadingFailed: false,
-            page: refresh ? 2 : this.data.page + 1,
-            hasMore: false
-          });
-          return Promise.resolve();
+      // 处理返回的数据，这里需要适配后端直接返回数组的情况
+      let posts = [];
+      if (res) {
+        if (Array.isArray(res)) {
+          // 后端直接返回了帖子数组
+          posts = res;
+          console.debug(`获取帖子成功，数量: ${posts.length}`);
+        } else if (res.data) {
+          // 后端返回了包含data字段的对象
+          posts = res.data || [];
+          console.debug(`获取帖子成功，数量: ${posts.length}`);
+        } else if (!res.error) {
+          // 返回了其他格式但不是错误
+          console.debug('返回的数据格式不符合预期:', res);
+          posts = [];
         }
-        
-        // 处理帖子数据
-        const { processAvatarUrl } = require('../../utils/api');
-        
-        // 处理每个帖子的数据，与WXML模板期望的格式保持一致
-        const processedPosts = await Promise.all(posts.map(async post => {
-          try {
-            // 获取处理后的头像URL
-            let avatarUrl = post.author_avatar || (post.author ? post.author.avatar_url : null);
-            if (avatarUrl) {
-              avatarUrl = await processAvatarUrl(avatarUrl);
-            }
-
-            // 格式化显示内容
-            const displayContent = post.content 
-              ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) 
-              : '';
-            
-            // 转换为WXML期望的格式
-            return {
-              _id: post.id || post._id,
-              title: post.title || '',
-              content: post.content || '',
-              displayContent: displayContent,
-              hasMore: post.content && post.content.length > 100,
-              authorName: post.author_name || (post.author ? post.author.name : '南开大学用户'),
-              authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
-              images: post.images || [],
-              likes: post.likes || 0,
-              commentCount: post.comment_count || 0,
-              relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
-              tags: post.tags || [],
-              isLiked: post.isLiked || false,
-              isFavorited: post.isFavorited || false,
-              comments: post.comments || []
-            };
-          } catch (itemError) {
-            console.error('处理帖子项失败:', itemError, post);
-            // 返回一个基本格式的帖子项，避免整个渲染过程失败
-            return {
-              _id: post.id || post._id || `temp_${Date.now()}`,
-              title: post.title || '帖子标题',
-              content: post.content || '帖子内容',
-              displayContent: '内容加载失败，请刷新重试...',
-              authorName: '南开大学用户',
-              authorAvatar: '/assets/icons/default-avatar.png',
-              relativeTime: '刚刚',
-              likes: 0,
-              commentCount: 0
-            };
-          }
-        }));
-        
-        console.debug('处理后的帖子数据:', processedPosts);
-        
-        // 更新数据
+      } else {
+        console.error('请求返回为空');
+        posts = [];
+      }
+      
+      // 如果没有帖子数据，提前退出
+      if (!posts.length) {
         this.setData({
-          posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
+          posts: refresh ? [] : this.data.posts,
           loading: false,
           loadingFailed: false,
           page: refresh ? 2 : this.data.page + 1,
-          hasMore: posts.length >= this.data.pageSize
+          hasMore: false
         });
-        
-        // 若是下拉刷新，显示提示并停止刷新
-        if (this.data.isRefreshing) {
-          wx.showToast({
-            title: '刷新成功',
-            icon: 'success',
-            duration: 1000
-          });
-          wx.stopPullDownRefresh();
-          this.setData({
-            isRefreshing: false
-          });
+        return Promise.resolve();
+      }
+      
+      // 处理帖子数据
+      const { processAvatarUrl } = require('../../utils/api');
+      
+      // 处理每个帖子的数据，与WXML模板期望的格式保持一致
+      const processedPosts = await Promise.all(posts.map(async post => {
+        try {
+          // 获取处理后的头像URL
+          let avatarUrl = post.author_avatar || (post.author ? post.author.avatar_url : null);
+          if (avatarUrl) {
+            avatarUrl = await processAvatarUrl(avatarUrl);
+          }
+
+          // 格式化显示内容
+          const displayContent = post.content 
+            ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) 
+            : '';
+          
+          // 转换为WXML期望的格式
+          return {
+            _id: post.id || post._id,
+            title: post.title || '',
+            content: post.content || '',
+            displayContent: displayContent,
+            hasMore: post.content && post.content.length > 100,
+            authorName: post.author_name || (post.author ? post.author.name : '南开大学用户'),
+            authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
+            images: post.images || [],
+            likes: post.likes || 0,
+            commentCount: post.comment_count || 0,
+            relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
+            tags: post.tags || [],
+            isLiked: post.isLiked || false,
+            isFavorited: post.isFavorited || false,
+            comments: post.comments || []
+          };
+        } catch (itemError) {
+          console.error('处理帖子项失败:', itemError, post);
+          // 返回一个基本格式的帖子项，避免整个渲染过程失败
+          return {
+            _id: post.id || post._id || `temp_${Date.now()}`,
+            title: post.title || '帖子标题',
+            content: post.content || '帖子内容',
+            displayContent: '内容加载失败，请刷新重试...',
+            authorName: '南开大学用户',
+            authorAvatar: '/assets/icons/default-avatar.png',
+            relativeTime: '刚刚',
+            likes: 0,
+            commentCount: 0
+          };
         }
-      } else {
-        console.error('获取帖子返回错误:', res?.error || '未知错误');
-        throw new Error(res?.error || '获取帖子失败');
+      }));
+      
+      console.debug('处理后的帖子数据:', processedPosts);
+      
+      // 更新数据
+      this.setData({
+        posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
+        loading: false,
+        loadingFailed: false,
+        page: refresh ? 2 : this.data.page + 1,
+        hasMore: posts.length >= this.data.pageSize
+      });
+      
+      // 若是下拉刷新，显示提示并停止刷新
+      if (this.data.isRefreshing) {
+        wx.showToast({
+          title: '刷新成功',
+          icon: 'success',
+          duration: 1000
+        });
+        wx.stopPullDownRefresh();
+        this.setData({
+          isRefreshing: false
+        });
       }
     } catch (err) {
       console.error('加载帖子失败:', err);
