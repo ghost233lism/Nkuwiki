@@ -113,7 +113,7 @@
           </view>
 
           <!-- 查看全部评论链接 -->
-          <view class="view-more-comments" wx:if="{{item.comments.length > 3}}" bindtap="viewPostDetail" data-id="{{item._id}}">
+          <view class="view-more-comments" wx:if="{{item.comments.length > 3}}" bindtap="goToDetail" data-id="{{item._id}}">
             查看全部 {{item.comments.length}} 条评论
           </view>
         </view>

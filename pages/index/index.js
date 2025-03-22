@@ -118,31 +118,99 @@ Page({
       };
       
       console.debug('请求参数:', params);
-      const res = await postAPI.getPosts(params);
+      
+      // 捕获可能的错误
+      let res;
+      try {
+        res = await postAPI.getPosts(params);
+        console.debug('API返回原始数据:', res);
+      } catch (apiError) {
+        console.error('API调用异常:', apiError);
+        // 返回一个带错误标志但不影响界面显示的空数据
+        res = { 
+          data: [], 
+          success: false, 
+          error: apiError.message || '获取帖子失败'
+        };
+      }
       
       if (res && !res.error) {
         const posts = res.data || [];
         console.debug(`获取帖子成功，数量: ${posts.length}`);
         
+        // 如果没有帖子数据，提前退出
+        if (!posts.length) {
+          this.setData({
+            posts: [],
+            loading: false,
+            loadingFailed: false,
+            page: refresh ? 2 : this.data.page + 1,
+            hasMore: false
+          });
+          return Promise.resolve();
+        }
+        
         // 处理帖子数据
         const { processAvatarUrl } = require('../../utils/api');
         
-        // 处理每个帖子的数据，特别是作者头像
+        // 处理每个帖子的数据，与WXML模板期望的格式保持一致
         const processedPosts = await Promise.all(posts.map(async post => {
-          // 处理作者头像
-          if (post.author) {
-            post.author.avatarUrl = await processAvatarUrl(post.author.avatarUrl || post.author.avatar_url);
+          try {
+            // 获取处理后的头像URL
+            let avatarUrl = post.author_avatar || (post.author ? post.author.avatar_url : null);
+            if (avatarUrl) {
+              avatarUrl = await processAvatarUrl(avatarUrl);
+            }
+
+            // 格式化显示内容
+            const displayContent = post.content 
+              ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) 
+              : '';
+            
+            // 转换为WXML期望的格式
+            return {
+              _id: post.id || post._id,
+              title: post.title || '',
+              content: post.content || '',
+              displayContent: displayContent,
+              hasMore: post.content && post.content.length > 100,
+              authorName: post.author_name || (post.author ? post.author.name : '南开大学用户'),
+              authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
+              images: post.images || [],
+              likes: post.likes || 0,
+              commentCount: post.comment_count || 0,
+              relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
+              tags: post.tags || [],
+              isLiked: post.isLiked || false,
+              isFavorited: post.isFavorited || false,
+              comments: post.comments || []
+            };
+          } catch (itemError) {
+            console.error('处理帖子项失败:', itemError, post);
+            // 返回一个基本格式的帖子项，避免整个渲染过程失败
+            return {
+              _id: post.id || post._id || `temp_${Date.now()}`,
+              title: post.title || '帖子标题',
+              content: post.content || '帖子内容',
+              displayContent: '内容加载失败，请刷新重试...',
+              authorName: '南开大学用户',
+              authorAvatar: '/assets/icons/default-avatar.png',
+              relativeTime: '刚刚',
+              likes: 0,
+              commentCount: 0
+            };
           }
-          
-          // 处理其他数据...
-          return post;
         }));
+        
+        console.debug('处理后的帖子数据:', processedPosts);
         
         // 更新数据
         this.setData({
-          posts: processedPosts,
+          posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
           loading: false,
-          loadingFailed: false
+          loadingFailed: false,
+          page: refresh ? 2 : this.data.page + 1,
+          hasMore: posts.length >= this.data.pageSize
         });
         
         // 若是下拉刷新，显示提示并停止刷新
@@ -158,12 +226,15 @@ Page({
           });
         }
       } else {
-        console.error('获取帖子失败:', res);
-        throw new Error('获取帖子失败');
+        console.error('获取帖子返回错误:', res?.error || '未知错误');
+        throw new Error(res?.error || '获取帖子失败');
       }
     } catch (err) {
       console.error('加载帖子失败:', err);
-      this.setData({ loading: false });
+      this.setData({ 
+        loading: false,
+        loadingFailed: true
+      });
       
       wx.showToast({
         title: '加载帖子失败',
@@ -204,9 +275,15 @@ Page({
 
   // 查看帖子详情
   goToDetail(e) {
-    const { postid } = e.currentTarget.dataset;
+    const { id } = e.currentTarget.dataset;
+    if (!id) {
+      console.error('帖子ID不存在:', e.currentTarget.dataset);
+      return;
+    }
+    
+    console.debug('跳转到帖子详情页, ID:', id);
     wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${postid}`
+      url: `/pages/post/detail/detail?id=${id}`
     });
   },
 
@@ -243,10 +320,21 @@ Page({
       });
       
       // 调用后端API
-      if (isLiked) {
-        await postAPI.unlikePost(id, userInfo.id);
-      } else {
-        await postAPI.likePost(id, userInfo.id);
+      try {
+        if (isLiked) {
+          await postAPI.likePost(id, false);
+        } else {
+          await postAPI.likePost(id, true);
+        }
+      } catch (apiError) {
+        console.error('API调用失败:', apiError);
+        // 如果API调用失败，恢复UI
+        newPosts[index].isLiked = isLiked;
+        newPosts[index].likes = currentPost.likes;
+        this.setData({
+          posts: newPosts
+        });
+        throw apiError;
       }
       
     } catch (error) {
@@ -416,14 +504,6 @@ Page({
     }
   },
 
-  // 查看帖子详情
-  viewPostDetail(e) {
-    const { postid } = e.currentTarget.dataset;
-    wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${postid}`
-    });
-  },
-
   // 显示展开的编辑器
   showExpandedEditor() {
     this.setData({
@@ -453,7 +533,7 @@ Page({
       const currentPost = this.data.posts[index];
       const isFavorited = currentPost.isFavorited;
       
-      // 获取当前用户ID
+      // 获取当前用户信息
       const userInfo = userManager.getCurrentUser();
       
       // 检查是否登录
@@ -475,10 +555,20 @@ Page({
       });
       
       // 调用后端API
-      if (isFavorited) {
-        await postAPI.cancelFavorite(id, userInfo.id);
-      } else {
-        await postAPI.addFavorite(id, userInfo.id);
+      try {
+        if (isFavorited) {
+          await postAPI.favoritePost(id, false);
+        } else {
+          await postAPI.favoritePost(id, true);
+        }
+      } catch (apiError) {
+        console.error('API调用失败:', apiError);
+        // 如果API调用失败，恢复UI
+        newPosts[index].isFavorited = isFavorited;
+        this.setData({
+          posts: newPosts
+        });
+        throw apiError;
       }
       
     } catch (error) {
