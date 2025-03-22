@@ -73,29 +73,52 @@ Page({
           // 保存标准化的用户信息
           userManager.saveUserInfo(formattedUserInfo);
           
-          // 确保服务器已同步用户信息
+          // 确保服务器已同步用户信息，等待一定时间并添加重试机制
           if (formattedUserInfo.id) {
-            try {
-              logger.debug('验证用户同步状态，请求用户信息:', formattedUserInfo.id);
-              const userData = await userAPI.getUserInfo(formattedUserInfo.id);
-              if (userData) {
-                logger.debug('成功获取服务器用户信息:', userData);
-                // 合并服务器数据，但保留云ID作为主ID
-                const mergedData = {
-                  ...userData,
-                  id: formattedUserInfo.id,    // 保持云ID
-                  _id: formattedUserInfo._id   // 保持云ID
-                };
+            logger.debug('等待服务器同步用户数据...');
+            // 添加延迟和重试，等待同步完成
+            const verifyUserSync = async (retryCount = 5, delay = 1500) => {
+              try {
+                // 首次尝试前先等待一段时间，让服务器有时间完成同步
+                await new Promise(resolve => setTimeout(resolve, delay));
                 
-                // 更新本地用户信息
-                userManager.saveUserInfo(mergedData);
-              } else {
-                logger.warn('服务器返回空的用户数据，使用本地数据');
+                logger.debug(`尝试验证用户同步状态(剩余${retryCount}次): ${formattedUserInfo.id}`);
+                // 附加随机参数避免缓存
+                const timestamp = new Date().getTime();
+                const userData = await userAPI.getUserInfo(`${formattedUserInfo.id}?t=${timestamp}`);
+                
+                if (userData) {
+                  logger.debug('成功获取服务器用户信息:', userData);
+                  // 合并服务器数据，但保留云ID作为主ID
+                  const mergedData = {
+                    ...userData,
+                    id: formattedUserInfo.id,    // 保持云ID
+                    _id: formattedUserInfo._id   // 保持云ID
+                  };
+                  
+                  // 更新本地用户信息
+                  userManager.saveUserInfo(mergedData);
+                  return true;
+                } else {
+                  throw new Error('服务器返回空数据');
+                }
+              } catch (verifyError) {
+                logger.warn(`验证用户同步状态失败(剩余${retryCount}次):`, verifyError);
+                if (retryCount > 0) {
+                  // 增加延迟时间，指数退避
+                  const nextDelay = delay * 1.5;
+                  return verifyUserSync(retryCount - 1, nextDelay);
+                } else {
+                  logger.error('用户同步验证重试次数已用完，使用本地数据继续');
+                  return false;
+                }
               }
-            } catch (verifyError) {
-              logger.warn('验证用户同步状态失败，仍可继续使用:', verifyError);
-              // 验证失败不影响登录流程
-            }
+            };
+            
+            // 执行验证但不阻塞登录流程
+            verifyUserSync().catch(err => {
+              logger.error('用户同步验证过程出错:', err);
+            });
           }
           
           // 登录成功跳转

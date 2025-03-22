@@ -32,7 +32,7 @@ const userAPI = {
 
   /**
    * 获取用户信息
-   * @param {number|string} userId - 用户ID
+   * @param {number|string} userId - 用户ID，可能包含查询参数
    * @returns {Promise} - 请求Promise
    */
   getUserInfo: (userId) => {
@@ -41,40 +41,53 @@ const userAPI = {
       return Promise.reject(new Error('用户ID为空'));
     }
     
-    // 保留完整的用户ID，不做任何处理或截断
-    const formattedUserId = userId;
+    // 处理userId，提取基本ID，分离查询参数
+    let baseUserId = userId;
+    let queryString = '';
     
-    logger.debug(`尝试获取用户信息，用户ID=${formattedUserId}`);
+    // 如果userId包含查询参数（如?t=timestamp），分离开
+    if (typeof userId === 'string' && userId.includes('?')) {
+      const parts = userId.split('?');
+      baseUserId = parts[0];
+      queryString = parts.length > 1 ? `?${parts[1]}` : '';
+      logger.debug(`分离用户ID和查询参数: ID=${baseUserId}, 查询=${queryString}`);
+    }
+    
+    logger.debug(`尝试获取用户信息，用户ID=${baseUserId}${queryString}`);
     
     return request({
-      url: `${API.PREFIX.WXAPP}/users/${formattedUserId}`,
+      url: `${API.PREFIX.WXAPP}/users/${baseUserId}${queryString}`,
       method: 'GET',
       showError: false,
-      retryCount: 3,
+      retryCount: 5,  // 增加重试次数
+      retryDelay: 1000, // 增加重试延迟
       // 在出现404错误时使用备用接口
       statusCodeCallback: {
         404: (error) => {
-          logger.warn(`用户ID ${formattedUserId} 不存在，尝试获取当前用户信息`);
+          logger.warn(`用户ID ${baseUserId} 不存在，尝试获取当前用户信息`);
+          // 添加一个时间戳避免缓存
+          const timestamp = new Date().getTime();
           // 尝试获取当前用户信息作为替代
           return request({
             url: `${API.PREFIX.WXAPP}/users/me`,
             method: 'GET',
-            data: { user_id: formattedUserId },
-            showError: false
+            data: { user_id: baseUserId, t: timestamp },
+            showError: false,
+            retryCount: 3
           }).catch(err => {
             logger.error('获取当前用户信息也失败:', err);
-            return getLocalFallbackUserInfo(formattedUserId);
+            return getLocalFallbackUserInfo(baseUserId);
           });
         }
       },
       // 失败时回退方案
       fail: (err) => {
         logger.error(`获取用户信息失败: ${err.message || err}`);
-        return getLocalFallbackUserInfo(formattedUserId);
+        return getLocalFallbackUserInfo(baseUserId);
       }
     }).catch(error => {
       logger.error('获取用户信息出错:', error);
-      return getLocalFallbackUserInfo(formattedUserId);
+      return getLocalFallbackUserInfo(baseUserId);
     });
   },
 
