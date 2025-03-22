@@ -62,7 +62,7 @@ const userManager = {
     const userInfo = this.getCurrentUser();
     return {
       id: userInfo.id || userInfo._id || '0',  // 确保有ID
-      author_id: userInfo.id || userInfo._id || '0',
+      user_id: userInfo.id || userInfo._id || '0',
       wxapp_id: userInfo.wxapp_id || `user_${Date.now()}`,
       author_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,

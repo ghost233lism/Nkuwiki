@@ -439,7 +439,7 @@ Page({
         // 准备要发送到API的数据
         const postData = {
           wxapp_id: `post_${Date.now()}`, // 生成唯一ID
-          author_id: userInfo.id,
+          user_id: userInfo.id, // 使用user_id字段
           author_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
           author_avatar: avatarUrl,
           title: title,
@@ -480,7 +480,7 @@ Page({
       // 无图片帖子，直接调用API
       const postData = {
         wxapp_id: `post_${Date.now()}`,
-        author_id: userInfo.id,
+        user_id: userInfo.id, // 使用user_id字段
         author_name: userInfo.nickname,
         author_avatar: userInfo.avatar_url,
         title: title,

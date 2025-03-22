@@ -174,7 +174,7 @@ Page({
       const processedPosts = await Promise.all(posts.map(async post => {
         try {
           // 获取处理后的头像URL
-          let avatarUrl = post.author_avatar || (post.author ? post.author.avatar_url : null);
+          let avatarUrl = post.user_avatar || post.author_avatar || (post.author ? post.author.avatar_url : null);
           if (avatarUrl) {
             avatarUrl = await processAvatarUrl(avatarUrl);
           }
@@ -191,7 +191,7 @@ Page({
             content: post.content || '',
             displayContent: displayContent,
             hasMore: post.content && post.content.length > 100,
-            authorName: post.author_name || (post.author ? post.author.name : '南开大学用户'),
+            authorName: post.user_name || post.author_name || (post.author ? post.author.name : '南开大学用户'),
             authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
             images: post.images || [],
             likes: post.likes || 0,
@@ -478,7 +478,7 @@ Page({
       const commentData = {
         wxapp_id: `comment_${Date.now()}`,
         post_id: this.data.currentCommentPostId,
-        author_id: userInfo.id,
+        user_id: userInfo.id,
         author_name: userInfo.nickname,
         author_avatar: userInfo.avatar_url,
         content: this.data.commentText.trim(),

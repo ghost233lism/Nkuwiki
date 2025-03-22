@@ -437,7 +437,7 @@ const userAPI = {
         method: 'GET',
         data: { 
           ...params,
-          author_id: userId 
+          user_id: userId 
         }
       })
         .then(res => {
@@ -604,7 +604,7 @@ const postAPI = {
         method: 'GET',
         data: { 
           ...params,
-          author_id: userId 
+          user_id: userId 
         }
       })
         .then(res => {

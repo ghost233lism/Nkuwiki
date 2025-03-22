@@ -48,7 +48,7 @@ function transformData(collection, data) {
     case 'posts':
       return data.map(item => ({
         wxapp_id: item._id,
-        author_id: item.authorId,
+        user_id: item.authorId,
         author_name: item.authorName || '',
         author_avatar: item.authorAvatar || '',
         content: item.content || '',
@@ -75,7 +75,7 @@ function transformData(collection, data) {
       return data.map(item => ({
         wxapp_id: item._id,
         post_id: item.postId,
-        author_id: item.authorId,
+        user_id: item.authorId,
         author_name: item.authorName || '',
         author_avatar: item.authorAvatar || '',
         content: item.content || '',

@@ -576,7 +576,7 @@ Page({
       
       const commentData = {
         post_id: postId,
-        author_id: userInfo.id,
+        user_id: userInfo.id,
         author_name: userInfo.nickname,
         author_avatar: userInfo.avatar_url,
         content: content,
@@ -592,7 +592,7 @@ Page({
         // 更新本地数据
         const newComment = result.data || {
           id: `temp_${Date.now()}`,
-          author_id: userInfo.id,
+          user_id: userInfo.id,
           author_name: userInfo.nickname,
           author_avatar: userInfo.avatar_url,
           content: content,
