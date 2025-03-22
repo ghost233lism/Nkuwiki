@@ -6,24 +6,28 @@
 
 ## 一、用户接口
 
-### 1.1 创建用户
+### 1.1 同步微信云用户
 
-**接口**：`POST /users`  
-**描述**：创建新用户  
+**接口**：`POST /users/sync`  
+**描述**：同步微信云数据库用户到主服务器，支持使用云数据库ID作为主键  
+**请求头**：
+- `X-Cloud-Source` - 可选，标记来源
+- `X-Prefer-Cloud-ID` - 可选，标记优先使用云ID
+
 **请求体**：
 
 ```json
 {
+  "id": "微信云数据库ID",
+  "_id": "微信云数据库ID（别名）",
   "wxapp_id": "用户在微信小程序中的原始ID",
   "openid": "微信用户唯一标识",
-  "unionid": "微信开放平台唯一标识（可选）",
   "nickname": "用户昵称（可选）",
   "avatar_url": "头像URL（可选）",
-  "gender": 0,
-  "country": "国家（可选）",
-  "province": "省份（可选）",
-  "city": "城市（可选）",
-  "language": "语言（可选）"
+  "university": "南开大学",
+  "login_type": "wechat",
+  "cloud_source": true,
+  "use_cloud_id": true
 }
 ```
 
@@ -34,19 +38,25 @@
   "code": 200,
   "message": "success",
   "data": {
-    "id": 1,
-    "wxapp_id": "用户微信小程序ID",
-    "openid": "微信用户唯一标识",
-    "nickname": "用户昵称",
-    "avatar_url": "头像URL",
-    "gender": 0,
-    "country": "国家",
-    "province": "省份",
-    "city": "城市",
-    "language": "语言",
-    "create_time": "2023-01-01 12:00:00",
-    "update_time": "2023-01-01 12:00:00",
-    "status": 1
+    "data": {
+      "id": "10001",
+      "wxapp_id": "用户微信小程序ID",
+      "openid": "微信用户唯一标识",
+      "cloud_id": "微信云数据库ID",
+      "nickname": "用户昵称",
+      "avatar_url": "头像URL",
+      "university": "南开大学",
+      "login_type": "wechat",
+      "create_time": "2023-01-01 12:00:00",
+      "update_time": "2023-01-01 12:00:00",
+      "status": 1
+    },
+    "cloud_id": "微信云数据库ID",
+    "server_id": "10001",
+    "id_mapping": {
+      "cloud_to_server": {"微信云数据库ID": "10001"},
+      "server_to_cloud": {"10001": "微信云数据库ID"}
+    }
   }
 }
 ```
@@ -56,7 +66,7 @@
 **接口**：`GET /users/{user_id}`  
 **描述**：获取指定用户的信息  
 **参数**：
-- `user_id` - 路径参数，用户ID
+- `user_id` - 路径参数，用户ID（可以是服务器ID或云ID）
 
 **响应**：
 
@@ -68,6 +78,7 @@
     "id": 1,
     "wxapp_id": "用户微信小程序ID",
     "openid": "微信用户唯一标识",
+    "cloud_id": "微信云数据库ID",
     "nickname": "用户昵称",
     "avatar_url": "头像URL",
     "gender": 0,

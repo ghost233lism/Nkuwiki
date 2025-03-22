@@ -49,10 +49,16 @@ Page({
           // 处理云函数登录成功结果
           const userInfo = res.result.data;
           
-          // 标准格式化用户数据
+          // 记录同步结果日志
+          logger.debug('用户同步结果:', res.result.syncResult || '未同步');
+          
+          // 标准格式化用户数据 - 使用云数据库ID
           const formattedUserInfo = {
+            // 优先使用云ID - 不再使用main_server_id
             id: userInfo._id,
             _id: userInfo._id,
+            // 记录同步状态
+            server_synced: userInfo.server_synced || false,
             wxapp_id: userInfo.openid,
             openid: userInfo.openid,
             unionid: userInfo.unionid || '',
@@ -64,8 +70,33 @@ Page({
             avatarUrl: userInfo.avatarUrl || ''
           };
           
-          // 保存用户信息
+          // 保存标准化的用户信息
           userManager.saveUserInfo(formattedUserInfo);
+          
+          // 确保服务器已同步用户信息
+          if (formattedUserInfo.id) {
+            try {
+              logger.debug('验证用户同步状态，请求用户信息:', formattedUserInfo.id);
+              const userData = await userAPI.getUserInfo(formattedUserInfo.id);
+              if (userData) {
+                logger.debug('成功获取服务器用户信息:', userData);
+                // 合并服务器数据，但保留云ID作为主ID
+                const mergedData = {
+                  ...userData,
+                  id: formattedUserInfo.id,    // 保持云ID
+                  _id: formattedUserInfo._id   // 保持云ID
+                };
+                
+                // 更新本地用户信息
+                userManager.saveUserInfo(mergedData);
+              } else {
+                logger.warn('服务器返回空的用户数据，使用本地数据');
+              }
+            } catch (verifyError) {
+              logger.warn('验证用户同步状态失败，仍可继续使用:', verifyError);
+              // 验证失败不影响登录流程
+            }
+          }
           
           // 登录成功跳转
           wx.showToast({

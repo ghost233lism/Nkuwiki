@@ -1,0 +1,4 @@
+/* 空样式文件 */
+.empty-component {
+  display: none;
+} 

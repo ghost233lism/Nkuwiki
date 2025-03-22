@@ -95,27 +95,57 @@ App({
   async initUserInfo() {
     try {
       // 获取当前用户信息
-      const userInfo = userManager.getCurrentUser()
+      const userInfo = userManager.getCurrentUser();
       
-      console.debug('应用启动，初始化用户信息:', userInfo)
+      console.debug('应用启动，初始化用户信息:', userInfo);
+      
+      // 检查用户ID是否完整
+      const userId = userInfo?.id || userInfo?._id || userInfo?.user_id;
+      
+      if (userId) {
+        console.debug(`用户ID检查: ${userId} (完整的ID)`);
+      }
       
       // 如果用户已登录但信息不完整，尝试从服务器刷新
       if (userManager.isLoggedIn() && !userManager.isUserInfoComplete(userInfo)) {
-        console.debug('用户信息不完整，尝试从服务器刷新')
-        // 这里可以添加从服务器刷新用户信息的代码
-        // ...
+        console.debug('用户信息不完整，尝试从服务器刷新');
+        
+        // 在API请求中使用完整ID
+        const { userAPI } = require('./utils/api/index');
+        if (userId) {
+          try {
+            const updatedUserInfo = await userAPI.getUserInfo(userId);
+            if (updatedUserInfo && updatedUserInfo.id) {
+              // 更新用户信息
+              userManager.saveUserInfo(updatedUserInfo);
+              console.debug('成功从服务器刷新用户信息');
+              this.globalData.userInfo = updatedUserInfo;
+              return;
+            }
+          } catch (apiError) {
+            console.error('从服务器刷新用户信息失败:', apiError);
+          }
+        }
       }
       
       // 存储到全局状态
-      this.globalData.userInfo = userInfo
+      this.globalData.userInfo = userInfo;
     } catch (error) {
-      console.error('初始化用户信息失败:', error)
+      console.error('初始化用户信息失败:', error);
     }
   },
 
   // 获取登录用户信息
   getUserInfo() {
-    return userManager.getCurrentUser()
+    // 确保返回的是最新的用户信息
+    const userInfo = userManager.getCurrentUser();
+    
+    // 更新全局缓存
+    if (userInfo && (userInfo.id || userInfo._id)) {
+      this.globalData.userInfo = userInfo;
+    }
+    
+    return userInfo;
   },
 
   // 加载服务器配置

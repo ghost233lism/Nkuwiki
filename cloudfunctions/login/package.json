@@ -1,11 +1,16 @@
 {
-  "name": "login-function",
+  "name": "login",
   "version": "1.0.0",
-  "description": "",
+  "description": "用户登录云函数，同步用户信息到主服务器",
   "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "^2.5.3"
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "nkuwiki",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6"
+  }
 }

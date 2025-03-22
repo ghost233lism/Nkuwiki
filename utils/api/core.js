@@ -149,7 +149,7 @@ const request = (options = {}) => {
         for (const key in options.params) {
           if (options.params[key] !== undefined && options.params[key] !== null) {
             // 确保不会截断用户ID等参数，使用完整的参数值
-            const paramValue = encodeURIComponent(options.params[key]);
+            const paramValue = encodeURIComponent(String(options.params[key]));
             queryParams.push(`${encodeURIComponent(key)}=${paramValue}`);
           }
         }
@@ -162,7 +162,8 @@ const request = (options = {}) => {
         }
       }
       
-      logger.debug(`发起请求[${retryAttempt > 0 ? '重试#' + retryAttempt : '首次'}]: ${options.method || 'GET'} ${url}`);
+      // 记录完整的URL，确保可以查看请求的完整路径
+      logger.debug(`发起完整请求[${retryAttempt > 0 ? '重试#' + retryAttempt : '首次'}]: ${options.method || 'GET'} ${url}`);
       if (options.data) {
         logger.debug(`请求体参数: ${JSON.stringify(options.data)}`);
       }

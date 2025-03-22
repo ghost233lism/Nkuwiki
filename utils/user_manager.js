@@ -146,12 +146,15 @@ const userManager = {
         }
       }
       
-      // 确保ID字段一致性 (新增)
+      // 确保ID字段一致性 - 保留完整ID
       if (userInfo._id && !userInfo.id) {
-        userInfo.id = userInfo._id;
+        userInfo.id = userInfo._id; // 完整复制，不截断
       } else if (userInfo.id && !userInfo._id) {
-        userInfo._id = userInfo.id;
+        userInfo._id = userInfo.id; // 完整复制，不截断
       }
+      
+      // 始终确保用户ID在调试日志中完整显示
+      console.debug(`用户ID信息: id=${userInfo.id}, _id=${userInfo._id}, user_id=${userInfo.user_id}`);
       
       return userInfo;
     } catch (error) {
@@ -172,7 +175,7 @@ const userManager = {
     
     // 确保有用户ID，保持原始ID格式不变
     const userId = userInfo.id || userInfo._id || userInfo.user_id || '';
-    console.debug('解析得到的用户ID:', userId);
+    console.debug('解析得到的完整用户ID:', userId);
     
     if (!userId) {
       console.warn('警告：用户ID不存在，使用临时ID');
@@ -180,9 +183,9 @@ const userManager = {
     
     // 创建包含多个字段的对象，确保后端可以识别
     const apiInfo = {
-      id: userId || `temp_${Date.now()}`,  // 确保有ID，不截断
-      _id: userId || `temp_${Date.now()}`,  // 同样不截断
-      user_id: userId || `temp_${Date.now()}`,
+      id: userId,  // 保持原始ID，不做处理
+      _id: userId,  // 保持原始ID，不做处理
+      user_id: userId,  // 保持原始ID，不做处理
       wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${Date.now()}`,
       openid: userInfo.openid || '',  // 确保openid字段
       author_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,

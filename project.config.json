@@ -26,7 +26,13 @@
     "condition": false,
     "swc": false,
     "disableSWC": true,
-    "ignoreUploadUnusedFiles": true
+    "ignoreUploadUnusedFiles": true,
+    "useStaticServer": true,
+    "ignoreDevUnusedFiles": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "nodeModules": true
   },
   "condition": {},
   "editorSetting": {
@@ -41,5 +47,14 @@
     "ignore": [],
     "include": []
   },
-  "projectname": "app"
+  "projectname": "app",
+  "checkSiteMap": false,
+  "jsserverRoot": "jsserver/",
+  "srcMiniprogramRoot": "miniprogram/",
+  "useStaticServer": true,
+  "ignoreDevUnusedFiles": false,
+  "useMultiFrameRuntime": true,
+  "useApiHook": true,
+  "useApiHostProcess": true,
+  "nodeModules": true
 }

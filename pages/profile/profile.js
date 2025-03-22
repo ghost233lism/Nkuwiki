@@ -586,7 +586,7 @@ Page({
         return;
       }
       
-      console.debug(`尝试获取用户ID=${userId}的信息`);
+      console.debug(`尝试获取用户ID=${userId}的完整用户信息`);
       
       // 显示加载状态
       wx.showLoading({
@@ -619,6 +619,11 @@ Page({
       }
     } catch (error) {
       console.error("获取用户信息失败:", error);
+      // 尝试使用备选方案
+      wx.showToast({
+        title: '获取信息失败，使用本地数据',
+        icon: 'none'
+      });
       return false;
     } finally {
       wx.hideLoading();

@@ -1,13 +1,7 @@
-selectImage: function() {
-  // 已有选择图片的逻辑...
-  
-  wx.chooseMedia({
-    count: remainCount,
-    mediaType: ['image'],
-    sourceType: ['album', 'camera'],
-    sizeType: ['compressed'], // 使用压缩模式
-    success: function(res) {
-      // 处理结果...
-    }
-  });
-}
+// 空占位文件
+// 此模块已不再使用，但保留以防项目引用
+Component({
+  properties: {},
+  data: {},
+  methods: {}
+}); 

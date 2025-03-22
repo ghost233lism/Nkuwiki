@@ -41,11 +41,9 @@ const userAPI = {
       return Promise.reject(new Error('用户ID为空'));
     }
     
-    // 处理可能的异常用户ID格式
-    let formattedUserId = userId;
+    // 保留完整的用户ID，不做任何处理或截断
+    const formattedUserId = userId;
     
-    // 移除对UUID格式用户ID的截断处理
-    // 确保使用完整的用户ID进行请求
     logger.debug(`尝试获取用户信息，用户ID=${formattedUserId}`);
     
     return request({
