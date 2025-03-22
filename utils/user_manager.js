@@ -18,6 +18,75 @@ const DEFAULT_NAME = '南开大学用户';
  */
 const userManager = {
   /**
+   * 调试用户ID问题
+   * @returns {Object} 从所有可能的来源获取的用户ID信息
+   */
+  debugUserId() {
+    try {
+      // 从各种存储中获取用户ID
+      const sources = {};
+      
+      // 从主存储获取
+      try {
+        const userInfo = wx.getStorageSync(STORAGE_KEYS.USER_INFO) || {};
+        sources.main_storage = {
+          id: userInfo.id,
+          _id: userInfo._id,
+          user_id: userInfo.user_id,
+          openid: userInfo.openid
+        };
+      } catch (e) {
+        sources.main_storage = { error: e.message };
+      }
+      
+      // 从最新存储获取
+      try {
+        const latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
+        sources.latest_storage = {
+          id: latestUserInfo.id,
+          _id: latestUserInfo._id,
+          user_id: latestUserInfo.user_id,
+          openid: latestUserInfo.openid
+        };
+      } catch (e) {
+        sources.latest_storage = { error: e.message };
+      }
+      
+      // 从全局状态获取
+      try {
+        const app = getApp();
+        if (app && app.globalData && app.globalData.userInfo) {
+          const globalUserInfo = app.globalData.userInfo;
+          sources.global_data = {
+            id: globalUserInfo.id,
+            _id: globalUserInfo._id,
+            user_id: globalUserInfo.user_id,
+            openid: globalUserInfo.openid
+          };
+        } else {
+          sources.global_data = { error: '全局用户数据不可用' };
+        }
+      } catch (e) {
+        sources.global_data = { error: e.message };
+      }
+      
+      // 从token获取
+      try {
+        const token = wx.getStorageSync(STORAGE_KEYS.TOKEN);
+        sources.token = { token: token ? '存在' : '不存在' };
+      } catch (e) {
+        sources.token = { error: e.message };
+      }
+      
+      console.debug('用户ID调试信息:', JSON.stringify(sources, null, 2));
+      return sources;
+    } catch (error) {
+      console.error('调试用户ID出错:', error);
+      return { error: error.message };
+    }
+  },
+
+  /**
    * 获取当前用户信息，整合多个来源确保信息完整
    * @returns {Object} 用户信息
    */
@@ -77,6 +146,13 @@ const userManager = {
         }
       }
       
+      // 确保ID字段一致性 (新增)
+      if (userInfo._id && !userInfo.id) {
+        userInfo.id = userInfo._id;
+      } else if (userInfo.id && !userInfo._id) {
+        userInfo._id = userInfo.id;
+      }
+      
       return userInfo;
     } catch (error) {
       console.error('获取用户信息出错:', error);
@@ -102,15 +178,21 @@ const userManager = {
       console.warn('警告：用户ID不存在，使用临时ID');
     }
     
-    return {
+    // 创建包含多个字段的对象，确保后端可以识别
+    const apiInfo = {
       id: userId || `temp_${Date.now()}`,  // 确保有ID
+      _id: userId || `temp_${Date.now()}`,  // 同时添加_id (新增)
       user_id: userId || `temp_${Date.now()}`,
-      wxapp_id: userInfo.wxapp_id || `user_${Date.now()}`,
+      wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${Date.now()}`,
+      openid: userInfo.openid || '',  // 确保openid字段 (新增)
       author_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       author_avatar: userInfo.avatar_url || userInfo.avatarUrl || DEFAULT_AVATAR,
       avatar_url: userInfo.avatar_url || userInfo.avatarUrl || DEFAULT_AVATAR,
     };
+    
+    console.debug('准备发送给API的用户信息:', JSON.stringify(apiInfo));
+    return apiInfo;
   },
   
   /**

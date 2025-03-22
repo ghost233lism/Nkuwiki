@@ -1,7 +1,7 @@
 // pages/profile/profile.js
 const app = getApp();
 const userManager = require('../../utils/user_manager');
-const { userAPI, postAPI, notificationAPI, feedbackAPI, aboutAPI, logger } = require('../../utils/api');
+const { userAPI, postAPI, notificationAPI, feedbackAPI, aboutAPI, logger } = require('../../utils/api/index');
 
 Page({
   data: {
@@ -36,6 +36,9 @@ Page({
       
       // 获取用户数据
       this.refreshUserData();
+      
+      // 添加这一行：尝试手动获取用户信息
+      this.fetchUserInfo();
     } else {
       this.setData({
         isLogin: false
@@ -44,9 +47,16 @@ Page({
   },
 
   onShow() {
+    // 添加用户ID调试信息
+    const idDebugInfo = userManager.debugUserId();
+    console.debug('用户ID调试信息:', idDebugInfo);
+    
     // 每次页面显示时刷新用户信息
     const userInfo = userManager.getCurrentUser();
     const isLoggedIn = userManager.isLoggedIn();
+    
+    console.debug('当前用户信息:', userInfo);
+    console.debug('登录状态:', isLoggedIn);
     
     this.setData({
       userInfo,
@@ -57,12 +67,16 @@ Page({
     // 检查登录状态是否变化
     if (isLoggedIn && (!this.data.isLogin || !this.data.isLoggedIn)) {
       // 登录状态变化，更新登录状态并刷新数据
+      console.debug('登录状态发生变化：从未登录变为已登录');
       this.setData({
         isLogin: true
       });
       this.refreshUserData();
+      // 尝试重新获取用户信息
+      this.fetchUserInfo();
     } else if (!isLoggedIn && (this.data.isLogin || this.data.isLoggedIn)) {
       // 退出登录
+      console.debug('登录状态发生变化：从已登录变为未登录');
       this.setData({
         isLogin: false,
         likeCount: 0,
@@ -73,6 +87,7 @@ Page({
       });
     } else if (isLoggedIn) {
       // 已登录，强制刷新用户统计数据
+      console.debug('已处于登录状态，刷新用户数据');
       this.refreshUserData();
     }
   },
@@ -81,60 +96,36 @@ Page({
   async getUserPostsCount() {
     try {
       if (!this.data.userInfo) {
-        logger.warn('获取用户发帖数失败: 用户信息不存在');
+        console.debug('获取用户发帖数失败: 用户信息不存在');
         return Promise.resolve(0);
       }
       
       const userId = this.data.userInfo.id || this.data.userInfo._id;
       if (!userId) {
-        logger.warn('获取用户发帖数失败: 用户ID不存在');
+        console.debug('获取用户发帖数失败: 用户ID不存在');
         return Promise.resolve(0);
       }
       
-      logger.debug('获取用户发帖数量，用户ID:', userId);
+      console.debug('获取用户发帖数量，用户ID:', userId);
       
       // 使用API获取用户的所有帖子
       const posts = await postAPI.getUserPosts(userId);
       
-      // 确认返回数据结构
-      logger.debug('获取到的帖子原始数据:', typeof posts, posts ? (Array.isArray(posts) ? `数组(${posts.length}项)` : '非数组') : '空');
+      // 标准响应会直接返回帖子数组
+      console.debug(`成功获取用户帖子列表，帖子数量: ${posts.length}`);
       
-      // 确认posts是一个数组
-      if (posts && Array.isArray(posts)) {
-        logger.debug(`成功获取用户帖子列表，帖子数量: ${posts.length}`);
-        
-        this.setData({
-          postCount: posts.length || 0
-        });
-        
-        logger.debug(`更新用户发帖数: ${posts.length}`);
-        return Promise.resolve(posts.length);
-      } else if (posts && typeof posts === 'object' && posts.total !== undefined) {
-        // 处理返回总数而不是帖子列表的情况
-        const count = posts.total || 0;
-        logger.debug(`获取到帖子总数: ${count}`);
-        
-        this.setData({
-          postCount: count
-        });
-        
-        return Promise.resolve(count);
-      } else {
-        // 如果posts不是数组或有错误，设置默认值
-        logger.debug('获取帖子列表失败或格式不是预期的:', posts);
-        this.setData({
-          postCount: 0
-        });
-        
-        return Promise.resolve(0);
-      }
+      this.setData({
+        postCount: posts.length || 0
+      });
+      
+      return Promise.resolve(posts.length || 0);
     } catch (error) {
-      logger.error('获取用户发帖数失败:', error);
+      console.error('获取用户发帖数失败:', error);
       this.setData({
         postCount: 0
       });
       
-      return Promise.reject(error);
+      return Promise.resolve(0);
     }
   },
 
@@ -142,27 +133,27 @@ Page({
   async getUserTotalLikes() {
     try {
       if (!this.data.userInfo) {
-        logger.warn('获取用户获赞总数失败: 用户信息不存在');
+        console.debug('获取用户获赞总数失败: 用户信息不存在');
         return Promise.resolve(0);
       }
       
       const userId = this.data.userInfo.id || this.data.userInfo._id;
       if (!userId) {
-        logger.warn('获取用户获赞总数失败: 用户ID不存在');
+        console.debug('获取用户获赞总数失败: 用户ID不存在');
         return Promise.resolve(0);
       }
       
-      logger.debug('获取用户获赞总数，用户ID:', userId);
+      console.debug('获取用户获赞总数，用户ID:', userId);
       
       // 使用API获取用户的所有帖子
       const posts = await postAPI.getUserPosts(userId);
       
       // 日志记录获取到的数据
-      logger.debug('获取到的帖子原始数据:', typeof posts, posts ? (Array.isArray(posts) ? `数组(${posts.length}项)` : '非数组') : '空');
+      console.debug('获取到的帖子原始数据:', typeof posts, posts ? (Array.isArray(posts) ? `数组(${posts.length}项)` : '非数组') : '空');
       
       // 确认posts是一个数组再使用reduce
       if (posts && Array.isArray(posts)) {
-        logger.debug('成功获取用户帖子:', posts.length, '篇');
+        console.debug('成功获取用户帖子:', posts.length, '篇');
         
         // 计算所有帖子获得的点赞总数，检查多种可能的字段名
         let totalLikes = 0;
@@ -172,11 +163,11 @@ Page({
           const postId = post.id || post._id;
           const likeCount = parseInt(post.like_count || post.likes || 0);
           
-          logger.debug(`帖子ID:${postId}, 点赞数:${likeCount}`);
+          console.debug(`帖子ID:${postId}, 点赞数:${likeCount}`);
           totalLikes += likeCount;
         }
         
-        logger.debug('计算得到用户获赞总数:', totalLikes);
+        console.debug('计算得到用户获赞总数:', totalLikes);
         
         this.setData({
           likeCount: totalLikes
@@ -187,7 +178,7 @@ Page({
         // 处理直接返回总赞数的情况
         const totalLikes = parseInt(posts.total_likes || 0);
         
-        logger.debug('API直接返回用户获赞总数:', totalLikes);
+        console.debug('API直接返回用户获赞总数:', totalLikes);
         
         this.setData({
           likeCount: totalLikes
@@ -196,7 +187,7 @@ Page({
         return Promise.resolve(totalLikes);
       } else {
         // 如果posts不是数组或有错误，设置默认值
-        logger.debug('获取帖子列表失败或格式不是预期的:', posts);
+        console.debug('获取帖子列表失败或格式不是预期的:', posts);
         this.setData({
           likeCount: 0
         });
@@ -204,7 +195,7 @@ Page({
         return Promise.resolve(0);
       }
     } catch (error) {
-      logger.error('获取用户获赞总数失败:', error);
+      console.error('获取用户获赞总数失败:', error);
       this.setData({
         likeCount: 0
       });
@@ -217,71 +208,35 @@ Page({
   async getUserFollowCounts() {
     try {
       if (!this.data.userInfo) {
-        logger.warn('获取用户关注与粉丝数失败: 用户信息不存在');
-        return Promise.resolve({followed: 0, follower: 0});
+        console.debug('获取用户关注统计失败: 用户信息不存在');
+        return Promise.resolve({ followedCount: 0, followerCount: 0 });
       }
       
       const userId = this.data.userInfo.id || this.data.userInfo._id;
       if (!userId) {
-        logger.warn('获取用户关注与粉丝数失败: 用户ID不存在');
-        return Promise.resolve({followed: 0, follower: 0});
+        console.debug('获取用户关注统计失败: 用户ID不存在');
+        return Promise.resolve({ followedCount: 0, followerCount: 0 });
       }
       
-      logger.debug('获取用户关注和粉丝数据，用户ID:', userId);
+      console.debug('获取用户关注统计，用户ID:', userId);
       
-      // 使用API获取用户关注和粉丝数据
-      const res = await userAPI.getUserFollowStats(userId);
+      // 使用API获取关注和粉丝数量
+      const result = await userAPI.getUserFollowStats(userId);
+      console.debug('获取用户关注统计响应:', result);
       
-      // 日志记录获取到的数据
-      logger.debug('获取用户关注统计原始返回:', JSON.stringify(res));
+      // 后端标准化响应，关注和粉丝数应该直接可用
+      const followedCount = result.followedCount || 0;
+      const followerCount = result.followerCount || 0;
       
-      // 处理API响应
-      if (res) {
-        // 尝试不同可能的数据结构
-        let followedCount = 0;
-        let followerCount = 0;
-        
-        // 多种可能的字段名
-        if (res.followedCount !== undefined) {
-          followedCount = parseInt(res.followedCount) || 0;
-        } else if (res.followed_count !== undefined) {
-          followedCount = parseInt(res.followed_count) || 0;
-        } else if (res.followed !== undefined) {
-          followedCount = parseInt(res.followed) || 0;
-        } else if (res.data && res.data.followedCount !== undefined) {
-          followedCount = parseInt(res.data.followedCount) || 0;
-        }
-        
-        if (res.followerCount !== undefined) {
-          followerCount = parseInt(res.followerCount) || 0;
-        } else if (res.follower_count !== undefined) {
-          followerCount = parseInt(res.follower_count) || 0;
-        } else if (res.followers !== undefined) {
-          followerCount = parseInt(res.followers) || 0;
-        } else if (res.data && res.data.followerCount !== undefined) {
-          followerCount = parseInt(res.data.followerCount) || 0;
-        }
-        
-        // 更新数据
-        this.setData({
-          followedCount: followedCount,
-          followerCount: followerCount
-        });
-        
-        logger.debug(`用户关注数据更新成功: 关注=${followedCount}, 粉丝=${followerCount}`);
-        return Promise.resolve({followed: followedCount, follower: followerCount});
-      } else {
-        logger.warn('获取用户关注统计返回为空');
-        // 设置默认值
-        this.setData({
-          followedCount: 0,
-          followerCount: 0
-        });
-        
-        return Promise.resolve({followed: 0, follower: 0});
-      }
+      this.setData({
+        followedCount,
+        followerCount
+      });
+      
+      return Promise.resolve({ followedCount, followerCount });
     } catch (error) {
-      logger.error('获取用户关注粉丝数据失败:', error);
+      console.error('获取用户关注统计失败:', error);
+      
       // 设置默认值
       this.setData({
         followedCount: 0,
@@ -474,30 +429,45 @@ Page({
   },
   
   // 跳转到消息通知页面
-  goToNotifications() {
+  async goToNotifications() {
     if (!this.checkLogin()) return;
     
-    // 检查用户ID是否存在
-    if (!this.data.userInfo || !(this.data.userInfo.id || this.data.userInfo._id)) {
-      logger.warn('无法跳转到通知页面：用户ID不存在');
+    try {
+      // 先尝试刷新用户信息
+      await this.fetchUserInfo();
+      
+      // 获取最新用户信息
+      const userInfo = userManager.getCurrentUser();
+      const userId = userInfo?.id || userInfo?._id;
+      
+      // 检查用户ID是否存在
+      if (!userId) {
+        console.warn('无法跳转到通知页面：用户ID不存在');
+        wx.showToast({
+          title: '获取用户信息失败',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      console.debug('跳转到通知页面，用户ID:', userId);
+      wx.navigateTo({
+        url: '/pages/notifications/notifications',
+        fail: (err) => {
+          console.error('跳转到通知页面失败:', err);
+          wx.showToast({
+            title: '页面跳转失败',
+            icon: 'none'
+          });
+        }
+      });
+    } catch (error) {
+      console.error('准备跳转到通知页面时发生错误:', error);
       wx.showToast({
         title: '获取用户信息失败',
         icon: 'none'
       });
-      return;
     }
-    
-    logger.debug('跳转到通知页面');
-    wx.navigateTo({
-      url: '/pages/notifications/notifications',
-      fail: (err) => {
-        logger.error('跳转到通知页面失败:', err);
-        wx.showToast({
-          title: '页面跳转失败',
-          icon: 'none'
-        });
-      }
-    });
   },
   
   // 跳转到关于我们页面
@@ -510,70 +480,56 @@ Page({
   /**
    * 刷新用户数据
    */
-  refreshUserData: async function() {
-    if (!this.data.userInfo || !this.data.userInfo.id) {
-      logger.warn('无法刷新用户数据：用户未登录或用户ID不存在');
-      return;
-    }
-    
-    const userId = this.data.userInfo.id;
-    logger.debug('开始刷新用户数据，用户ID:', userId);
-    
-    wx.showLoading({
-      title: '加载中',
-      mask: true
-    });
-    
+  async refreshUserData() {
     try {
-      // 记录开始时间，用于性能分析
-      const startTime = Date.now();
-      logger.debug('开始获取用户统计数据');
+      // 首先进行用户ID调试
+      const idDebugInfo = userManager.debugUserId();
+      console.debug('用户ID调试信息:', idDebugInfo);
       
-      // 并行获取用户统计数据
-      const results = await Promise.allSettled([
-        this.getUserPostsCount(),
-        this.getUserTotalLikes(),
-        this.getUserFollowCounts(),
-        this.getUserTokenCount()
-      ]);
+      // 再次确认用户信息
+      const currentUserInfo = userManager.getCurrentUser();
+      console.debug('当前用户信息:', currentUserInfo);
       
-      // 计算耗时
-      const timeElapsed = Date.now() - startTime;
-      logger.debug(`所有用户统计数据请求完成，耗时: ${timeElapsed}ms`);
+      // 检查是否有有效的用户ID
+      const userId = currentUserInfo?.id || currentUserInfo?._id || '';
+      if (!userId) {
+        console.error('刷新用户数据失败: 无法获取有效的用户ID');
+        wx.showToast({
+          title: '获取用户信息失败',
+          icon: 'none'
+        });
+        return;
+      }
       
-      // 检查每个请求的结果，记录失败的请求
-      const apiNames = ['帖子数', '获赞数', '关注/粉丝数', 'Token数'];
-      let successCount = 0;
-      
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          successCount++;
-          logger.debug(`获取${apiNames[index]}成功: ${result.value}`);
-        } else if (result.status === 'rejected') {
-          logger.error(`获取${apiNames[index]}失败:`, result.reason);
-        }
+      // 设置加载状态
+      wx.showLoading({
+        title: '加载中...'
       });
       
-      // 记录成功率
-      logger.debug(`用户数据刷新完成，成功率: ${successCount}/${results.length}`);
-      
-      // 记录最终数据
-      const finalData = {
-        postCount: this.data.postCount,
-        likeCount: this.data.likeCount,
-        followedCount: this.data.followedCount,
-        followerCount: this.data.followerCount,
-        tokenCount: this.data.tokenCount
-      };
-      
-      logger.debug('用户数据刷新结果:', JSON.stringify(finalData));
-      
-      // 判断是否需要重试失败的请求（当前简化处理，不进行重试）
-      if (successCount < results.length) {
-        logger.warn(`部分数据获取失败(${results.length - successCount}/${results.length})，不进行重试`);
+      // 并行获取用户的各项数据
+      try {
+        await Promise.all([
+          this.getUserPostsCount(),         // 获取发帖数
+          this.getUserTotalLikes(),         // 获取获赞数
+          this.getUserFollowCounts(),       // 获取关注/粉丝数
+          this.getUserTokenCount()          // 获取Token数量
+        ]);
+        
+        console.debug('用户数据刷新成功');
+      } catch (apiError) {
+        console.error('API请求失败:', apiError);
+        // 显示错误但继续运行
+        wx.showToast({
+          title: '部分数据加载失败',
+          icon: 'none'
+        });
       }
-    } catch (err) {
-      logger.error('刷新用户数据失败:', err);
+    } catch (error) {
+      console.error('刷新用户数据时发生错误:', error);
+      wx.showToast({
+        title: '数据加载失败',
+        icon: 'none'
+      });
     } finally {
       wx.hideLoading();
     }
@@ -585,63 +541,86 @@ Page({
   async getUserTokenCount() {
     try {
       if (!this.data.userInfo) {
-        logger.warn('获取用户Token数失败: 用户信息不存在');
+        console.debug('获取用户Token数失败: 用户信息不存在');
         return Promise.resolve(0);
       }
       
       const userId = this.data.userInfo.id || this.data.userInfo._id;
       if (!userId) {
-        logger.warn('获取用户Token数失败: 用户ID不存在');
+        console.debug('获取用户Token数失败: 用户ID不存在');
         return Promise.resolve(0);
       }
       
-      logger.debug('获取用户Token数量，用户ID:', userId);
+      console.debug('获取用户Token数量，用户ID:', userId);
       
-      const res = await userAPI.getUserToken(userId);
-      logger.debug('获取用户Token响应:', JSON.stringify(res));
+      const result = await userAPI.getUserToken(userId);
+      console.debug('获取用户Token响应:', JSON.stringify(result));
       
-      if (res) {
-        // 尝试从不同可能的数据结构中提取token值
-        let tokenCount = 0;
-        
-        if (res.token !== undefined) {
-          tokenCount = parseInt(res.token) || 0;
-        } else if (res.tokens !== undefined) {
-          tokenCount = parseInt(res.tokens) || 0;
-        } else if (res.token_count !== undefined) {
-          tokenCount = parseInt(res.token_count) || 0;
-        } else if (res.data && res.data.token !== undefined) {
-          tokenCount = parseInt(res.data.token) || 0;
-        } else if (res.data && res.data.tokens !== undefined) {
-          tokenCount = parseInt(res.data.tokens) || 0;
-        } else if (typeof res === 'number') {
-          // 如果直接返回数字
-          tokenCount = res;
-        } else if (typeof res === 'string' && !isNaN(parseInt(res))) {
-          // 如果直接返回数字字符串
-          tokenCount = parseInt(res);
-        }
-        
-        logger.debug('用户Token数量解析结果:', tokenCount);
-        
-        this.setData({
-          tokenCount: tokenCount
-        });
-        
-        return Promise.resolve(tokenCount);
-      } else {
-        logger.warn('获取用户Token响应为空');
-        this.setData({
-          tokenCount: 0
-        });
-        return Promise.resolve(0);
-      }
-    } catch (err) {
-      logger.error('获取用户Token数量失败:', err);
+      // 后端标准化响应，result.token应该直接可用
+      const tokenCount = result.token || 0;
+      
+      this.setData({
+        tokenCount: tokenCount
+      });
+      
+      return Promise.resolve(tokenCount);
+    } catch (error) {
+      console.error('获取用户Token失败:', error);
       this.setData({
         tokenCount: 0
       });
+      
       return Promise.resolve(0);
+    }
+  },
+
+  // 尝试手动获取用户信息并更新本地数据
+  async fetchUserInfo() {
+    try {
+      const userInfo = userManager.getCurrentUser();
+      const userId = userInfo?.id || userInfo?._id;
+      
+      if (!userId) {
+        console.error("没有有效的用户ID，无法获取用户信息");
+        return;
+      }
+      
+      console.debug(`尝试获取用户ID=${userId}的信息`);
+      
+      // 显示加载状态
+      wx.showLoading({
+        title: '获取用户信息...',
+        mask: true
+      });
+      
+      // 使用API获取最新用户信息
+      const result = await userAPI.getUserInfo(userId);
+      console.debug("获取到的用户信息:", result);
+      
+      if (result && result.id) {
+        // 更新用户信息
+        userManager.saveUserInfo(result);
+        
+        // 更新页面显示
+        this.setData({
+          userInfo: result,
+          isLoggedIn: true,
+          isLogin: true
+        });
+        
+        // 刷新数据
+        this.refreshUserData();
+        
+        return true;
+      } else {
+        console.warn("获取用户信息成功，但返回的数据不包含用户ID:", result);
+        return false;
+      }
+    } catch (error) {
+      console.error("获取用户信息失败:", error);
+      return false;
+    } finally {
+      wx.hideLoading();
     }
   }
 });

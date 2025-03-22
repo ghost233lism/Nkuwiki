@@ -9,7 +9,10 @@ let needRefresh = false;  // 标记是否需要刷新
 // 在文件顶部引入工具函数和API
 const util = require('../../utils/util');
 const userManager = require('../../utils/user_manager');
-const { postAPI, userAPI, commentAPI } = require('../../utils/api');
+const { postAPI, userAPI, commentAPI, logger } = require('../../utils/api/index');
+
+// 更新带有processAvatarUrl的引用
+const { processAvatarUrl } = require('../../utils/api/index');
 
 Page({
   data: {
@@ -99,82 +102,67 @@ Page({
       wx.stopPullDownRefresh()
     })
   },
-  // 加载帖子 - 返回Promise以便链式调用
-  async loadPosts(refresh = false) {
-    if (this.data.loading || (!refresh && !this.data.hasMore)) return Promise.resolve()
-
-    try {
-      this.setData({ loading: true })
-
-      // 获取当前用户ID
-      const userInfo = userManager.getCurrentUser();
-      const userId = userInfo.id || '';
-      
-      // 使用API接口加载帖子
-      const params = {
-        limit: this.data.pageSize,
-        offset: refresh ? 0 : (this.data.page - 1) * this.data.pageSize,
-        status: 1 // 正常状态的帖子
-      };
-      
-      console.debug('请求参数:', params);
-      
-      // 捕获可能的错误
-      let res;
-      try {
-        res = await postAPI.getPosts(params);
-        console.debug('API返回原始数据:', res);
-      } catch (apiError) {
-        console.error('API调用异常:', apiError);
-        
-        // 返回一个带错误标志但不影响界面显示的空数据
-        res = { 
-          data: [], 
-          success: false, 
-          error: apiError.message || '获取帖子失败'
-        };
-      }
-      
-      // 处理返回的数据
-      let posts = [];
-      if (res) {
-        if (Array.isArray(res)) {
-          // 后端直接返回了帖子数组
-          posts = res;
-          console.debug(`获取帖子成功，数量: ${posts.length}`);
-        } else if (res.data) {
-          // 后端返回了包含data字段的对象
-          posts = res.data || [];
-          console.debug(`获取帖子成功，数量: ${posts.length}`);
-        } else if (!res.error) {
-          // 返回了其他格式但不是错误
-          console.debug('返回的数据格式不符合预期:', res);
-          posts = [];
-        }
-      } else {
-        console.error('请求返回为空');
-        posts = [];
-      }
-      
-      // 处理帖子数据
-      await this.processPostsData(posts, refresh);
-      
-    } catch (err) {
-      console.error('加载帖子失败:', err);
-      this.setData({ 
-        loading: false,
-        loadingFailed: true
-      });
-      
-      wx.showToast({
-        title: '加载帖子失败',
-        icon: 'none'
-      });
-      
-      return Promise.reject(err);
+  // 加载帖子列表
+  loadPosts: function (reset = false) {
+    if (this.data.loading && !reset) {
+      return;
     }
-    
-    return Promise.resolve();
+
+    this.setData({
+      loading: true
+    });
+
+    // 构建查询参数
+    const params = {
+      limit: 10,
+      offset: reset ? 0 : this.data.posts.length,
+      sort_by: this.data.sortBy,
+      category: this.data.selectedCategory === 'all' ? '' : this.data.selectedCategory
+    };
+
+    logger.debug('加载帖子，参数：', params);
+
+    // 使用API加载帖子
+    postAPI.getPosts(params)
+      .then(res => {
+        logger.debug('帖子加载成功:', res);
+        
+        let newPosts = [];
+        // 处理返回数据，兼容多种格式
+        if (Array.isArray(res)) {
+          newPosts = res;
+        } else if (res && Array.isArray(res.data)) {
+          newPosts = res.data;
+        } else if (res && res.posts && Array.isArray(res.posts)) {
+          newPosts = res.posts;
+        } else {
+          logger.warn('无法解析帖子数据格式:', res);
+          newPosts = [];
+        }
+        
+        // 如果是重置，直接替换帖子列表
+        const posts = reset ? newPosts : [...this.data.posts, ...newPosts];
+        
+        this.setData({
+          posts: posts,
+          loading: false,
+          lastPage: newPosts.length < 10,
+          refreshing: false
+        });
+      })
+      .catch(err => {
+        logger.error('加载帖子失败:', err);
+        
+        this.setData({
+          loading: false,
+          refreshing: false
+        });
+        
+        wx.showToast({
+          title: '加载失败，请重试',
+          icon: 'none'
+        });
+      });
   },
   
   // 处理帖子数据(保留的优化函数)
@@ -193,7 +181,7 @@ Page({
       }
       
       // 处理帖子数据
-      const { processAvatarUrl } = require('../../utils/api');
+      const { processAvatarUrl } = require('../../utils/api/index');
       
       // 处理每个帖子的数据，与WXML模板期望的格式保持一致
       const processedPosts = await Promise.all(posts.map(async post => {

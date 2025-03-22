@@ -19,14 +19,14 @@
   <!-- 加载状态 -->
   <view class="loading-container" wx:if="{{loading && notifications.length === 0}}">
     <view class="loading">
-      <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+      <image class="loading-icon" src="/assets/icons/discover/robot.png" mode="aspectFill"></image>
       <text class="loading-text">加载中...</text>
     </view>
   </view>
 
   <!-- 通知为空提示 -->
   <view class="empty-container" wx:if="{{!loading && notifications.length === 0}}">
-    <image class="empty-icon" src="/assets/icons/empty-notification.png" mode="aspectFill"></image>
+    <image class="empty-icon" src="/assets/icons/profile/notification.png" mode="aspectFill"></image>
     <text class="empty-text">暂无通知消息</text>
   </view>
 
@@ -43,12 +43,10 @@
       <!-- 左侧图标 -->
       <view class="notification-icon">
         <view class="icon-bg {{item.type}}">
-          <image class="icon" src="{{
-            item.type === 'like' ? '/assets/icons/like-fill.png' : 
-            item.type === 'comment' ? '/assets/icons/comment-fill.png' : 
-            item.type === 'follow' ? '/assets/icons/user-fill.png' : 
-            '/assets/icons/notification-fill.png'
-          }}" mode="aspectFill"></image>
+          <image class="icon" wx:if="{{item.type === 'like'}}" src="/assets/icons/index/liked.png" mode="aspectFill"></image>
+          <image class="icon" wx:elif="{{item.type === 'comment'}}" src="/assets/icons/index/comment.png" mode="aspectFill"></image>
+          <image class="icon" wx:elif="{{item.type === 'follow'}}" src="/assets/icons/default-avatar.png" mode="aspectFill"></image>
+          <image class="icon" wx:else src="/assets/icons/profile/notification.png" mode="aspectFill"></image>
         </view>
       </view>
       
@@ -88,7 +86,7 @@
   <!-- 底部操作区 -->
   <view class="bottom-action">
     <button class="mark-all-read-btn" bindtap="markAllAsRead" disabled="{{unreadCount === 0}}">
-      <image class="btn-icon" src="/assets/icons/read.png" mode="aspectFill"></image>
+      <image class="btn-icon" src="/assets/icons/search/token.png" mode="aspectFill"></image>
       <text>全部标记为已读</text>
     </button>
   </view>

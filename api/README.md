@@ -18,7 +18,7 @@
 
 ```javascript
 // 引入API工具
-const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api');
+const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api/index');
 
 // 示例：获取帖子列表
 async function fetchPosts() {

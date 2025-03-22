@@ -39,8 +39,8 @@
 项目使用 `utils/api.js` 文件封装了所有后端API调用，在页面中导入即可使用：
 
 ```javascript
-// 引入API工具
-const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api');
+// 引入API模块
+const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api/index');
 ```
 
 ### 示例：加载帖子列表

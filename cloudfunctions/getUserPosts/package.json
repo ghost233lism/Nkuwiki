@@ -1,9 +1,0 @@
-{
-  "name": "get-userposts",
-  "version": "1.0.0",
-  "description": "获取用户发布的帖子数量和列表",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-} 

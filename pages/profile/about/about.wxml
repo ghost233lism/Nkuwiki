@@ -7,7 +7,7 @@
   <!-- 加载状态 -->
   <view class="loading-container" wx:if="{{loading}}">
     <view class="loading">
-      <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+      <image class="loading-icon" src="/assets/icons/discover/robot.png" mode="aspectFill"></image>
       <text class="loading-text">加载中...</text>
     </view>
   </view>
@@ -62,25 +62,25 @@
       <view class="section-title">联系我们</view>
       <view class="contact-list">
         <view class="contact-item" wx:if="{{platformInfo.email}}" bindtap="copyContact" data-type="email">
-          <image class="contact-icon" src="/assets/icons/email.png" mode="aspectFill"></image>
+          <image class="contact-icon" src="/assets/icons/index/message.png" mode="aspectFill"></image>
           <view class="contact-info">{{platformInfo.email}}</view>
           <view class="copy-hint">点击复制</view>
         </view>
         
         <view class="contact-item" wx:if="{{platformInfo.wechat}}" bindtap="copyContact" data-type="wechat">
-          <image class="contact-icon" src="/assets/icons/wechat.png" mode="aspectFill"></image>
+          <image class="contact-icon" src="/assets/icons/discover/message.png" mode="aspectFill"></image>
           <view class="contact-info">{{platformInfo.wechat}}</view>
           <view class="copy-hint">点击复制</view>
         </view>
         
         <view class="contact-item" wx:if="{{platformInfo.github}}" bindtap="copyContact" data-type="github">
-          <image class="contact-icon" src="/assets/icons/github.png" mode="aspectFill"></image>
+          <image class="contact-icon" src="/assets/icons/discover/code.png" mode="aspectFill"></image>
           <view class="contact-info">{{platformInfo.github}}</view>
           <view class="copy-hint">点击复制</view>
         </view>
         
         <view class="contact-item" wx:if="{{platformInfo.website}}">
-          <image class="contact-icon" src="/assets/icons/website.png" mode="aspectFill"></image>
+          <image class="contact-icon" src="/assets/icons/discover/book.png" mode="aspectFill"></image>
           <view class="contact-info">{{platformInfo.website}}</view>
         </view>
       </view>
@@ -110,7 +110,7 @@
     <view class="content-section" wx:if="{{activeTab === 'agreement'}}">
       <block wx:if="{{!agreement.content}}">
         <view class="loading">
-          <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+          <image class="loading-icon" src="/assets/icons/discover/robot.png" mode="aspectFill"></image>
           <text class="loading-text">加载中...</text>
         </view>
       </block>
@@ -124,7 +124,7 @@
     <view class="content-section" wx:if="{{activeTab === 'privacy'}}">
       <block wx:if="{{!privacy.content}}">
         <view class="loading">
-          <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+          <image class="loading-icon" src="/assets/icons/discover/robot.png" mode="aspectFill"></image>
           <text class="loading-text">加载中...</text>
         </view>
       </block>

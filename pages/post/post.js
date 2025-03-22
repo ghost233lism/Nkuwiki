@@ -451,7 +451,7 @@ Page({
         console.debug('API数据准备完成，准备发送请求');
         
         // 调用API发布帖子
-        const { postAPI } = require('../../utils/api');
+        const { postAPI } = require('../../utils/api/index');
         const res = await postAPI.createPost(postData);
         
         console.debug('API调用成功:', res);
@@ -491,7 +491,7 @@ Page({
       
       console.debug('无图片帖子，直接使用API');
       
-      const { postAPI } = require('../../utils/api');
+      const { postAPI } = require('../../utils/api/index');
       postAPI.createPost(postData)
         .then(res => {
           console.debug('无图片发帖成功:', res);

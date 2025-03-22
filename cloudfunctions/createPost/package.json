@@ -1,9 +1,0 @@
-{
-  "name": "create-post",
-  "version": "1.0.0",
-  "description": "Create new post with likes and favorites support",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

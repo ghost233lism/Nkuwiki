@@ -100,7 +100,7 @@
   <!-- 加载中 -->
   <view class="loading-container" wx:if="{{loadingFeedbacks}}">
     <view class="loading">
-      <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+      <image class="loading-icon" src="/assets/icons/discover/robot.png" mode="aspectFill"></image>
       <text class="loading-text">加载中...</text>
     </view>
   </view>

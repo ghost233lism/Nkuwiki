@@ -3,7 +3,7 @@
   <!-- 顶部导航栏 -->
   <view class="header">
     <text class="title">我的</text>
-    <image class="setting-icon" src="/assets/icons/settings.png" bindtap="goToSettings"></image>
+    <image class="setting-icon" src="/assets/icons/profile/settings.png" bindtap="goToSettings"></image>
   </view>
 
   <!-- 用户信息区域 -->
@@ -61,37 +61,37 @@
   <view class="feature-icons">
     <view class="icon-item" bindtap="viewCollections">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/star.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/star.png"></image>
       </view>
       <text class="icon-text">我的收藏</text>
     </view>
     <view class="icon-item" bindtap="viewHistory">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/history.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/history.png"></image>
       </view>
       <text class="icon-text">浏览历史</text>
     </view>
     <view class="icon-item" bindtap="viewComments">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/comment.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/comment.png"></image>
       </view>
       <text class="icon-text">我的评论</text>
     </view>
     <view class="icon-item" bindtap="viewLiked">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/like.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/like.png"></image>
       </view>
       <text class="icon-text">我的点赞</text>
     </view>
     <view class="icon-item" bindtap="viewDrafts">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/draft.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/draft.png"></image>
       </view>
       <text class="icon-text">草稿箱</text>
     </view>
     <view class="icon-item" bindtap="goToFeedback">
       <view class="icon-circle">
-        <image class="feature-icon" src="/assets/icons/feedback.png"></image>
+        <image class="feature-icon" src="/assets/icons/profile/feedback.png"></image>
       </view>
       <text class="icon-text">意见反馈</text>
     </view>
@@ -100,24 +100,24 @@
   <!-- 设置菜单区域 -->
   <view class="settings-menu">
     <view class="menu-item" bindtap="goToNotifications">
-      <image class="menu-icon" src="/assets/icons/notification.png"></image>
+      <image class="menu-icon" src="/assets/icons/profile/notification.png"></image>
       <text class="menu-text">消息通知</text>
-      <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
+      <image class="arrow-icon" src="/assets/icons/profile/arrow-right.png"></image>
     </view>
     <view class="menu-item" bindtap="clearCache">
-      <image class="menu-icon" src="/assets/icons/clear.png"></image>
+      <image class="menu-icon" src="/assets/icons/profile/clear.png"></image>
       <text class="menu-text">清除缓存</text>
-      <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
+      <image class="arrow-icon" src="/assets/icons/profile/arrow-right.png"></image>
     </view>
     <view class="menu-item" bindtap="goToAboutUs">
-      <image class="menu-icon" src="/assets/icons/about.png"></image>
+      <image class="menu-icon" src="/assets/icons/profile/about.png"></image>
       <text class="menu-text">关于我们</text>
-      <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
+      <image class="arrow-icon" src="/assets/icons/profile/arrow-right.png"></image>
     </view>
     <view class="menu-item" bindtap="logout" wx:if="{{isLoggedIn}}">
-      <image class="menu-icon" src="/assets/icons/logout.png"></image>
+      <image class="menu-icon" src="/assets/icons/profile/logout.png"></image>
       <text class="menu-text">退出登录</text>
-      <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
+      <image class="arrow-icon" src="/assets/icons/profile/arrow-right.png"></image>
     </view>
   </view>
 </view>

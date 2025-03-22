@@ -1,5 +1,5 @@
 // 引入API工具
-const { userAPI, logger } = require('../../utils/api');
+const { userAPI, logger } = require('../../utils/api/index');
 const userManager = require('../../utils/user_manager');
 
 Page({

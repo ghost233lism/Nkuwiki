@@ -3,19 +3,87 @@ const userManager = require('./utils/user_manager')
 
 App({
   onLaunch() {
+    // 获取系统信息，设置全局数据
+    const systemInfo = wx.getSystemInfoSync();
+    
+    // 初始化全局数据
+    this.globalData = {
+      systemInfo,
+      userInfo: null,
+      hasLogin: false,
+      config: {
+        services: {
+          app: {
+            base_url: 'https://nkuwiki.com',  // 默认服务器地址
+            env: 'production'  // 默认环境
+          }
+        }
+      }
+    };
+    
+    // 检查版本兼容性
+    this.checkCompatibility(systemInfo);
+    
     // 初始化云开发环境
     if (wx.cloud) {
       wx.cloud.init({
-        traceUser: true,
-        env: 'nkuwiki-0g6bkdy9e8455d93'
-      })
+        env: 'nkuwiki-env',
+        traceUser: true
+      });
     }
+    
+    // 日志配置
+    const logger = wx.getRealtimeLogManager ? wx.getRealtimeLogManager() : console;
+    this.logger = logger;
+    
+    logger.info('应用启动，系统信息：', systemInfo.platform, systemInfo.SDKVersion);
 
     // 初始化用户信息
     this.initUserInfo()
 
     // 加载服务器配置
     this.loadServerConfig()
+  },
+
+  // 检查版本兼容性
+  checkCompatibility(systemInfo) {
+    const minVersion = '2.10.4'; // 最低要求的基础库版本
+    
+    // 检查基础库版本
+    if (this.compareVersion(systemInfo.SDKVersion, minVersion) < 0) {
+      // 提示用户更新微信版本
+      wx.showModal({
+        title: '提示',
+        content: `当前微信版本过低，请升级到最新微信版本后重试。当前版本:${systemInfo.SDKVersion}，需要:${minVersion}`,
+        showCancel: false
+      });
+    }
+  },
+  
+  // 版本号比较函数
+  compareVersion(v1, v2) {
+    v1 = v1.split('.');
+    v2 = v2.split('.');
+    const len = Math.max(v1.length, v2.length);
+    
+    while (v1.length < len) {
+      v1.push('0');
+    }
+    while (v2.length < len) {
+      v2.push('0');
+    }
+    
+    for (let i = 0; i < len; i++) {
+      const num1 = parseInt(v1[i]);
+      const num2 = parseInt(v2[i]);
+      
+      if (num1 > num2) {
+        return 1;
+      } else if (num1 < num2) {
+        return -1;
+      }
+    }
+    return 0;
   },
 
   // 初始化用户信息
@@ -155,23 +223,7 @@ App({
 
   globalData: {
     userInfo: null,
-    needRefreshIndexPosts: false,
-    config: {
-      services: {
-        app: {
-          base_url: 'https://nkuwiki.com',
-          backup_domains: []
-        }
-      },
-      features: {
-        debug: false,
-        offline_mode: false
-      },
-      api: {
-        timeout: 10000,
-        retry_count: 1
-      }
-    },
+    hasLogin: false,
     systemInfo: null
   }
 })

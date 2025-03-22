@@ -1,4 +1,4 @@
-const { notificationAPI, logger } = require('../../utils/api');
+const { notificationAPI, logger } = require('../../utils/api/index');
 const userManager = require('../../utils/user_manager');
 
 Page({
@@ -73,7 +73,22 @@ Page({
     
     this.setData({ loading: true });
     
-    const userId = this.data.userId;
+    // 再次检查确保有用户ID
+    const userInfo = userManager.getCurrentUser();
+    const userId = this.data.userId || userInfo.id || userInfo._id;
+    
+    if (!userId) {
+      logger.warn('无法加载通知：用户ID不存在');
+      this.setData({ loading: false });
+      wx.showToast({
+        title: '用户信息不完整',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    logger.debug(`准备加载用户[${userId}]的通知列表`);
+    
     const offset = this.data.currentPage * this.data.pageSize;
     const limit = this.data.pageSize;
     
@@ -88,9 +103,15 @@ Page({
       params.type = this.data.selectedType;
     }
     
+    wx.showLoading({
+      title: '加载中...',
+      mask: true
+    });
+    
     // 调用API获取通知
     notificationAPI.getUserNotifications(userId, params)
       .then(res => {
+        wx.hideLoading();
         logger.debug('获取用户通知成功:', res);
         
         // 处理返回数据
@@ -112,7 +133,9 @@ Page({
         });
       })
       .catch(err => {
+        wx.hideLoading();
         logger.error('获取用户通知失败:', err);
+        
         this.setData({
           loading: false
         });
