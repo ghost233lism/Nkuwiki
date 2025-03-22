@@ -36,11 +36,15 @@ const logger = {
   }
 };
 
+// 获取开发环境
+const env = __wxConfig.envVersion;
+const isDev = env === 'develop' || env === 'trial';
+
 // 基础配置
 const API = {
-  // 基础URL
-  BASE_URL: getApp().globalData.config.services.app.base_url || 'https://nkuwiki.com',
-  BACKUP_URL: getApp().globalData.config.services.app.backup_url || 'http://localhost:8000',
+  // 基础URL - 根据环境选择不同URL
+  // 微信小程序必须为HTTPS并且已在微信后台配置的域名
+  BASE_URL: getApp().globalData.config?.services?.app?.base_url || 'https://nkuwiki.com',
   
   // 各模块前缀
   PREFIX: {
@@ -59,8 +63,32 @@ const API = {
   }
 };
 
-// 是否已经降级到备用URL
-let isUsingBackupUrl = false;
+// 服务器已知的域名列表
+const KNOWN_DOMAINS = [
+  'nkuwiki.com',
+  '6e6b-nkuwiki-8gcr16ev16f75c.tcb.qcloud.la'
+];
+
+// 备用域名索引，用于故障转移
+let currentDomainIndex = 0;
+
+/**
+ * 尝试使用下一个可用的域名
+ * @returns {String} 下一个可用的域名地址
+ */
+function switchToNextDomain() {
+  // 切换到下一个域名
+  currentDomainIndex = (currentDomainIndex + 1) % KNOWN_DOMAINS.length;
+  
+  // 构建完整的URL
+  const protocol = 'https://';
+  const domain = KNOWN_DOMAINS[currentDomainIndex];
+  
+  // 记录域名切换
+  logger.warn(`切换到备用域名: ${protocol}${domain}`);
+  
+  return `${protocol}${domain}`;
+}
 
 /**
  * 发起请求
@@ -73,7 +101,7 @@ let isUsingBackupUrl = false;
  */
 function request(url, method = 'GET', data = {}, header = {}, showLoading = true) {
   // 完整URL
-  const baseUrl = isUsingBackupUrl ? API.BACKUP_URL : API.BASE_URL;
+  let baseUrl = API.BASE_URL;
   const fullUrl = baseUrl + url;
   
   // 合并请求头
@@ -154,27 +182,46 @@ function request(url, method = 'GET', data = {}, header = {}, showLoading = true
       fail: (err) => {
         logger.error('请求异常', err);
         
-        // 网络错误或服务器无响应，尝试备用URL
-        if (!isUsingBackupUrl && (err.errMsg.includes('request:fail') || err.errMsg.includes('timeout'))) {
-          isUsingBackupUrl = true;
-          logger.info(`尝试使用备用URL: ${API.BACKUP_URL}`);
+        // 处理域名不在白名单错误
+        if (err.errMsg && err.errMsg.includes('url not in domain list')) {
+          logger.error(`域名[${baseUrl}]未在微信后台配置，请添加到域名白名单`);
+          // 显示提示
+          wx.showModal({
+            title: '访问受限',
+            content: '当前服务器域名未添加到微信白名单，请在开发工具中关闭域名校验或使用合法域名',
+            showCancel: false
+          });
+          reject(err);
+          return;
+        }
+        
+        // 网络错误或服务器无响应，尝试备用域名
+        if (err.errMsg.includes('request:fail') || err.errMsg.includes('timeout')) {
+          // 获取下一个可用域名
+          const nextDomain = switchToNextDomain();
+          logger.info(`尝试切换到备用域名: ${nextDomain}`);
           
-          // 重新发起请求，使用备用URL
+          // 使用新域名重新发起请求
           wx.request({
-            url: API.BACKUP_URL + url,
+            url: `${nextDomain}${url}`,
             method,
             data,
             header: headers,
             success: (res) => {
               if (res.statusCode === API.STATUS.SUCCESS) {
-                logger.info('备用URL请求成功');
+                logger.info('备用域名请求成功');
+                // 更新默认域名
+                API.BASE_URL = nextDomain;
                 resolve(res.data);
               } else {
-                reject(err);
+                const errorMsg = res.data?.detail || res.data?.message || `服务器错误(${res.statusCode})`;
+                reject(new Error(errorMsg));
               }
             },
-            fail: () => {
-              reject(err);
+            fail: (retryErr) => {
+              logger.error('备用域名请求失败', retryErr);
+              // 如果重试也失败，才最终报错
+              reject(new Error('网络连接失败，请检查网络设置或稍后重试'));
             },
             complete: () => {
               if (showLoading) {
@@ -389,7 +436,7 @@ const postAPI = {
       ? `${API.PREFIX.WXAPP}/posts/${postId}/favorite`
       : `${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`;
     
-    return request(url, 'POST', { user_id: userId });
+    return request(url, 'POST', { userId });
   },
 
   /**
@@ -399,6 +446,28 @@ const postAPI = {
    */
   getUserFavorites: (userId) => {
     return request(`${API.PREFIX.WXAPP}/users/${userId}/favorites`);
+  },
+  
+  /**
+   * 获取用户点赞的帖子
+   * @param {number} userId - 用户ID
+   * @returns {Promise} - 请求Promise
+   */
+  getUserLikedPosts: (userId) => {
+    return request(`${API.PREFIX.WXAPP}/users/${userId}/liked-posts`);
+  },
+  
+  /**
+   * 获取用户发布的帖子
+   * @param {number|string} userId - 用户ID
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserPosts: (userId, params = {}) => {
+    return request(`${API.PREFIX.WXAPP}/posts`, 'GET', { 
+      ...params,
+      author_id: userId 
+    });
   }
 };
 

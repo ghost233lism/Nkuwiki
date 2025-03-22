@@ -1,4 +1,7 @@
 // 我的帖子页面
+const { postAPI, logger } = require('../../../utils/api');
+const userManager = require('../../../utils/user_manager');
+
 Page({
   data: {
     userAvatar: "",
@@ -12,7 +15,7 @@ Page({
   },
 
   onLoad(options) {
-    console.log('mylike_fav_comment页面onLoad触发')
+    logger.debug('mylike_fav_comment页面onLoad触发')
     this.data.mytype = options.type
     switch (options.type) {
       case 'star' :
@@ -25,73 +28,77 @@ Page({
         this.setData({ mytitle: '点赞' })
         break;
       default :
-        console.log('type is : ',options.type)
+        logger.debug('未知类型: ', options.type)
     }
-    console.log('type is : ',options.type)
+    logger.debug('当前类型: ', options.type)
     this.loadPosts(options.type)
   },
   
   // 加载我的帖子列表
-  async loadPosts(like_fav_comment, refresh = false) {
+  async loadPosts(type, refresh = false) {
     if (this.data.loading) return
     
     try {
       this.setData({ loading: true })
       
       const page = refresh ? 1 : this.data.page
-      const userInfo = wx.getStorageSync('userInfo')
-
-      wx.cloud.database().collection("users").where({
-        openid: userInfo.openid
-      }).get()
-          .then(result => {
-            this.setData({
-              userAvatar: result.data[0].avatarUrl
-            });
-            console.log("获取头像", this.userAvatar);
-          })
+      const userInfo = userManager.getCurrentUser()
       
-      console.log('当前用户信息:', userInfo)
-      
-      const res = await wx.cloud.callFunction({
-        name: 'getUserlike_fav_comment',
-        data: {
-          page,
-          pageSize: this.data.pageSize,
-          // 传入用户ID以确保查询正确
-          openid: userInfo._id || userInfo.openid,
-          type : like_fav_comment
-        }
+      // 设置用户头像
+      this.setData({
+        userAvatar: userInfo.avatarUrl || '/assets/icons/default-avatar.png'
       })
       
-      console.log('云函数返回结果:', res.result)
+      logger.debug('当前用户信息:', userInfo)
       
-      if (res.result && res.result.success) {
+      // 使用新的API接口
+      const userId = userInfo.id
+      let result = { data: [] }
+      
+      if (type === 'star') {
+        // 获取收藏的帖子
+        result = await postAPI.getUserFavorites(userId)
+      } else if (type === 'like') {
+        // 获取点赞的帖子
+        result = await postAPI.getUserLikedPosts(userId)
+      } else if (type === 'comment') {
+        // 获取评论过的帖子 - 暂无专门API，可以后续添加
+        result = { data: [] }
+      }
+      
+      // 如果返回数据符合标准格式，则提取data字段
+      const posts = (result.data && Array.isArray(result.data)) ? result.data : []
+      
+      logger.debug('API返回结果:', posts.length > 0 ? `${posts.length}条数据` : '无数据')
+      
+      if (posts.length > 0) {
         // 处理帖子数据，添加格式化时间
-        const posts = res.result.posts.map(post => {
+        const processedPosts = posts.map(post => {
           return {
             ...post,
-            formattedTime: this.formatTime(post.createTime)
+            formattedTime: this.formatTime(post.create_time || post.update_time)
           }
         })
         
-        console.log('处理后的帖子数据:', posts)
-        
         this.setData({
-          posts: refresh ? posts : [...this.data.posts, ...posts],
+          posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
           page: page + 1,
-          hasMore: posts.length === this.data.pageSize,
+          hasMore: processedPosts.length === this.data.pageSize,
           loading: false
         })
         
-        console.log('更新页面数据完成, 总条数:', this.data.posts.length)
+        logger.debug('更新页面数据完成, 总条数:', this.data.posts.length)
       } else {
-        throw new Error(res.result?.message || '加载失败')
+        this.setData({
+          posts: refresh ? [] : this.data.posts,
+          hasMore: false,
+          loading: false
+        })
       }
     } catch (err) {
-      console.error('加载帖子失败：', err)
+      logger.error('加载帖子失败：', err)
       wx.showToast({
-        title: '加载失败',
+        title: '加载失败，请重试',
         icon: 'none'
       })
       this.setData({ loading: false })
