@@ -55,9 +55,7 @@
         "iconPath": "assets/icons/profile.png",
         "selectedIconPath": "assets/icons/profile-active.png"
       }
-    ],
-    "iconWidth": 16,
-    "iconHeight": 16
+    ]
   },
   "usingComponents": {
     "towxml": "wxcomponents/towxml/towxml"
