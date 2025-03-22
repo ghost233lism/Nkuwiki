@@ -32,7 +32,7 @@ const userAPI = {
 
   /**
    * 获取用户信息
-   * @param {number} userId - 用户ID
+   * @param {number|string} userId - 用户ID
    * @returns {Promise} - 请求Promise
    */
   getUserInfo: (userId) => {
@@ -41,51 +41,42 @@ const userAPI = {
       return Promise.reject(new Error('用户ID为空'));
     }
     
-    logger.debug(`尝试获取用户信息，用户ID=${userId}`);
+    // 处理可能的异常用户ID格式
+    let formattedUserId = userId;
+    
+    // 移除对UUID格式用户ID的截断处理
+    // 确保使用完整的用户ID进行请求
+    logger.debug(`尝试获取用户信息，用户ID=${formattedUserId}`);
     
     return request({
-      url: `${API.PREFIX.WXAPP}/users/${userId}`,
+      url: `${API.PREFIX.WXAPP}/users/${formattedUserId}`,
       method: 'GET',
-      // 增加错误处理
       showError: false,
-      // 增加重试次数
       retryCount: 3,
+      // 在出现404错误时使用备用接口
+      statusCodeCallback: {
+        404: (error) => {
+          logger.warn(`用户ID ${formattedUserId} 不存在，尝试获取当前用户信息`);
+          // 尝试获取当前用户信息作为替代
+          return request({
+            url: `${API.PREFIX.WXAPP}/users/me`,
+            method: 'GET',
+            data: { user_id: formattedUserId },
+            showError: false
+          }).catch(err => {
+            logger.error('获取当前用户信息也失败:', err);
+            return getLocalFallbackUserInfo(formattedUserId);
+          });
+        }
+      },
       // 失败时回退方案
       fail: (err) => {
         logger.error(`获取用户信息失败: ${err.message || err}`);
-        
-        // 提供可用的用户数据
-        const userInfo = wx.getStorageSync('userInfo') || {};
-        if (userInfo && (userInfo.id || userInfo._id)) {
-          logger.debug('使用本地存储的用户信息作为回退');
-          return userInfo;
-        }
-        
-        // 创建一个最小可用的用户数据
-        return {
-          id: userId,
-          _id: userId,
-          nickname: '未知用户',
-          avatar_url: '/assets/icons/default_avatar.png'
-        };
+        return getLocalFallbackUserInfo(formattedUserId);
       }
     }).catch(error => {
       logger.error('获取用户信息出错:', error);
-      
-      // 提供可用的用户数据
-      const userInfo = wx.getStorageSync('userInfo') || {};
-      if (userInfo && (userInfo.id || userInfo._id)) {
-        logger.debug('使用本地存储的用户信息作为回退');
-        return userInfo;
-      }
-      
-      // 创建一个最小可用的用户数据
-      return {
-        id: userId,
-        _id: userId,
-        nickname: '未知用户',
-        avatar_url: '/assets/icons/default_avatar.png'
-      };
+      return getLocalFallbackUserInfo(formattedUserId);
     });
   },
 
@@ -127,6 +118,8 @@ const userAPI = {
         logger.warn('获取关注统计失败: 没有提供用户ID');
         return { followedCount: 0, followerCount: 0, error: '无效的用户ID' };
       }
+      
+      logger.debug(`获取用户关注统计, 用户ID: ${userId}`);
       
       const result = await request({
         url: `${API.PREFIX.WXAPP}/users/${userId}/follow-stats`,
@@ -266,5 +259,27 @@ const userAPI = {
     });
   }
 };
+
+/**
+ * 获取本地存储的备用用户信息
+ * @param {string} userId - 用户ID
+ * @returns {Object} - 用户信息对象
+ */
+function getLocalFallbackUserInfo(userId) {
+  // 尝试从本地存储获取用户信息
+  const userInfo = wx.getStorageSync('userInfo') || {};
+  if (userInfo && (userInfo.id || userInfo._id)) {
+    logger.debug('使用本地存储的用户信息作为回退');
+    return userInfo;
+  }
+  
+  // 创建一个最小可用的用户数据
+  return {
+    id: userId,
+    _id: userId,
+    nickname: '未知用户',
+    avatar_url: '/assets/icons/default_avatar.png'
+  };
+}
 
 module.exports = userAPI; 

@@ -26,10 +26,15 @@ App({
     
     // 初始化云开发环境
     if (wx.cloud) {
-      wx.cloud.init({
-        env: 'nkuwiki-env',
-        traceUser: true
-      });
+      try {
+        wx.cloud.init({
+          env: 'nkuwiki-2gftkp7ze3a27f70',  // 更新为正确的环境ID
+          traceUser: true
+        });
+        console.debug('云开发环境初始化成功');
+      } catch (error) {
+        console.error('云开发环境初始化失败:', error);
+      }
     }
     
     // 日志配置
@@ -167,12 +172,8 @@ App({
         this.globalData.config.services.app.backup_domains = backupDomains;
       }
       
-      // 同步到全局变量，确保其他模块可以及时访问
-      getApp().globalData = {
-        ...getApp().globalData,
-        config: this.globalData.config
-      };
-      
+      // 不要使用getApp()来访问自身，这会导致递归调用
+      // 直接使用this指向当前App实例
       console.debug('服务器配置加载完成:', JSON.stringify(this.globalData.config));
       
       // 运行环境诊断

@@ -374,51 +374,6 @@ Page({
       }
     };
     
-    // 使用云函数作为备用方案，同时尝试API方法
-    const useCloudFunction = async () => {
-      try {
-        console.debug('尝试使用云函数方式发帖');
-        
-        const cloudData = {
-          title: title,
-          content: content,
-          images: processedImages,
-          isPublic: true
-        };
-        
-        console.debug('云函数数据准备完成');
-        
-        const res = await wx.cloud.callFunction({
-          name: 'createPost',
-          data: cloudData
-        });
-        
-        console.debug('云函数调用结果:', res);
-        
-        wx.hideLoading();
-        if (res.result && res.result.code === 0) {
-          // 设置首页需要刷新
-          app.globalData.needRefreshIndexPosts = true;
-          wx.showToast({
-            title: '发布成功',
-            icon: 'success',
-            success: function() {
-              setTimeout(() => {
-                wx.navigateBack();
-              }, 1500);
-            }
-          });
-          return true;
-        } else {
-          console.debug('云函数返回错误:', res.result);
-          return false;
-        }
-      } catch (err) {
-        console.debug('云函数备用方案失败:', err);
-        return false;
-      }
-    };
-    
     // 尝试API方式发帖
     const tryApiPost = async () => {
       try {
@@ -429,6 +384,11 @@ Page({
         
         if (cloudImages.length !== processedImages.length) {
           console.debug('有图片上传失败，API方式可能无法继续');
+          wx.hideLoading();
+          wx.showToast({
+            title: '图片上传失败，请重试',
+            icon: 'none'
+          });
           return false;
         }
         
@@ -445,7 +405,10 @@ Page({
           title: title,
           content: content,
           images: cloudImages, // 使用云存储的图片地址
-          tags: []
+          tags: [],
+          // 添加API文档中需要的字段
+          category_id: null, // 如果有分类系统，应设置对应的分类ID
+          location: '' // 如果需要位置信息，应设置对应的位置
         };
         
         console.debug('API数据准备完成，准备发送请求');
@@ -454,7 +417,18 @@ Page({
         const { postAPI } = require('../../utils/api/index');
         const res = await postAPI.createPost(postData);
         
-        console.debug('API调用成功:', res);
+        console.debug('API调用结果:', res);
+        
+        // 检查返回结果是否包含错误信息
+        if (res && res.success === false) {
+          console.error('发帖API返回错误:', res.error);
+          wx.hideLoading();
+          wx.showToast({
+            title: res.error || '发布失败',
+            icon: 'none'
+          });
+          return false;
+        }
         
         wx.hideLoading();
         // 设置首页需要刷新
@@ -471,6 +445,11 @@ Page({
         return true;
       } catch (err) {
         console.debug('API发帖失败:', err);
+        wx.hideLoading();
+        wx.showToast({
+          title: '发布失败，请稍后重试',
+          icon: 'none'
+        });
         return false;
       }
     };
@@ -486,7 +465,10 @@ Page({
         title: title,
         content: content,
         images: [],
-        tags: []
+        tags: [],
+        // 添加API文档中需要的字段
+        category_id: null, // 如果有分类系统，应设置对应的分类ID
+        location: '' // 如果需要位置信息，应设置对应的位置
       };
       
       console.debug('无图片帖子，直接使用API');
@@ -494,7 +476,19 @@ Page({
       const { postAPI } = require('../../utils/api/index');
       postAPI.createPost(postData)
         .then(res => {
-          console.debug('无图片发帖成功:', res);
+          console.debug('无图片发帖结果:', res);
+          
+          // 检查返回结果是否包含错误信息
+          if (res && res.success === false) {
+            console.error('无图片发帖API返回错误:', res.error);
+            wx.hideLoading();
+            wx.showToast({
+              title: res.error || '发布失败',
+              icon: 'none'
+            });
+            return;
+          }
+          
           wx.hideLoading();
           app.globalData.needRefreshIndexPosts = true;
           wx.showToast({
@@ -508,34 +502,16 @@ Page({
           });
         })
         .catch(err => {
-          console.debug('无图片API发帖失败，尝试云函数:', err);
-          // API失败，尝试云函数
-          useCloudFunction().then(success => {
-            if (!success) {
-              wx.hideLoading();
-              wx.showToast({
-                title: '发布失败，请稍后重试',
-                icon: 'none'
-              });
-            }
+          console.error('无图片API发帖失败:', err);
+          wx.hideLoading();
+          wx.showToast({
+            title: '发布失败，请稍后重试',
+            icon: 'none'
           });
         });
     } else {
-      // 有图片帖子，先尝试API方式上传图片再发帖
-      tryApiPost().then(success => {
-        if (!success) {
-          // API方式失败，尝试云函数
-          useCloudFunction().then(cloudSuccess => {
-            if (!cloudSuccess) {
-              wx.hideLoading();
-              wx.showToast({
-                title: '发布失败，请稍后重试',
-                icon: 'none'
-              });
-            }
-          });
-        }
-      }).catch(err => {
+      // 有图片帖子，尝试API方式上传图片再发帖
+      tryApiPost().catch(err => {
         console.error('发布失败:', err);
         wx.hideLoading();
         wx.showToast({

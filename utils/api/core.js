@@ -2,7 +2,13 @@
 // 封装基础请求功能和日志工具
 
 // 获取全局应用实例
-const app = getApp();
+let app = null; 
+try {
+  app = getApp();
+} catch (error) {
+  console.warn('getApp()调用失败，可能是在App实例化之前');
+}
+
 const debug = wx.getRealtimeLogManager ? wx.getRealtimeLogManager() : null;
 
 // 日志工具
@@ -43,9 +49,18 @@ const isDev = env === 'develop' || env === 'trial';
 
 // 基础配置
 const API = {
-  // 基础URL - 根据环境选择不同URL
-  // 微信小程序必须为HTTPS并且已在微信后台配置的域名
-  BASE_URL: getApp().globalData.config?.services?.app?.base_url || 'https://nkuwiki.com',
+  // 基础URL - 将改为动态获取
+  get BASE_URL() {
+    try {
+      const currentApp = getApp();
+      if (currentApp && currentApp.globalData && currentApp.globalData.config) {
+        return currentApp.globalData.config.services.app.base_url || 'https://nkuwiki.com';
+      }
+    } catch (error) {
+      logger.warn('获取BASE_URL失败，使用默认值', error);
+    }
+    return 'https://nkuwiki.com';
+  },
   
   // 各模块前缀
   PREFIX: {
@@ -133,7 +148,9 @@ const request = (options = {}) => {
         
         for (const key in options.params) {
           if (options.params[key] !== undefined && options.params[key] !== null) {
-            queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(options.params[key])}`);
+            // 确保不会截断用户ID等参数，使用完整的参数值
+            const paramValue = encodeURIComponent(options.params[key]);
+            queryParams.push(`${encodeURIComponent(key)}=${paramValue}`);
           }
         }
         
@@ -262,6 +279,27 @@ const request = (options = {}) => {
           } else {
             // 状态码异常
             logger.warn(`请求状态码异常: ${res.statusCode}`);
+            
+            // 检查是否有statusCode特定回调
+            if (options.statusCodeCallback && typeof options.statusCodeCallback[res.statusCode] === 'function') {
+              logger.debug(`执行状态码${res.statusCode}特定回调处理`);
+              try {
+                const callbackResult = options.statusCodeCallback[res.statusCode](
+                  new Error(`网络请求错误 (${res.statusCode})`)
+                );
+                
+                if (callbackResult instanceof Promise) {
+                  callbackResult.then(resolve).catch(reject);
+                } else if (callbackResult !== undefined) {
+                  resolve(callbackResult);
+                } else {
+                  reject(new Error(`网络请求错误 (${res.statusCode})`));
+                }
+                return;
+              } catch (callbackErr) {
+                logger.error(`状态码回调处理出错: ${callbackErr.message}`, callbackErr);
+              }
+            }
             
             // 判断是否需要重试
             const retryableStatusCodes = [408, 429, 500, 502, 503, 504];

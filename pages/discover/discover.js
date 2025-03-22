@@ -33,19 +33,58 @@ Page({
 
   // 加载帖子列表
   async loadPosts(refresh = false) {
-    if (this.data.loading || (!refresh && !this.data.hasMore)) return
-
+    if (this.data.loading) return
+    
+    this.setData({ loading: true })
+    
     try {
-      this.setData({ loading: true })
-
-      const db = wx.cloud.database()
-      const result = await db.collection('posts')
-        .orderBy('createTime', 'desc')
-        .skip((this.data.page - 1) * this.data.pageSize)
-        .limit(this.data.pageSize)
-        .get()
-
-      const posts = result.data
+      // 使用HTTP API代替云数据库调用
+      const api = require('../../utils/api/index');
+      const result = await api.postAPI.getPosts({
+        limit: this.data.pageSize,
+        offset: (this.data.page - 1) * this.data.pageSize,
+        order_by: 'update_time DESC'
+      });
+      
+      // 转换数据格式以兼容原有结构
+      const posts = Array.isArray(result) ? result.map(post => ({
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        images: post.images || [],
+        author: {
+          id: post.user_id,
+          name: post.user_name || '用户',
+          avatar: post.user_avatar || '/assets/icons/default_avatar.png'
+        },
+        stats: {
+          views: post.view_count || 0,
+          likes: post.like_count || 0,
+          comments: post.comment_count || 0
+        },
+        createTime: post.create_time,
+        userInteraction: {
+          isLiked: false // 默认未点赞
+        }
+      })) : [];
+      
+      // 安全获取当前用户ID并设置点赞状态
+      try {
+        const app = getApp();
+        const currentUser = app && app.getUserInfo ? app.getUserInfo() : null;
+        const userId = currentUser && currentUser.id;
+        
+        if (userId) {
+          // 设置点赞状态
+          posts.forEach(post => {
+            if (Array.isArray(post.liked_users)) {
+              post.userInteraction.isLiked = post.liked_users.includes(userId);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('获取用户信息失败，默认显示未点赞状态:', e);
+      }
 
       this.setData({
         posts: refresh ? posts : [...this.data.posts, ...posts],
@@ -75,30 +114,53 @@ Page({
   async handleLike(e) {
     const { id, index } = e.currentTarget.dataset
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'posts',
-        data: {
-          type: 'toggleLike',
-          postId: id
-        }
-      })
-
-      if (res.result.success) {
+      // 使用HTTP API代替云函数调用
+      const api = require('../../utils/api/index');
+      
+      // 安全获取当前用户
+      const app = getApp();
+      if (!app) {
+        console.error('获取App实例失败');
+        wx.showToast({
+          title: '系统错误',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      const currentUser = app.getUserInfo ? app.getUserInfo() : null;
+      if (!currentUser || !currentUser.id) {
+        wx.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      const res = await api.postAPI.likePost(id, currentUser.id);
+      
+      if (res && res.success !== false) {
         const key = `posts[${index}].stats.likes`
         const keyLiked = `posts[${index}].userInteraction.isLiked`
-        const delta = res.result.hasLiked ? 1 : -1
+        const isLiked = res.liked || res.is_favorited;
+        const delta = isLiked ? 1 : -1;
 
         this.setData({
           [key]: this.data.posts[index].stats.likes + delta,
-          [keyLiked]: res.result.hasLiked
-        })
+          [keyLiked]: isLiked
+        });
+        
+        wx.showToast({
+          title: isLiked ? '点赞成功' : '已取消点赞',
+          icon: 'success'
+        });
       }
     } catch (err) {
-      console.error('点赞失败：', err)
+      console.error('点赞失败：', err);
       wx.showToast({
         title: '操作失败',
         icon: 'none'
-      })
+      });
     }
   }
 }) 

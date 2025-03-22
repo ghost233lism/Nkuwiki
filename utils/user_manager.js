@@ -170,7 +170,7 @@ const userManager = {
     // 记录用户信息验证过程，帮助调试
     console.debug('获取API用户信息, 原始数据:', JSON.stringify(userInfo));
     
-    // 确保有用户ID
+    // 确保有用户ID，保持原始ID格式不变
     const userId = userInfo.id || userInfo._id || userInfo.user_id || '';
     console.debug('解析得到的用户ID:', userId);
     
@@ -180,11 +180,11 @@ const userManager = {
     
     // 创建包含多个字段的对象，确保后端可以识别
     const apiInfo = {
-      id: userId || `temp_${Date.now()}`,  // 确保有ID
-      _id: userId || `temp_${Date.now()}`,  // 同时添加_id (新增)
+      id: userId || `temp_${Date.now()}`,  // 确保有ID，不截断
+      _id: userId || `temp_${Date.now()}`,  // 同样不截断
       user_id: userId || `temp_${Date.now()}`,
       wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${Date.now()}`,
-      openid: userInfo.openid || '',  // 确保openid字段 (新增)
+      openid: userInfo.openid || '',  // 确保openid字段
       author_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       author_avatar: userInfo.avatar_url || userInfo.avatarUrl || DEFAULT_AVATAR,

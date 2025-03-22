@@ -224,7 +224,7 @@ Page({
       const result = await userAPI.getUserFollowStats(userId);
       console.debug('获取用户关注统计响应:', result);
       
-      // 后端标准化响应，关注和粉丝数应该直接可用
+      // 后端标准响应，关注和粉丝数应该直接可用
       const followedCount = result.followedCount || 0;
       const followerCount = result.followerCount || 0;
       
@@ -578,7 +578,8 @@ Page({
   async fetchUserInfo() {
     try {
       const userInfo = userManager.getCurrentUser();
-      const userId = userInfo?.id || userInfo?._id;
+      // 确保使用完整的用户ID，不做任何截断或修改
+      const userId = userInfo?.id || userInfo?._id || userInfo?.user_id;
       
       if (!userId) {
         console.error("没有有效的用户ID，无法获取用户信息");

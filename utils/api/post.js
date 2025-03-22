@@ -10,10 +10,61 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   createPost: (postData) => {
-    return request({
-      url: `${API.PREFIX.WXAPP}/posts`,
-      method: 'POST',
-      data: postData
+    // 确保只发送后端支持的字段，并根据API文档调整
+    const safePostData = {
+      user_id: postData.user_id,
+      title: postData.title,
+      content: postData.content,
+      images: postData.images,
+      tags: postData.tags || [],
+      // 添加API文档中提到的可选字段
+      category_id: postData.category_id || null,
+      location: postData.location || '',
+      
+      // 保留这些字段，因为后端可能需要，虽然API文档未提及
+      wxapp_id: postData.wxapp_id,
+      author_name: postData.author_name,
+      author_avatar: postData.author_avatar,
+      is_public: postData.is_public !== undefined ? postData.is_public : true,
+      allow_comment: postData.allow_comment !== undefined ? postData.allow_comment : true
+    };
+    
+    logger.debug('准备创建帖子，数据:', JSON.stringify(safePostData));
+    
+    // 包装请求，添加错误处理
+    return new Promise((resolve, reject) => {
+      request({
+        url: `${API.PREFIX.WXAPP}/posts`,
+        method: 'POST',
+        data: safePostData,
+        showError: false
+      })
+      .then(result => {
+        logger.debug('创建帖子成功:', JSON.stringify(result));
+        resolve(result);
+      })
+      .catch(error => {
+        logger.error('创建帖子失败:', error);
+        
+        // 尝试检测是否是字段不匹配问题
+        const errorStr = error.message || JSON.stringify(error);
+        if (errorStr.includes('Unknown column') || errorStr.includes('42S22')) {
+          logger.warn('检测到字段不匹配错误，可能是数据库结构与前端不一致');
+          // 返回一个带有错误信息的对象而不是抛出异常
+          resolve({
+            success: false,
+            error: '数据库字段不匹配，请联系管理员更新数据库结构',
+            details: errorStr
+          });
+        } else {
+          // 其他错误，也返回对象而不是异常
+          resolve({
+            success: false,
+            error: '创建帖子失败',
+            details: errorStr
+          });
+        }
+      });
     });
   },
 
