@@ -33,7 +33,7 @@
       <view class="toolbar-item">/</view>
       <view class="toolbar-item">@</view>
       <view class="toolbar-item wiki-button {{isWikiEnabled ? 'active' : ''}}" bindtap="toggleWiki">
-        <image src="/assets/icons/wiki.png" mode="aspectFit"></image>
+        <image src="/assets/icons/search.png" mode="aspectFit"></image>
         <text>Wiki润色</text>
       </view>
     </view>
@@ -107,12 +107,12 @@
   <view class="post-footer">
     <view class="visibility-options">
       <view class="visibility-option-pill {{isPublic ? 'active' : ''}}" bindtap="togglePublic">
-        <image src="/assets/icons/eye.png"></image>
+        <image src="/assets/icons/search.png"></image>
         <text>公开</text>
       </view>
       
       <view class="visibility-option-pill {{allowComment ? 'active' : ''}}" bindtap="toggleComment">
-        <image src="/assets/icons/comment.png"></image>
+        <image src="/assets/icons/search-active.png"></image>
         <text>允许评论</text>
       </view>
       

@@ -53,7 +53,7 @@
         </view>
 
         <!-- 内容部分 -->
-        <view class="post-content-wrapper" bindtap="goToDetail" data-post-id="{{item._id}}">
+        <view class="post-content-wrapper" bindtap="goToDetail" data-id="{{item._id}}">
           <!-- 标题部分 -->
           <text class="post-title" wx:if="{{item.title}}">{{item.title}}</text>
 
@@ -135,7 +135,7 @@
           </view>
 
           <view class="action-item" bindtap="showCommentInput" data-id="{{item._id}}" data-index="{{index}}">
-            <image class="action-icon" src="/assets/icons/index/comment.png" mode="aspectFit"></image>
+            <image class="action-icon" src="/assets/icons/search-active.png" mode="aspectFit"></image>
             <text>{{item.commentCount || 0}}</text>
           </view>
 

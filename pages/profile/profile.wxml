@@ -71,7 +71,7 @@
         <text>浏览历史</text>
       </view>
       <view class="function-item" bindtap="onFunctionTap" data-type="comment">
-        <image src="/assets/icons/profile/comment.png" />
+        <image src="/assets/icons/search-active.png" />
         <text>我的评论</text>
       </view>
       <view class="function-item" bindtap="onFunctionTap" data-type="like">

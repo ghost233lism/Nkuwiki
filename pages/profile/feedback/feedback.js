@@ -114,7 +114,12 @@ Page({
       contact: this.data.contact,
       images: this.data.images,
       createTime: new Date().toISOString(),
-      deviceInfo: wx.getSystemInfoSync()
+      deviceInfo: {
+        ...wx.getDeviceInfo(),
+        ...wx.getAppBaseInfo(),
+        ...wx.getSystemSetting(),
+        windowInfo: wx.getWindowInfo()
+      }
     };
 
     // 保存反馈

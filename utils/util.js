@@ -97,7 +97,128 @@ function formatRelativeTime(timestamp) {
   }
 }
 
+/**
+ * 简单深拷贝对象
+ * @param {Object} obj - 要拷贝的对象
+ * @returns {Object} 拷贝后的新对象
+ */
+function deepClone(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch (e) {
+    console.error('深拷贝对象失败:', e);
+    return {};
+  }
+}
+
+/**
+ * 生成随机字符串
+ * @param {number} length - 字符串长度
+ * @returns {string} 随机字符串
+ */
+function randomString(length = 8) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  return result;
+}
+
+/**
+ * 节流函数
+ * @param {Function} fn - 要执行的函数
+ * @param {number} delay - 延迟时间(ms)
+ * @returns {Function} 节流后的函数
+ */
+function throttle(fn, delay = 500) {
+  let timer = null;
+  let startTime = Date.now();
+  
+  return function(...args) {
+    const curTime = Date.now();
+    const remaining = delay - (curTime - startTime);
+    const context = this;
+    
+    clearTimeout(timer);
+    
+    if (remaining <= 0) {
+      fn.apply(context, args);
+      startTime = Date.now();
+    } else {
+      timer = setTimeout(() => {
+        fn.apply(context, args);
+      }, remaining);
+    }
+  };
+}
+
+/**
+ * 防抖函数
+ * @param {Function} fn - 要执行的函数
+ * @param {number} delay - 延迟时间(ms)
+ * @returns {Function} 防抖后的函数
+ */
+function debounce(fn, delay = 500) {
+  let timer = null;
+  
+  return function(...args) {
+    const context = this;
+    
+    clearTimeout(timer);
+    
+    timer = setTimeout(() => {
+      fn.apply(context, args);
+    }, delay);
+  };
+}
+
+/**
+ * 检查并更新小程序
+ */
+function checkForUpdate() {
+  if (wx.canIUse('getUpdateManager')) {
+    const updateManager = wx.getUpdateManager();
+    
+    updateManager.onCheckForUpdate(function(res) {
+      if (res.hasUpdate) {
+        updateManager.onUpdateReady(function() {
+          wx.showModal({
+            title: '更新提示',
+            content: '新版本已经准备好，重启应用以使用新版本',
+            showCancel: false,
+            success: function(res) {
+              if (res.confirm) {
+                updateManager.applyUpdate();
+              }
+            }
+          });
+        });
+        
+        updateManager.onUpdateFailed(function() {
+          wx.showModal({
+            title: '更新提示',
+            content: '新版本下载失败，请检查网络后重试',
+            showCancel: false
+          });
+        });
+      }
+    });
+  }
+}
+
 module.exports = {
   formatTime,
-  formatRelativeTime
+  formatRelativeTime,
+  deepClone,
+  randomString,
+  throttle,
+  debounce,
+  checkForUpdate
 }

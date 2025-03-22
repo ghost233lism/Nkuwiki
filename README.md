@@ -1,151 +1,131 @@
-# 微信小程序开发指南
+# 南开百科小程序
 
-## 开发环境准备
+南开百科是一个知识共享平台，致力于构建南开知识共同体，践行"开源·共治·普惠"三位一体价值体系。
 
-1. 下载安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
+## 项目概述
 
-2. 填写 AppID
+- 微信小程序端代码
+- 与后端API交互获取数据
+- 提供用户互动、内容浏览、知识检索等功能
 
-## 项目结构说明
+## 技术栈
 
-```plain text
-project
-│
-├── pages/ # 页面文件夹
-│   ├── index/ # 首页
-│   │   ├── index.js # 页面逻辑
-│   │   ├── index.json # 页面配置
-│   │   ├── index.wxml # 页面结构
-│   │   └── index.wxss # 页面样式
-│   ├── search/ # 搜索页
-│   ├── discover/ # 发现页
-│   ├── profile/ # 个人中心
-│   ├── login/ # 登录页
-│   └── post/ # 发帖页
-│
-├── api/ # API接口封装
-│   ├── agent_api.md # Agent API文档
-│   ├── mysql_api.md # MySQL API文档
-│   └── README.md # API说明文档
-│
-├── assets/ # 静态资源
-│   └── icons/ # 图标文件
-│
-├── utils/ # 工具函数
-│   └── util.js # 通用工具函数
-│
-├── cloudfunctions/ # 云函数
-│   └── login/ # 登录相关云函数
-│
-├── typings/ # TypeScript类型定义
-│
-├── app.js # 小程序入口文件
-├── app.json # 小程序全局配置
-├── app.wxss # 全局样式
-├── project.config.json # 项目配置文件
-├── project.private.config.json # 项目私有配置
-├── sitemap.json # 小程序搜索配置
-├── jsconfig.json # JavaScript配置文件
-└── .cursorrules # Cursor IDE配置文件
+- 微信小程序原生开发
+- 云开发（仅用于登录鉴权）
+- Promise / async-await 异步处理
 
-```text
+## 目录结构
 
-## 重要文件说明
+```plaintext
+- pages/ # 页面文件夹
+  - index/ # 首页
+  - search/ # 搜索页
+  - discover/ # 发现页
+  - profile/ # 个人中心
+  - login/ # 登录页
+  - post/ # 发帖页
+- api/ # API接口文档
+- utils/ # 工具函数
+  - api.js # API接口封装
+  - util.js # 通用工具函数
+- assets/ # 静态资源
+- cloudfunctions/ # 云函数(仅用于登录鉴权)
+```
 
-- `app.json`: 全局配置文件，包含页面路由、窗口样式、底部导航等配置
+## API接口使用说明
 
-- `app.js`: 小程序入口文件，包含全局逻辑
+### 初始化
 
-- `app.wxss`: 全局样式文件
+项目使用 `utils/api.js` 文件封装了所有后端API调用，在页面中导入即可使用：
 
-- 每个页面包含四个文件：
-  - `.js`: 页面逻辑
-  - `.wxml`: 页面结构（相当于 HTML）
-  - `.wxss`: 页面样式（相当于 CSS）
-  - `.json`: 页面配置
+```javascript
+// 引入API工具
+const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api');
+```
 
-## 开发基础知识
+### 示例：加载帖子列表
 
-### 1. 文件类型介绍
+```javascript
+async function loadPosts() {
+  try {
+    const params = {
+      limit: 20,
+      offset: 0,
+      status: 1
+    };
+    
+    const posts = await postAPI.getPosts(params);
+    
+    // 处理获取到的帖子数据
+    this.setData({
+      posts: posts
+    });
+  } catch (error) {
+    console.error('加载帖子失败:', error);
+    wx.showToast({
+      title: '加载失败',
+      icon: 'none'
+    });
+  }
+}
+```
 
-前端设计原型图：https://mastergo.com/goto/HrncAZgN?page_id=M&file=152887751273499
+### 示例：创建评论
 
-- `WXML`：框架设计的一套标签语言，用于描述页面结构
+```javascript
+async function createComment(postId, content, images = []) {
+  try {
+    const userInfo = wx.getStorageSync('userInfo');
+    
+    const commentData = {
+      wxapp_id: `comment_${Date.now()}`,
+      post_id: postId,
+      author_id: userInfo.id,
+      author_name: userInfo.nickname || '用户',
+      author_avatar: userInfo.avatar_url,
+      content: content,
+      images: images
+    };
+    
+    const result = await commentAPI.createComment(commentData);
+    return result;
+  } catch (error) {
+    console.error('创建评论失败:', error);
+    throw error;
+  }
+}
+```
 
-- `WXSS`：样式语言，类似 CSS
+### 示例：智能体对话
 
-- `JS`：小程序的逻辑层，处理数据和用户操作
+```javascript
+async function chatWithAgent(query, history = []) {
+  try {
+    const response = await agentAPI.chat(query, history);
+    return response;
+  } catch (error) {
+    console.error('智能体对话失败:', error);
+    throw error;
+  }
+}
+```
 
-- `JSON`：配置文件
+## 用户登录流程
 
-### 2. 常用组件
-
-- `view`: 视图容器，类似 div
-
-- `text`: 文本组件
-
-- `button`: 按钮组件
-
-- `image`: 图片组件
-
-- `scroll-view`: 可滚动视图区域
-
-### 3. 生命周期
-
-页面生命周期函数：
-
-- `onLoad`: 页面加载时触发
-
-- `onShow`: 页面显示时触发
-
-- `onReady`: 页面初次渲染完成时触发
-
-- `onHide`: 页面隐藏时触发
-
-- `onUnload`: 页面卸载时触发
+1. 用户点击"微信一键登录"按钮
+2. 调用云函数获取用户openid和基本信息
+3. 将用户信息发送到后端API创建/更新用户
+4. 存储合并后的用户信息（包含后端用户ID）
+5. 用户完成登录
 
 ## 开发注意事项
 
-1. 小程序总包大小限制为 2M，超过需要分包，注意控制代码和资源大小
+1. API请求会自动处理授权Token，无需手动处理
+2. 所有请求返回Promise，建议使用async/await语法处理
+3. 页面重要操作应有加载状态和错误处理
+4. 日志记录使用debug级别，方便调试
 
-2. 除了图标类的图片，其余图片一律上传图床
+## 相关文档
 
-3. 及时清理不使用的文件和代码
-
-4. 遵循小程序的[设计指南](https://developers.weixin.qq.com/miniprogram/design/)
-
-5. 注意用户数据隐私保护
-
-6. 做好错误处理和异常捕获
-
-## 发布流程
-
-1. 完成开发和测试
-
-2. 在开发者工具中点击"上传"
-
-3. 登录微信公众平台
-
-4. 在版本管理中提交审核
-
-5. 审核通过后发布
-
-## 学习资源
-
-- [微信小程序官方文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
-
-- [小程序设计指南](https://developers.weixin.qq.com/miniprogram/design/)
-
-- [小程序示例](https://developers.weixin.qq.com/miniprogram/dev/demo.html)
-
-## 常见问题
-
-1. 真机预览需要在公众平台配置开发者权限
-
-2. 注意 AppID 的正确配置
-
-3. 本地存储有大小限制
-
-4. 部分 API 仅在真机上可用
-
-5. 注意兼容性问题，特别是低版本
+- [API接口文档](./api/README.md)
+- [微信小程序开发文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
