@@ -98,6 +98,7 @@ function request(option = {}) {
     method: 'GET',
     header: {},
     data: {},
+    params: {},  // 添加查询参数选项
     dataType: 'json',
     responseType: 'text',
     success: () => {},
@@ -112,7 +113,22 @@ function request(option = {}) {
   };
 
   // 构建完整URL
-  const url = options.url.startsWith('http') ? options.url : API.BASE_URL + options.url;
+  let url = options.url.startsWith('http') ? options.url : API.BASE_URL + options.url;
+  
+  // 处理查询参数
+  if (options.params && Object.keys(options.params).length > 0) {
+    const queryParams = [];
+    for (const key in options.params) {
+      if (options.params[key] !== undefined && options.params[key] !== null) {
+        queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(options.params[key])}`);
+      }
+    }
+    
+    // 添加查询参数到URL
+    if (queryParams.length > 0) {
+      url += (url.includes('?') ? '&' : '?') + queryParams.join('&');
+    }
+  }
 
   // 日志
   logger.debug(`[${options.method}] ${url}`, options.data);
@@ -554,15 +570,12 @@ const postAPI = {
     
     console.debug('点赞操作，帖子ID:', postId, '用户ID:', userId, '操作:', isLike ? '点赞' : '取消');
     
-    // 根据操作类型选择接口
-    const url = isLike 
-      ? `${API.PREFIX.WXAPP}/posts/${postId}/like`
-      : `${API.PREFIX.WXAPP}/posts/${postId}/unlike`;
-    
+    // 使用同一个接口，后端会根据用户ID是否在点赞列表中自动判断是点赞还是取消点赞
     return request({
-      url,
+      url: `${API.PREFIX.WXAPP}/posts/${postId}/like`,
       method: 'POST',
-      data: { userId }
+      data: {},  // 不在请求体中传递user_id
+      params: { user_id: userId }  // 作为URL查询参数传递
     });
   },
 
@@ -579,15 +592,14 @@ const postAPI = {
     
     console.debug('收藏操作，帖子ID:', postId, '用户ID:', userId, '操作:', isFavorite ? '收藏' : '取消');
     
-    // 根据操作类型选择接口
-    const url = isFavorite 
-      ? `${API.PREFIX.WXAPP}/posts/${postId}/favorite`
-      : `${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`;
+    // 检查是否有favorite接口
+    const url = `${API.PREFIX.WXAPP}/posts/${postId}/favorite`;
     
     return request({
       url,
       method: 'POST',
-      data: { userId }
+      data: { is_favorite: isFavorite },  // 通过请求体参数指明是收藏还是取消收藏
+      params: { user_id: userId }  // 作为URL查询参数传递
     });
   },
 
