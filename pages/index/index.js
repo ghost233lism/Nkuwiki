@@ -1,6 +1,6 @@
 // index.js
 const app = getApp();
-const defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'
+const defaultAvatarUrl = '/assets/icons/default-avatar.png'
 
 let isLiking = false  // 添加在 Page 外部
 let isFavoriting = false;  // 防止重复点击收藏按钮
@@ -8,6 +8,7 @@ let needRefresh = false;  // 标记是否需要刷新
 
 // 在文件顶部引入工具函数和API
 const util = require('../../utils/util');
+const userManager = require('../../utils/user_manager');
 const { postAPI, userAPI, commentAPI } = require('../../utils/api');
 
 Page({
@@ -106,18 +107,19 @@ Page({
       this.setData({ loading: true })
 
       // 获取当前用户ID
-      const userInfo = wx.getStorageSync('userInfo');
-      const userId = userInfo ? userInfo.id : '';
+      const userInfo = userManager.getCurrentUser();
+      const userId = userInfo.id || '';
       
-      // 使用新的API加载帖子
+      // 使用API接口加载帖子，不直接查询云数据库
       const params = {
         limit: this.data.pageSize,
         offset: refresh ? 0 : (this.data.page - 1) * this.data.pageSize,
         status: 1 // 正常状态的帖子
       };
       
+      console.debug('请求参数:', params);
       const postsData = await postAPI.getPosts(params);
-      console.log('获取到的帖子数据:', postsData);
+      console.debug('API返回帖子数据:', postsData);
       
       // 检查返回的数据结构
       let formattedPosts = [];
@@ -148,6 +150,25 @@ Page({
       
       // 格式化帖子数据
       const posts = formattedPosts.map(post => {
+        // 确保作者信息始终有值
+        let authorName = '南开大学用户';
+        let authorAvatar = defaultAvatarUrl;
+        
+        // 优先使用author_name和author_avatar字段
+        if (post.author_name && post.author_name.trim()) {
+          authorName = post.author_name;
+        } else if (post.authorName && post.authorName.trim()) {
+          authorName = post.authorName;
+        }
+        
+        if (post.author_avatar && post.author_avatar.trim()) {
+          authorAvatar = post.author_avatar;
+        } else if (post.authorAvatar && post.authorAvatar.trim()) {
+          authorAvatar = post.authorAvatar;
+        }
+        
+        console.debug('处理帖子:', post.id, '作者:', authorName, '头像:', authorAvatar);
+        
         // 确保所有属性名与模板中使用的一致
         return {
           _id: post.id || post._id,
@@ -155,8 +176,8 @@ Page({
           content: post.content || '',
           displayContent: post.content ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) : '',
           hasMore: post.content && post.content.length > 100,
-          authorName: post.author_name || post.authorName || '匿名用户',
-          authorAvatar: post.author_avatar || post.authorAvatar || defaultAvatarUrl,
+          authorName: authorName,
+          authorAvatar: authorAvatar,
           images: post.images || [],
           likes: post.likes || 0,
           commentCount: post.comment_count || post.commentCount || 0,
@@ -234,13 +255,15 @@ Page({
     isLiking = true;
 
     try {
-      const { postid, index } = e.currentTarget.dataset;
+      const { id, index } = e.currentTarget.dataset;
       const currentPost = this.data.posts[index];
       const isLiked = currentPost.isLiked;
       
-      // 获取当前用户ID
-      const userInfo = wx.getStorageSync('userInfo');
-      if (!userInfo || !userInfo.id) {
+      // 获取当前用户信息
+      const userInfo = userManager.getCurrentUser();
+      
+      // 检查是否登录
+      if (!userManager.isLoggedIn()) {
         wx.showToast({
           title: '请先登录',
           icon: 'none'
@@ -260,9 +283,9 @@ Page({
       
       // 调用后端API
       if (isLiked) {
-        await postAPI.unlikePost(postid, userInfo.id);
+        await postAPI.unlikePost(id, userInfo.id);
       } else {
-        await postAPI.likePost(postid, userInfo.id);
+        await postAPI.likePost(id, userInfo.id);
       }
       
     } catch (error) {
@@ -359,9 +382,11 @@ Page({
       return;
     }
     
-    // 获取当前用户ID
-    const userInfo = wx.getStorageSync('userInfo');
-    if (!userInfo || !userInfo.id) {
+    // 获取当前用户信息
+    const userInfo = userManager.getUserInfoForAPI();
+    
+    // 检查是否登录
+    if (!userManager.isLoggedIn()) {
       wx.showToast({
         title: '请先登录',
         icon: 'none'
@@ -392,8 +417,8 @@ Page({
         wxapp_id: `comment_${Date.now()}`,
         post_id: this.data.currentCommentPostId,
         author_id: userInfo.id,
-        author_name: userInfo.nickname || '用户',
-        author_avatar: userInfo.avatar_url || defaultAvatarUrl,
+        author_name: userInfo.nickname,
+        author_avatar: userInfo.avatar_url,
         content: this.data.commentText.trim(),
         images: imageUrls
       };
@@ -468,8 +493,10 @@ Page({
       const isFavorited = currentPost.isFavorited;
       
       // 获取当前用户ID
-      const userInfo = wx.getStorageSync('userInfo');
-      if (!userInfo || !userInfo.id) {
+      const userInfo = userManager.getCurrentUser();
+      
+      // 检查是否登录
+      if (!userManager.isLoggedIn()) {
         wx.showToast({
           title: '请先登录',
           icon: 'none'

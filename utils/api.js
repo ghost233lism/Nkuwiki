@@ -184,6 +184,15 @@ function request(url, method = 'GET', data = {}, header = {}, showLoading = true
 // =============== 用户接口 ===============
 const userAPI = {
   /**
+   * 微信登录
+   * @param {Object} data - 登录数据，包含微信code
+   * @returns {Promise} - 请求Promise 
+   */
+  login: (data) => {
+    return request(`${API.PREFIX.WXAPP}/login`, 'POST', data);
+  },
+  
+  /**
    * 创建用户
    * @param {Object} userData - 用户数据
    * @returns {Promise} - 请求Promise 
@@ -272,41 +281,43 @@ const postAPI = {
   /**
    * 点赞帖子
    * @param {number} postId - 帖子ID
-   * @param {number} userId - 用户ID
+   * @param {boolean} isLike - 是否点赞，true为点赞，false为取消点赞
    * @returns {Promise} - 请求Promise
    */
-  likePost: (postId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}/like`, 'POST', { userId });
-  },
-
-  /**
-   * 取消点赞
-   * @param {number} postId - 帖子ID
-   * @param {number} userId - 用户ID
-   * @returns {Promise} - 请求Promise
-   */
-  unlikePost: (postId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}/unlike`, 'POST', { userId });
+  likePost: (postId, isLike) => {
+    const userManager = require('./user_manager');
+    const userInfo = userManager.getUserInfoForAPI();
+    const userId = userInfo.id;
+    
+    console.debug('点赞操作，帖子ID:', postId, '用户ID:', userId, '操作:', isLike ? '点赞' : '取消');
+    
+    // 根据操作类型选择接口
+    const url = isLike 
+      ? `${API.PREFIX.WXAPP}/posts/${postId}/like`
+      : `${API.PREFIX.WXAPP}/posts/${postId}/unlike`;
+    
+    return request(url, 'POST', { userId });
   },
 
   /**
    * 收藏帖子
    * @param {number} postId - 帖子ID
-   * @param {number} userId - 用户ID
+   * @param {boolean} isFavorite - 是否收藏，true为收藏，false为取消收藏
    * @returns {Promise} - 请求Promise
    */
-  addFavorite: (postId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}/favorite`, 'POST', { userId });
-  },
-
-  /**
-   * 取消收藏
-   * @param {number} postId - 帖子ID
-   * @param {number} userId - 用户ID
-   * @returns {Promise} - 请求Promise
-   */
-  cancelFavorite: (postId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`, 'POST', { userId });
+  favoritePost: (postId, isFavorite) => {
+    const userManager = require('./user_manager');
+    const userInfo = userManager.getUserInfoForAPI();
+    const userId = userInfo.id;
+    
+    console.debug('收藏操作，帖子ID:', postId, '用户ID:', userId, '操作:', isFavorite ? '收藏' : '取消');
+    
+    // 根据操作类型选择接口
+    const url = isFavorite 
+      ? `${API.PREFIX.WXAPP}/posts/${postId}/favorite`
+      : `${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`;
+    
+    return request(url, 'POST', { userId });
   },
 
   /**
@@ -341,11 +352,17 @@ const commentAPI = {
 
   /**
    * 获取评论列表
-   * @param {Object} params - 查询参数
+   * @param {number|Object} postIdOrParams - 帖子ID或查询参数
    * @returns {Promise} - 请求Promise
    */
-  getComments: (params = {}) => {
-    return request(`${API.PREFIX.WXAPP}/comments`, 'GET', params);
+  getComments: (postIdOrParams = {}) => {
+    // 判断是否直接传入了帖子ID
+    if (typeof postIdOrParams === 'string' || typeof postIdOrParams === 'number') {
+      return request(`${API.PREFIX.WXAPP}/posts/${postIdOrParams}/comments`, 'GET');
+    }
+    
+    // 否则按照原有逻辑查询所有评论
+    return request(`${API.PREFIX.WXAPP}/comments`, 'GET', postIdOrParams);
   },
 
   /**

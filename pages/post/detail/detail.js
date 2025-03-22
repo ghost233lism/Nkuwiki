@@ -53,14 +53,16 @@ Page({
     this.setData({ loading: true });
     
     try {
-      const db = wx.cloud.database();
-      const result = await db.collection('posts').doc(postId).get();
+      // 使用API接口获取帖子详情
+      const { postAPI } = require('../../../utils/api');
+      console.debug('调用API获取帖子详情，ID:', postId);
+      const postData = await postAPI.getPostDetail(postId);
       
-      if (!result.data) {
+      if (!postData) {
         throw new Error('帖子不存在');
       }
       
-      const post = result.data;
+      const post = postData;
       console.log("获取到的帖子数据:", post);
       
       // 查询作者最新信息 - 直接使用authorId查询用户集合
@@ -81,8 +83,8 @@ Page({
       }
       
       // 处理相对时间
-      if (post.createTime) {
-        post.relativeTime = util.formatRelativeTime(post.createTime);
+      if (post.create_time) {
+        post.relativeTime = util.formatRelativeTime(post.create_time);
       }
       
       // 处理评论用户信息 - 可选，如果需要更新评论作者信息
@@ -192,6 +194,7 @@ Page({
       console.log("帖子收藏状态:", post.isFavorited, "原因:", 
                  post.isFavorited ? "用户ID在收藏列表中或本地存储标记为已收藏" : "用户未收藏");
       
+      // 更新界面
       this.setData({
         post: post,
         comments: post.comments || [],
@@ -202,8 +205,12 @@ Page({
       console.log("帖子详情已加载:", post);
     } catch (err) {
       console.error("加载帖子详情失败:", err);
-      this.setData({ loading: false });
-      this.showError('加载失败，请重试');
+      this.setData({
+        loading: false,
+        errorMsg: '加载帖子失败: ' + (err.message || err)
+      });
+      
+      this.showError('加载帖子失败，请稍后再试');
     }
   },
 
@@ -233,7 +240,7 @@ Page({
 
   // 处理点赞，增加安全检查
   async handleLike() {
-    if (!this.data.post || !this.data.post._id) {
+    if (!this.data.post || !this.data.post.id) {
       return;
     }
     
@@ -253,26 +260,22 @@ Page({
       
       // 立即更新本地存储的点赞状态 - 确保刷新页面后依然记住
       const likedPosts = wx.getStorageSync('likedPosts') || {};
+      const postId = this.data.post.id || this.data.post._id;
       
       if (newIsLiked) {
-        likedPosts[this.data.post._id] = true;
+        likedPosts[postId] = true;
       } else {
-        delete likedPosts[this.data.post._id];
+        delete likedPosts[postId];
       }
       
       wx.setStorageSync('likedPosts', likedPosts);
-      console.log("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", this.data.post._id);
+      console.log("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", postId);
       
-      // 调用云函数
-      const res = await wx.cloud.callFunction({
-        name: 'likes',
-        data: {
-          type: 'toggleLike',
-          postId: this.data.post._id
-        }
-      });
+      // 使用API接口
+      const { postAPI } = require('../../../utils/api');
+      const res = await postAPI.likePost(postId, newIsLiked);
       
-      if (!res.result || !res.result.success) {
+      if (!res || res.error) {
         // 如果失败，回滚UI状态和本地存储
         this.setData({
           'post.isLiked': !newIsLiked,
@@ -281,13 +284,13 @@ Page({
         
         // 回滚本地存储
         if (!newIsLiked) {
-          likedPosts[this.data.post._id] = true;
+          likedPosts[postId] = true;
         } else {
-          delete likedPosts[this.data.post._id];
+          delete likedPosts[postId];
         }
         wx.setStorageSync('likedPosts', likedPosts);
         
-        throw new Error(res.result?.message || '操作失败');
+        throw new Error(res?.error || '操作失败');
       }
       
       // 成功时显示轻量级提示
@@ -307,9 +310,9 @@ Page({
     }
   },
 
-  // 处理收藏，与handleLike类似
+  // 处理收藏
   async handleFavorite() {
-    if (!this.data.post || !this.data.post._id) {
+    if (!this.data.post || !this.data.post.id) {
       return;
     }
     
@@ -327,25 +330,22 @@ Page({
       
       // 立即更新本地存储的收藏状态 - 确保刷新页面后依然记住
       const favoritePosts = wx.getStorageSync('favoritePosts') || {};
+      const postId = this.data.post.id || this.data.post._id;
       
       if (newIsFavorited) {
-        favoritePosts[this.data.post._id] = true;
+        favoritePosts[postId] = true;
       } else {
-        delete favoritePosts[this.data.post._id];
+        delete favoritePosts[postId];
       }
       
       wx.setStorageSync('favoritePosts', favoritePosts);
-      console.log("更新本地收藏状态:", newIsFavorited ? "已收藏" : "取消收藏", this.data.post._id);
+      console.log("更新本地收藏状态:", newIsFavorited ? "已收藏" : "取消收藏", postId);
       
-      // 调用云函数
-      const res = await wx.cloud.callFunction({
-        name: 'favorite',
-        data: {
-          postId: this.data.post._id
-        }
-      });
+      // 使用API接口
+      const { postAPI } = require('../../../utils/api');
+      const res = await postAPI.favoritePost(postId, newIsFavorited);
       
-      if (!res.result || !res.result.success) {
+      if (!res || res.error) {
         // 如果失败，回滚UI状态和本地存储
         this.setData({
           'post.isFavorited': !newIsFavorited
@@ -353,13 +353,13 @@ Page({
         
         // 回滚本地存储
         if (!newIsFavorited) {
-          favoritePosts[this.data.post._id] = true;
+          favoritePosts[postId] = true;
         } else {
-          delete favoritePosts[this.data.post._id];
+          delete favoritePosts[postId];
         }
         wx.setStorageSync('favoritePosts', favoritePosts);
         
-        throw new Error(res.result?.message || '操作失败');
+        throw new Error(res?.error || '操作失败');
       }
       
       // 成功时显示轻量级提示
@@ -519,7 +519,7 @@ Page({
   // 提交评论
   async submitComment() {
     const content = this.data.commentText.trim();
-    const postId = this.data.post._id;
+    const postId = this.data.post.id || this.data.post._id;
     
     // 验证帖子ID
     if (!postId) {
@@ -553,13 +553,7 @@ Page({
           // 上传到云存储
           try {
             console.log('开始上传图片:', filePath);
-            const uploadRes = await wx.cloud.uploadFile({
-              cloudPath: `comments/${Date.now()}-${Math.random().toString(36).slice(-6)}.${filePath.match(/\.([^.]+)$/)[1] || 'png'}`,
-              filePath: filePath
-            });
-            
-            console.log('图片上传成功:', uploadRes.fileID);
-            return uploadRes.fileID; // 返回云存储路径
+            return await this.uploadImage(filePath);
           } catch (uploadErr) {
             console.error('图片上传失败:', uploadErr);
             wx.showToast({
@@ -575,21 +569,36 @@ Page({
         console.log('所有图片上传完成:', uploadedImageUrls);
       }
       
-      // 调用云函数添加评论
-      const result = await wx.cloud.callFunction({
-        name: 'addComment',
-        data: {
-          postId: postId,
-          content: content,
-          images: uploadedImageUrls // 使用云存储路径
-        }
-      });
+      // 使用API接口提交评论
+      const { commentAPI } = require('../../../utils/api');
+      const userManager = require('../../../utils/user_manager');
+      const userInfo = userManager.getUserInfoForAPI();
+      
+      const commentData = {
+        post_id: postId,
+        author_id: userInfo.id,
+        author_name: userInfo.nickname,
+        author_avatar: userInfo.avatar_url,
+        content: content,
+        images: uploadedImageUrls
+      };
+      
+      console.debug('提交评论数据:', commentData);
+      const result = await commentAPI.createComment(commentData);
       
       console.log('评论提交结果:', result);
       
-      if (result.result && result.result.success) {
+      if (result && !result.error) {
         // 更新本地数据
-        const newComment = result.result.comment;
+        const newComment = result.data || {
+          id: `temp_${Date.now()}`,
+          author_id: userInfo.id,
+          author_name: userInfo.nickname,
+          author_avatar: userInfo.avatar_url,
+          content: content,
+          images: uploadedImageUrls,
+          create_time: new Date().toISOString()
+        };
         
         this.setData({
           commentText: '',
@@ -604,7 +613,7 @@ Page({
           icon: 'success'
         });
       } else {
-        throw new Error(result.result?.message || '评论失败');
+        throw new Error(result?.error || '评论失败');
       }
     } catch (err) {
       console.error('评论提交出错:', err);
@@ -617,7 +626,7 @@ Page({
     }
   },
   
-  // 添加上传图片辅助函数(如果没有)
+  // 添加上传图片辅助函数
   async uploadImage(tempFilePath) {
     if (!tempFilePath) return '';
     
@@ -642,22 +651,9 @@ Page({
   // 获取用户信息
   async getUserInfo() {
     try {
-      const userInfo = wx.getStorageSync('userInfo');
-      if (userInfo) {
-        return userInfo;
-      }
-      
-      const db = wx.cloud.database();
-      const userRes = await db.collection('users').where({
-        _openid: wx.getStorageSync('openid')
-      }).get();
-      
-      if (userRes.data.length > 0) {
-        wx.setStorageSync('userInfo', userRes.data[0]);
-        return userRes.data[0];
-      }
-      
-      return {};
+      // 使用用户管理器获取用户信息
+      const userManager = require('../../../utils/user_manager');
+      return userManager.getUserInfoForAPI();
     } catch (err) {
       console.error('获取用户信息失败:', err);
       return {};
@@ -700,16 +696,16 @@ Page({
     console.log("加载帖子评论:", postId);
     
     try {
-      // 直接从posts集合获取评论，不使用独立的comments集合
-      const db = wx.cloud.database();
-      const result = await db.collection('posts').doc(postId).get();
+      // 使用API接口获取评论
+      const { commentAPI } = require('../../../utils/api');
+      const commentsData = await commentAPI.getComments(postId);
       
-      if (result.data && result.data.comments) {
+      if (commentsData && Array.isArray(commentsData)) {
         this.setData({
-          comments: result.data.comments,
-          commentCount: result.data.comments.length
+          comments: commentsData,
+          commentCount: commentsData.length
         });
-        console.log("评论加载成功, 共", result.data.comments.length, "条");
+        console.log("评论加载成功, 共", commentsData.length, "条");
       } else {
         this.setData({
           comments: [],
