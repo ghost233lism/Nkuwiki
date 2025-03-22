@@ -220,6 +220,7 @@ Page({
             authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
             images: post.images || [],
             likes: post.likes || 0,
+            favoriteCounts: post.favorite_count || 0,
             commentCount: post.comment_count || 0,
             relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
             tags: post.tags || [],
@@ -581,6 +582,10 @@ Page({
       // 乐观更新UI
       const newPosts = [...this.data.posts];
       newPosts[index].isFavorited = !isFavorited;
+      // 更新收藏数量显示
+      newPosts[index].favoriteCounts = isFavorited 
+        ? Math.max(0, currentPost.favoriteCounts - 1) 
+        : (currentPost.favoriteCounts || 0) + 1;
       
       this.setData({
         posts: newPosts
@@ -588,15 +593,25 @@ Page({
       
       // 调用后端API
       try {
+        let response;
         if (isFavorited) {
-          await postAPI.favoritePost(id, false);
+          response = await postAPI.favoritePost(id, false);
         } else {
-          await postAPI.favoritePost(id, true);
+          response = await postAPI.favoritePost(id, true);
+        }
+        
+        // 如果API返回了准确的收藏数量，使用API返回的数量
+        if (response && response.favorite_count !== undefined) {
+          newPosts[index].favoriteCounts = response.favorite_count;
+          this.setData({
+            posts: newPosts
+          });
         }
       } catch (apiError) {
         console.error('API调用失败:', apiError);
         // 如果API调用失败，恢复UI
         newPosts[index].isFavorited = isFavorited;
+        newPosts[index].favoriteCounts = currentPost.favoriteCounts;
         this.setData({
           posts: newPosts
         });
