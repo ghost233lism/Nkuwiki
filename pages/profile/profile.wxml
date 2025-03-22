@@ -1,120 +1,96 @@
 <!-- 页面结构 -->
-<view class="container">
-  <!-- 顶部标题 -->
-  <view class="header">
-    <text class="title">我的</text>
-    <view class="settings-icon">
-      <image src="/assets/icons/profile/settings.png" />
-    </view>
+<view class="profile-container">
+  <!-- 顶部用户信息区域 -->
+  <view class="user-header">
+    <!-- 未登录状态 -->
+    <block wx:if="{{!isLoggedIn}}">
+      <view class="login-prompt">
+        <image class="default-avatar" src="/assets/icons/default-avatar.png" mode="aspectFill"></image>
+        <view class="login-text">登录后体验更多功能</view>
+        <button class="login-btn" bindtap="goToLogin">立即登录</button>
+      </view>
+    </block>
+    
+    <!-- 已登录状态 -->
+    <block wx:else>
+      <view class="user-info">
+        <view class="avatar-container">
+          <image class="avatar" 
+            src="{{userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
+            mode="aspectFill" binderror="onAvatarError"></image>
+        </view>
+        <view class="info-container">
+          <view class="username">{{userInfo.nickname || userInfo.nickName || '校园用户'}}</view>
+          <view class="user-status">{{userInfo.status || '这个人很懒，什么都没留下'}}</view>
+          <view class="edit-btn" bindtap="editProfile">编辑资料</view>
+        </view>
+      </view>
+      
+      <!-- 用户统计数据 -->
+      <view class="stats-container">
+        <view class="stat-item" bindtap="viewUserPosts">
+          <view class="stat-number">{{postsCount}}</view>
+          <view class="stat-label">发帖</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-number">{{totalLikes}}</view>
+          <view class="stat-label">获赞</view>
+        </view>
+        <view class="stat-item" bindtap="viewFollowed">
+          <view class="stat-number">{{followedCount}}</view>
+          <view class="stat-label">关注</view>
+        </view>
+        <view class="stat-item" bindtap="viewFollowers">
+          <view class="stat-number">{{followerCount}}</view>
+          <view class="stat-label">粉丝</view>
+        </view>
+      </view>
+    </block>
   </view>
-
-  <!-- 未登录状态 -->
-  <view class="user-card" wx:if="{{!userInfo}}">
-    <view class="user-info">
-      <view class="avatar-container">
-        <image class="avatar" src="/assets/icons/default-avatar.png" />
+  
+  <!-- 功能列表区域 -->
+  <view class="function-list">
+    <view class="function-group">
+      <view class="function-title">内容管理</view>
+      <view class="function-item" bindtap="viewCollections">
+        <image class="function-icon" src="/assets/icons/star.png"></image>
+        <text class="function-name">我的收藏</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-      <view class="info-content">
-        <text class="nickname">未登录</text>
-        <button class="login-btn" bindtap="handleLogin">点击登录</button>
+      <view class="function-item" bindtap="viewHistory">
+        <image class="function-icon" src="/assets/icons/history.png"></image>
+        <text class="function-name">浏览历史</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-    </view>
-  </view>
-
-  <!-- 已登录状态 -->
-  <view class="user-card" wx:else>
-    <!-- 用户信息卡片 -->
-    <view class="user-info">
-      <view class="avatar-container">
-        <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+      <view class="function-item" bindtap="viewComments">
+        <image class="function-icon" src="/assets/icons/comment.png"></image>
+        <text class="function-name">我的评论</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-      <view class="info-content">
-        <text class="nickname">{{userInfo.nickName}}</text>
-        <text class="university">{{userInfo.university}}</text>
-        <text class="status">{{userInfo.status}}</text>
-      </view>
-      <view class="edit-btn" bindtap="goToEdit">编辑资料</view>
-    </view>
-
-    <!-- 数据统计 -->
-    <view class="stats-row">
-      <view class="stat-item" bindtap="viewMyPosts" data-type="posts">
-        <text class="stat-num">{{userInfo.posts || 0}}</text>
-        <text class="stat-label">帖子</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{totalLikes || 0}}</text>
-        <text class="stat-label">获赞</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{userInfo.following || 0}}</text>
-        <text class="stat-label">关注</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{userInfo.followers || 0}}</text>
-        <text class="stat-label">粉丝</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">5w</text>
-        <text class="stat-label">token</text>
+      <view class="function-item" bindtap="viewDrafts">
+        <image class="function-icon" src="/assets/icons/draft.png"></image>
+        <text class="function-name">草稿箱</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
     </view>
-
-    <!-- 功能按钮组 -->
-    <view class="function-row">
-      <view class="function-item" bindtap="onFunctionTap" data-type="star">
-        <image src="/assets/icons/profile/star.png" />
-        <text>我的收藏</text>
+    
+    <view class="function-group">
+      <view class="function-title">设置</view>
+      <view class="function-item" bindtap="clearCache">
+        <image class="function-icon" src="/assets/icons/clear.png"></image>
+        <text class="function-name">清除缓存</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="history">
-        <image src="/assets/icons/profile/history.png" />
-        <text>浏览历史</text>
+      <view class="function-item" bindtap="goToSettings">
+        <image class="function-icon" src="/assets/icons/settings.png"></image>
+        <text class="function-name">系统设置</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="comment">
-        <image src="/assets/icons/search-active.png" />
-        <text>我的评论</text>
+      <view class="function-item" bindtap="logout" wx:if="{{isLoggedIn}}">
+        <image class="function-icon" src="/assets/icons/logout.png"></image>
+        <text class="function-name">退出登录</text>
+        <image class="arrow-icon" src="/assets/icons/arrow-right.png"></image>
       </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="like">
-        <image src="/assets/icons/profile/like.png" />
-        <text>我的点赞</text>
-      </view>
-    </view>
-
-    <view class="function-row">
-      <view class="function-item" bindtap="onFunctionTap" data-type="draft">
-        <image src="/assets/icons/profile/draft.png" />
-        <text>草稿箱</text>
-      </view>
-      <view class="function-item" bindtap="onFeedbackTap" data-type="feedback">
-        <image src="/assets/icons/profile/feedback.png" />
-        <text>意见反馈</text>
-      </view>
-      <view class="function-item"></view>
-      <view class="function-item"></view>
-    </view>
-  </view>
-
-  <!-- 设置列表 -->
-  <view class="settings-list">
-    <view class="settings-item">
-      <image src="/assets/icons/profile/notification.png" />
-      <text>消息通知</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="clearCache">
-      <image src="/assets/icons/profile/clear.png" />
-      <text>清除缓存</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="onAboutTap">
-      <image src="/assets/icons/profile/about.png" />
-      <text>关于我们</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="onLogoutTap" wx:if="{{userInfo}}">
-      <image src="/assets/icons/profile/logout.png" />
-      <text>退出登录</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
     </view>
   </view>
 </view>

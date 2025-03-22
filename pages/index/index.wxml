@@ -45,9 +45,9 @@
       <view class="post-item" wx:for="{{posts}}" wx:key="_id">
         <!-- 用户信息部分 -->
         <view class="post-header">
-          <image class="author-avatar" src="{{item.authorAvatar}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}"/>
+          <image class="author-avatar" src="{{item.authorAvatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}"/>
           <view class="post-info">
-            <text class="author-name">{{item.authorName || '匿名用户'}}</text>
+            <text class="author-name">{{item.authorName || '南开大学用户'}}</text>
             <text class="post-time">{{item.relativeTime || '刚刚'}}</text>
           </view>
         </view>

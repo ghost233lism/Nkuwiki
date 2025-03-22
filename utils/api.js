@@ -181,6 +181,30 @@ function request(url, method = 'GET', data = {}, header = {}, showLoading = true
   });
 }
 
+/**
+ * 处理头像URL，支持微信云存储fileID
+ * @param {string} avatarUrl - 头像URL或fileID 
+ * @returns {Promise<string>} - 处理后的头像URL
+ */
+async function processAvatarUrl(avatarUrl) {
+  if (!avatarUrl) {
+    return '/assets/icons/default-avatar.png';
+  }
+  
+  // 如果是微信云存储fileID，转换为临时URL
+  if (avatarUrl.startsWith('cloud://')) {
+    try {
+      const userManager = require('./user_manager');
+      return await userManager.getTempFileURL(avatarUrl);
+    } catch (error) {
+      console.error('转换头像URL失败:', error);
+      return avatarUrl;
+    }
+  }
+  
+  return avatarUrl;
+}
+
 // =============== 用户接口 ===============
 const userAPI = {
   /**
@@ -227,6 +251,24 @@ const userAPI = {
    */
   updateUserInfo: (userId, userData) => {
     return request(`${API.PREFIX.WXAPP}/users/${userId}`, 'PUT', userData);
+  },
+
+  /**
+   * 获取用户关注和粉丝统计数据
+   * @param {string} userId 用户ID
+   * @returns {Promise<object>} 关注数据，包含followedCount和followerCount
+   */
+  getUserFollowStats: async (userId) => {
+    try {
+      const res = await request({
+        url: `${API.BASE_URL}/api/users/${userId}/follow-stats`,
+        method: 'GET'
+      });
+      return res;
+    } catch (error) {
+      console.error('获取用户关注统计失败:', error);
+      return { error: error.message || '获取用户关注统计失败' };
+    }
   }
 };
 
@@ -486,6 +528,7 @@ module.exports = {
   // 基础请求函数
   request,
   logger,
+  processAvatarUrl,
   
   // 模块API
   userAPI,

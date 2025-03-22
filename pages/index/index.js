@@ -118,90 +118,51 @@ Page({
       };
       
       console.debug('请求参数:', params);
-      const postsData = await postAPI.getPosts(params);
-      console.debug('API返回帖子数据:', postsData);
+      const res = await postAPI.getPosts(params);
       
-      // 检查返回的数据结构
-      let formattedPosts = [];
-      if (postsData && postsData.data) {
-        // 如果返回格式是 { data: [...] }
-        formattedPosts = postsData.data;
-      } else if (Array.isArray(postsData)) {
-        // 如果直接返回数组
-        formattedPosts = postsData;
+      if (res && !res.error) {
+        const posts = res.data || [];
+        console.debug(`获取帖子成功，数量: ${posts.length}`);
+        
+        // 处理帖子数据
+        const { processAvatarUrl } = require('../../utils/api');
+        
+        // 处理每个帖子的数据，特别是作者头像
+        const processedPosts = await Promise.all(posts.map(async post => {
+          // 处理作者头像
+          if (post.author) {
+            post.author.avatarUrl = await processAvatarUrl(post.author.avatarUrl || post.author.avatar_url);
+          }
+          
+          // 处理其他数据...
+          return post;
+        }));
+        
+        // 更新数据
+        this.setData({
+          posts: processedPosts,
+          loading: false,
+          loadingFailed: false
+        });
+        
+        // 若是下拉刷新，显示提示并停止刷新
+        if (this.data.isRefreshing) {
+          wx.showToast({
+            title: '刷新成功',
+            icon: 'success',
+            duration: 1000
+          });
+          wx.stopPullDownRefresh();
+          this.setData({
+            isRefreshing: false
+          });
+        }
       } else {
-        console.error('获取的帖子数据格式不正确:', postsData);
-        this.setData({
-          loading: false,
-          hasMore: false,
-          ...(refresh ? { posts: [], page: 1 } : {})
-        });
-        return Promise.resolve();
+        console.error('获取帖子失败:', res);
+        throw new Error('获取帖子失败');
       }
-      
-      if (!formattedPosts.length) {
-        this.setData({
-          loading: false,
-          hasMore: false,
-          ...(refresh ? { posts: [], page: 1 } : {})
-        });
-        return Promise.resolve();
-      }
-      
-      // 格式化帖子数据
-      const posts = formattedPosts.map(post => {
-        // 确保作者信息始终有值
-        let authorName = '南开大学用户';
-        let authorAvatar = defaultAvatarUrl;
-        
-        // 优先使用author_name和author_avatar字段
-        if (post.author_name && post.author_name.trim()) {
-          authorName = post.author_name;
-        } else if (post.authorName && post.authorName.trim()) {
-          authorName = post.authorName;
-        }
-        
-        if (post.author_avatar && post.author_avatar.trim()) {
-          authorAvatar = post.author_avatar;
-        } else if (post.authorAvatar && post.authorAvatar.trim()) {
-          authorAvatar = post.authorAvatar;
-        }
-        
-        console.debug('处理帖子:', post.id, '作者:', authorName, '头像:', authorAvatar);
-        
-        // 确保所有属性名与模板中使用的一致
-        return {
-          _id: post.id || post._id,
-          title: post.title || '',
-          content: post.content || '',
-          displayContent: post.content ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) : '',
-          hasMore: post.content && post.content.length > 100,
-          authorName: authorName,
-          authorAvatar: authorAvatar,
-          images: post.images || [],
-          likes: post.likes || 0,
-          commentCount: post.comment_count || post.commentCount || 0,
-          relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
-          tags: post.tags || [],
-          isLiked: post.isLiked || false,
-          isFavorited: post.isFavorited || false,
-          comments: post.comments || []
-        };
-      });
-      
-      console.log('格式化后的帖子数据:', posts);
-      
-      // 处理完成，更新状态
-      this.setData({
-        loading: false,
-        posts: refresh ? posts : [...this.data.posts, ...posts],
-        page: refresh ? 2 : this.data.page + 1,
-        hasMore: posts.length >= this.data.pageSize
-      });
-      
-      return Promise.resolve();
-    } catch (error) {
-      console.error('加载帖子失败:', error);
+    } catch (err) {
+      console.error('加载帖子失败:', err);
       this.setData({ loading: false });
       
       wx.showToast({
@@ -209,7 +170,7 @@ Page({
         icon: 'none'
       });
       
-      return Promise.reject(error);
+      return Promise.reject(err);
     }
   },
   

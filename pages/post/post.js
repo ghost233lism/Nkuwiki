@@ -225,7 +225,15 @@ Page({
     const that = this;
     const { title, content, images } = this.data;
     
-    // 验证输入
+    // 获取用户信息但不立即中断
+    const userManager = require('../../utils/user_manager');
+    const isLoggedIn = userManager.isLoggedIn();
+    const userInfo = userManager.getCurrentUser();
+    
+    console.debug('发布按钮点击 - 登录状态:', isLoggedIn);
+    console.debug('发布按钮点击 - 用户信息:', userInfo);
+    
+    // 优先验证输入，避免不必要的登录判断
     if (!title.trim()) {
       wx.showToast({
         title: '请输入标题',
@@ -297,19 +305,35 @@ Page({
       mask: true
     });
     
-    // 获取用户信息
-    const userInfo = wx.getStorageSync('userInfo');
+    // 使用用户管理器获取用户信息
+    const userManager = require('../../utils/user_manager');
+    const userInfo = userManager.getUserInfoForAPI();
+    const isLoggedIn = userManager.isLoggedIn();
     
-    if (!userInfo || !userInfo.id) {
+    // 在这里再次检查登录状态
+    if (!isLoggedIn || !userInfo || !userInfo.id || userInfo.id === '0') {
+      console.debug('发帖时发现未登录状态:', userInfo);
       wx.hideLoading();
-      wx.showToast({
-        title: '用户未登录，请先登录',
-        icon: 'none'
+      
+      // 显示登录提示并记录问题
+      wx.showModal({
+        title: '需要登录',
+        content: '您需要登录后才能发布帖子',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/login'
+            });
+          }
+        }
       });
       return;
     }
     
     // 调试输出
+    console.debug('发帖使用用户信息:', userInfo);
     console.debug('准备发帖：', {
       title,
       content: content.substring(0, 30) + '...',
@@ -408,12 +432,16 @@ Page({
           return false;
         }
         
+        // 获取用户头像URL，支持微信云存储fileID
+        const avatarUrl = userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png';
+        console.debug('用户头像URL:', avatarUrl);
+        
         // 准备要发送到API的数据
         const postData = {
           wxapp_id: `post_${Date.now()}`, // 生成唯一ID
-          author_id: userInfo.id.toString(),
-          author_name: userInfo.nickname || '匿名用户',
-          author_avatar: userInfo.avatar_url || '',
+          author_id: userInfo.id,
+          author_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
+          author_avatar: avatarUrl,
           title: title,
           content: content,
           images: cloudImages, // 使用云存储的图片地址
@@ -452,9 +480,9 @@ Page({
       // 无图片帖子，直接调用API
       const postData = {
         wxapp_id: `post_${Date.now()}`,
-        author_id: userInfo.id.toString(),
-        author_name: userInfo.nickname || '匿名用户',
-        author_avatar: userInfo.avatar_url || '',
+        author_id: userInfo.id,
+        author_name: userInfo.nickname,
+        author_avatar: userInfo.avatar_url,
         title: title,
         content: content,
         images: [],
@@ -533,5 +561,29 @@ Page({
       currentStyle: 'formal',
       isEditingMode: false
     });
+    
+    // 检查登录状态
+    const userManager = require('../../utils/user_manager');
+    const isLoggedIn = userManager.isLoggedIn();
+    const userInfo = userManager.getCurrentUser();
+    
+    console.debug('页面加载时登录状态:', isLoggedIn);
+    console.debug('当前用户信息:', userInfo);
+  },
+  
+  // 页面显示时再次检查登录状态
+  onShow: function() {
+    const userManager = require('../../utils/user_manager');
+    const isLoggedIn = userManager.isLoggedIn();
+    
+    console.debug('页面显示时登录状态:', isLoggedIn);
+    
+    if (!isLoggedIn) {
+      console.debug('检测到未登录状态，尝试查看原因');
+      const token = wx.getStorageSync('token');
+      const userInfo = userManager.getCurrentUser();
+      console.debug('Token存在:', !!token);
+      console.debug('用户ID存在:', !!(userInfo && userInfo.id));
+    }
   }
 }) 

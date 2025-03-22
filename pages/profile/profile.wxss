@@ -1,248 +1,179 @@
-/* 样式表 */
-.container {
-  background: #f5f5f5;
-  min-height: 80vh;
-  padding: 0;
-  margin: 0;
+/* pages/profile/profile.wxss */
+.profile-container {
   display: flex;
   flex-direction: column;
-  gap: 0rpx;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 }
 
-.header {
-  padding: 20rpx 30rpx;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.title {
-  font-size: 36rpx;
-  font-weight: 500;
-}
-
-.settings-icon image {
-  width: 40rpx;
-  height: 40rpx;
-}
-
-.user-card {
-  background: #fff;
+/* 顶部用户信息区域 */
+.user-header {
+  background-color: #ffffff;
   padding: 30rpx;
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
+  margin-bottom: 20rpx;
+  border-radius: 0 0 20rpx 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
+/* 未登录状态 */
+.login-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 0;
+}
+
+.default-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  background-color: #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.login-text {
+  font-size: 28rpx;
+  color: #888888;
+  margin-bottom: 30rpx;
+}
+
+.login-btn {
+  width: 240rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background-color: #4caf50;
+  color: #ffffff;
+  font-size: 28rpx;
+  border-radius: 40rpx;
+  text-align: center;
+}
+
+/* 已登录状态 */
 .user-info {
   display: flex;
   align-items: center;
-  margin-bottom: 40rpx;
+  padding-bottom: 30rpx;
 }
 
 .avatar-container {
-  position: relative;
-  margin-right: 24rpx;
+  margin-right: 30rpx;
 }
 
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 50%;
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 70rpx;
+  background-color: #f0f0f0;
+  border: 2rpx solid #e0e0e0;
 }
 
-.verified-badge {
-  position: absolute;
-  bottom: 4rpx;
-  right: 4rpx;
-  width: 28rpx;
-  height: 28rpx;
-  background: #4080FF;
-  border-radius: 50%;
-  border: 2rpx solid #fff;
-}
-
-.info-content {
+.info-container {
   flex: 1;
+  position: relative;
 }
 
-.nickname {
+.username {
   font-size: 36rpx;
-  font-weight: 600;
-  margin-bottom: 12rpx;
-  display: block;
-}
-
-.university {
-  font-size: 28rpx;
-  color: #666;
+  font-weight: 500;
+  color: #333333;
   margin-bottom: 8rpx;
-  display: block;
 }
 
-.status {
+.user-status {
   font-size: 26rpx;
-  color: #999;
+  color: #888888;
+  margin-bottom: 15rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 450rpx;
 }
 
 .edit-btn {
-  color: #4080FF;
-  font-size: 28rpx;
-  padding: 10rpx 20rpx;
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 10rpx 25rpx;
+  background-color: #f5f5f5;
+  color: #666666;
+  font-size: 24rpx;
+  border-radius: 30rpx;
+  border: 1rpx solid #e0e0e0;
 }
 
-.stats-row {
+/* 统计数据 */
+.stats-container {
   display: flex;
   justify-content: space-around;
-  padding: 30rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eeeeee;
 }
 
 .stat-item {
-  text-align: center;
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.stat-num {
+.stat-number {
   font-size: 32rpx;
   font-weight: 500;
-  display: block;
-  color: #333;
+  color: #333333;
 }
 
 .stat-label {
   font-size: 24rpx;
-  color: #999;
-  margin-top: 4rpx;
-  display: block;
+  color: #888888;
+  margin-top: 5rpx;
 }
 
-.function-row {
-  display: flex;
-  justify-content: space-around;
-  padding: 30rpx 0;
+/* 功能列表区域 */
+.function-list {
+  flex: 1;
+  padding: 0 20rpx;
+}
+
+.function-group {
+  background-color: #ffffff;
+  border-radius: 15rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.function-title {
+  font-size: 26rpx;
+  color: #888888;
+  padding: 20rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
 .function-item {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.function-item image {
-  width: 48rpx;
-  height: 48rpx;
-  margin-bottom: 12rpx;
-}
-
-.function-item text {
-  font-size: 26rpx;
-  color: #666;
-}
-
-.settings-list {
-  background: #fff;
-  width: 100%;
-  margin-top: 0rpx;
-  padding: 0;
-}
-
-.settings-item {
-  display: flex;
   align-items: center;
   padding: 30rpx;
-  border-bottom: 1rpx solid #eee;
-  width: 100%;
-  box-sizing: border-box;
+  position: relative;
 }
 
-.settings-item:last-child {
-  border-bottom: none;
+.function-item:not(:last-child) {
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
-.settings-item image {
-  width: 40rpx;
-  height: 40rpx;
-  margin-right: 20rpx;
+.function-icon {
+  width: 42rpx;
+  height: 42rpx;
+  margin-right: 25rpx;
 }
 
-.settings-item text {
+.function-name {
+  font-size: 28rpx;
+  color: #333333;
   flex: 1;
-  font-size: 28rpx;
-  color: #333;
 }
 
-.arrow {
-  width: 32rpx;
-  height: 32rpx;
-}
-
-/* 数据统计 */
-.stats-container {
-  display: none;
-}
-
-.stat-number {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: #666;
-}
-
-/* 菜单列表 */
-.menu-list {
-  display: none;
-}
-
-.menu-item {
-  padding: 30rpx 0;
-  border-bottom: 1rpx solid #eee;
-  font-size: 28rpx;
-}
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-/* 底部导航 */
-.tab-bar {
-  display: none;
-}
-
-.tab-item {
-  flex: 1;
-  text-align: center;
-  line-height: 100rpx;
-  font-size: 26rpx;
-  color: #666;
-}
-
-.tab-item.active {
-  color: #007AFF;
-  font-weight: bold;
-}
-
-.login-btn {
-  margin-top: 20rpx;
-  background: #4080FF;
-  color: #fff;
-  font-size: 28rpx;
-  padding: 12rpx 30rpx;
-  border-radius: 30rpx;
-  border: none;
-  width: auto;
-  display: inline-block;
-}
-
-.login-btn::after {
-  border: none;
+.arrow-icon {
+  width: 30rpx;
+  height: 30rpx;
+  opacity: 0.5;
 }
