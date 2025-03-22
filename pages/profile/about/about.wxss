@@ -73,181 +73,328 @@
 }
 
 .about-container {
-  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  padding: 20rpx;
   background-color: #f8f8f8;
 }
 
-.logo-section {
+/* 页面标题 */
+.page-header {
+  padding: 20rpx 0;
+  text-align: center;
+  border-bottom: 1rpx solid #eee;
+  margin-bottom: 20rpx;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40rpx 0;
+}
+
+.loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 60rpx;
 }
 
-.logo {
-  width: 180rpx;
-  height: 180rpx;
-  margin-bottom: 20rpx;
+.loading-icon {
+  width: 80rpx;
+  height: 80rpx;
+  animation: rotate 1s linear infinite;
 }
 
-.app-name {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.version {
+.loading-text {
+  margin-top: 20rpx;
   font-size: 28rpx;
-  color: #666;
-}
-
-.company-info {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 30rpx;
-  margin-bottom: 60rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
-}
-
-.info-item {
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #eee;
-}
-
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.label {
-  font-size: 28rpx;
-  color: #666;
-  margin-bottom: 10rpx;
-  display: block;
-}
-
-.content {
-  font-size: 32rpx;
-  color: #333;
-  display: block;
-}
-
-.company-intro {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 30rpx;
-  margin-bottom: 60rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
-}
-
-.intro-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20rpx;
-}
-
-.intro-content {
-  font-size: 28rpx;
-  color: #666;
-  line-height: 1.8;
-}
-
-/* 新增的富文本样式 */
-.intro-content .section-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin: 40rpx 0 20rpx;
-  padding-bottom: 10rpx;
-  border-bottom: 2rpx solid #eee;
-}
-
-.intro-content .subtitle {
-  font-size: 26rpx;
   color: #999;
-  margin-top: -10rpx;
+}
+
+/* 标签页 */
+.tab-container {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1rpx solid #eee;
+  background-color: #fff;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+}
+
+.tab {
+  flex: 1;
+  padding: 20rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab.active {
+  color: #007AFF;
+  font-weight: bold;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 4rpx;
+  background-color: #007AFF;
+  border-radius: 4rpx;
+}
+
+/* 内容区域 */
+.content-container {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+}
+
+.content-section {
+  min-height: 50vh;
+}
+
+/* 平台信息部分 */
+.platform-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30rpx 0;
+}
+
+.platform-logo {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 30rpx;
   margin-bottom: 20rpx;
 }
 
-.intro-content h3 {
-  font-size: 30rpx;
+.platform-title {
+  font-size: 36rpx;
   font-weight: bold;
-  color: #444;
-  margin: 30rpx 0 15rpx;
+  color: #333;
+  margin-bottom: 10rpx;
 }
 
-.intro-content .platform-item,
-.intro-content .contribution-item {
-  margin-bottom: 30rpx;
-  padding-left: 20rpx;
+.platform-version {
+  font-size: 24rpx;
+  color: #999;
 }
 
-.intro-content ul {
-  list-style-type: disc;
-  padding-left: 40rpx;
-  margin: 10rpx 0;
-}
-
-.intro-content li {
-  margin: 10rpx 0;
-}
-
-.intro-content p {
-  margin: 10rpx 0;
+.platform-desc {
+  font-size: 28rpx;
+  color: #666;
+  text-align: center;
+  margin: 20rpx 0;
   line-height: 1.6;
 }
 
-.intro-content .highlight {
-  color: #ff4d4f;
+.platform-slogan {
+  font-size: 28rpx;
+  color: #007AFF;
+  text-align: center;
+  margin: 20rpx 0;
+  line-height: 1.6;
   font-weight: bold;
 }
 
-.section {
-  margin-bottom: 40rpx;
+.divider {
+  height: 1rpx;
+  background-color: #eee;
+  margin: 30rpx 0;
 }
 
 .section-title {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: bold;
   color: #333;
-  margin: 40rpx 0 20rpx;
-  padding-bottom: 10rpx;
-  border-bottom: 2rpx solid #eee;
+  margin-bottom: 20rpx;
+  padding-left: 20rpx;
+  border-left: 8rpx solid #007AFF;
 }
 
-.section-subtitle {
-  font-size: 26rpx;
-  color: #999;
+/* 功能特性列表 */
+.features-list {
+  margin-bottom: 30rpx;
+}
+
+.feature-item {
+  background-color: #f9f9f9;
+  border-radius: 10rpx;
+  padding: 20rpx;
   margin-bottom: 20rpx;
 }
 
-.platform-item,
-.contribution-item {
-  margin-bottom: 30rpx;
-  padding-left: 20rpx;
-}
-
-.item-title {
+.feature-title {
   font-size: 30rpx;
   font-weight: bold;
-  color: #444;
-  margin-bottom: 15rpx;
+  color: #333;
+  margin-bottom: 10rpx;
 }
 
-.item-content {
-  font-size: 28rpx;
+.feature-desc {
+  font-size: 26rpx;
   color: #666;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-.list-item {
-  margin: 10rpx 0;
+/* 团队成员列表 */
+.team-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.team-item {
+  width: 33.33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.team-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  margin-bottom: 10rpx;
+}
+
+.team-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5rpx;
+  text-align: center;
+}
+
+.team-role {
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+}
+
+/* 联系方式列表 */
+.contact-list {
+  margin-bottom: 30rpx;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.contact-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 20rpx;
+}
+
+.contact-info {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.copy-hint {
+  font-size: 24rpx;
+  color: #007AFF;
+  padding: 10rpx 20rpx;
+  border: 1rpx solid #007AFF;
+  border-radius: 30rpx;
+}
+
+/* 版本历史部分 */
+.versions-list {
+  margin-bottom: 30rpx;
+}
+
+.version-item {
+  background-color: #f9f9f9;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.version-number {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #007AFF;
+}
+
+.version-date {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.version-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.version-desc {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+  line-height: 1.5;
+}
+
+.changes-list {
+  margin-top: 10rpx;
+}
+
+.change-item {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
   padding-left: 10rpx;
 }
 
-.highlight {
-  color: #ff4d4f;
+/* 协议内容样式 */
+.agreement-title {
+  font-size: 32rpx;
   font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin: 20rpx 0 30rpx;
+}
+
+/* 底部版权 */
+.footer {
+  text-align: center;
+  padding: 30rpx 0;
+  font-size: 24rpx;
+  color: #999;
 } 

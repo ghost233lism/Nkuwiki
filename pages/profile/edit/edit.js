@@ -1,207 +1,250 @@
 // pages/profile/edit/edit.js
 const userManager = require('../../../utils/user_manager');
-const { userAPI } = require('../../../utils/api');
+const userAPI = require('../../../api/user_api');
+const logger = require('../../../utils/logger');
+const uploadHelper = require('../../../utils/upload_helper');
 
 Page({
   data: {
-    userInfo: null,
-    newNickName: '',  // 用于存储修改后的昵称
-    newStatus: ''     // 用于存储修改后的个性签名
+    user: null,
+    isUpdating: false,
+    showDatePicker: false,
+    dateValue: "",
+    inputData: {
+      nickname: '',
+      birthday: '',
+      wechatId: '',
+      qqId: '',
+      bio: ''
+    },
+    modified: {
+      nickname: false,
+      birthday: false,
+      wechatId: false,
+      qqId: false,
+      bio: false,
+      avatar: false
+    }
   },
 
   onLoad() {
-    // 使用用户管理器获取用户信息
-    const userInfo = userManager.getCurrentUser();
-    
-    // 初始化时，将现有信息填入输入框
-    this.setData({ 
-      userInfo,
-      newNickName: userInfo.nickname || userInfo.nickName || '',  // 显示现有昵称
-      newStatus: userInfo.status || ''                           // 显示现有个性签名
-    });
-  },
-
-  // 微信用户的头像选择处理
-  onChooseAvatar(e) {
-    const { avatarUrl } = e.detail;
-    this.updateAvatar(avatarUrl);
-  },
-
-  // 邮箱用户的头像选择处理
-  async onChooseImage() {
-    try {
-      const res = await wx.chooseMedia({
-        count: 1,
-        mediaType: ['image'],
-        sourceType: ['album', 'camera'],
-        sizeType: ['compressed']
-      });
-      
-      if (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) {
-        this.updateAvatar(res.tempFiles[0].tempFilePath);
-      }
-    } catch (err) {
-      console.error('选择图片失败:', err);
+    // 获取当前用户信息
+    const user = userManager.getUser();
+    if (!user) {
       wx.showToast({
-        title: '选择图片失败',
+        title: '请先登录',
         icon: 'none'
       });
+      setTimeout(() => {
+        wx.navigateBack();
+      }, 1500);
+      return;
     }
+
+    // 设置已有的用户信息
+    this.setData({
+      user,
+      inputData: {
+        nickname: user.nickname || '',
+        birthday: user.birthday || '',
+        wechatId: user.wechatId || '',
+        qqId: user.qqId || '',
+        bio: user.bio || ''
+      }
+    });
+
+    logger.debug('已加载用户信息:', this.data.user);
   },
 
-  // 统一的头像更新处理
+  // 选择头像
+  onChooseAvatar(e) {
+    logger.debug('选择头像:', e);
+    const { avatarUrl } = e.detail;
+    
+    if (!avatarUrl) {
+      wx.showToast({
+        title: '获取头像失败',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 更新头像
+    this.updateAvatar(avatarUrl);
+  },
+  
+  // 更新头像
   async updateAvatar(avatarUrl) {
     try {
-      wx.showLoading({ title: '更新中...' });
-
-      // 获取用户ID
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
+      this.setData({ isUpdating: true });
       
-      // 上传图片到微信云存储
-      let fileID = '';
-      if (avatarUrl.startsWith('cloud://')) {
-        // 如果已经是fileID，直接使用
-        fileID = avatarUrl;
-      } else {
-        // 否则上传到云存储
-        const timestamp = Date.now();
-        const cloudPath = `avatars/${userId}_${timestamp}.jpg`;
-        
-        try {
-          const uploadRes = await wx.cloud.uploadFile({
-            cloudPath: cloudPath,
-            filePath: avatarUrl
-          });
-          
-          if (!uploadRes.fileID) {
-            throw new Error('图片上传失败');
-          }
-          
-          fileID = uploadRes.fileID;
-          console.debug('上传成功，fileID:', fileID);
-        } catch (err) {
-          console.error('上传图片失败:', err);
-          throw new Error('上传图片失败');
-        }
+      // 使用uploadHelper上传头像
+      const userId = this.data.user.id || 'anonymous';
+      const fileID = await uploadHelper.uploadImage(
+        avatarUrl, 
+        'avatars', 
+        userId, 
+        true, // 压缩 
+        90,    // 质量
+        400    // 最大宽度
+      );
+      
+      if (!fileID) {
+        throw new Error('上传头像失败');
       }
-
-      // 使用API更新用户信息，使用avatar_url字段保存微信云fileID
-      const userData = {
-        avatar_url: fileID
-      };
       
-      console.debug('更新用户头像信息:', userData);
-      const res = await userAPI.updateUserInfo(userId, userData);
-
-      if (res && res.success) {
-        // 更新本地用户信息
-        userManager.updateUserInfo({ 
-          avatar_url: fileID,
-          avatarUrl: fileID  // 同时更新两个字段，兼容不同地方的使用
+      // 调用API更新头像URL
+      const result = await userAPI.updateUserInfo({
+        avatar: fileID
+      });
+      
+      if (result.success) {
+        // 更新本地用户数据
+        const updatedUser = {...this.data.user, avatar: fileID};
+        userManager.updateUser(updatedUser);
+        
+        this.setData({
+          user: updatedUser,
+          'modified.avatar': true
         });
         
-        // 更新页面数据
-        const currentUserInfo = userManager.getCurrentUser();
-        this.setData({ 
-          userInfo: currentUserInfo 
-        });
-
         wx.showToast({
-          title: '更新成功',
+          title: '头像更新成功',
           icon: 'success'
         });
       } else {
-        throw new Error(res?.message || '更新失败');
+        throw new Error(result.message || '更新失败');
       }
-    } catch (err) {
-      console.error('更新头像失败:', err);
+    } catch (error) {
+      logger.error('更新头像失败:', error);
       wx.showToast({
-        title: '更新失败',
+        title: '更新头像失败',
         icon: 'none'
       });
     } finally {
-      wx.hideLoading();
+      this.setData({ isUpdating: false });
     }
   },
 
-  // 处理昵称输入
-  onInputNickName(e) {
+  // 昵称输入
+  onNicknameInput(e) {
+    const value = e.detail.value;
     this.setData({
-      newNickName: e.detail.value
+      'inputData.nickname': value,
+      'modified.nickname': value !== this.data.user.nickname
     });
   },
 
-  // 处理个性签名输入
-  onInputStatus(e) {
+  // 生日选择
+  onBirthdayChange(e) {
+    const value = e.detail.value;
     this.setData({
-      newStatus: e.detail.value
+      'inputData.birthday': value,
+      'modified.birthday': value !== this.data.user.birthday
     });
   },
 
-  // 保存修改
+  // 微信ID输入
+  onWechatIdInput(e) {
+    const value = e.detail.value;
+    this.setData({
+      'inputData.wechatId': value,
+      'modified.wechatId': value !== this.data.user.wechatId
+    });
+  },
+
+  // QQ号输入
+  onQQIdInput(e) {
+    const value = e.detail.value;
+    this.setData({
+      'inputData.qqId': value,
+      'modified.qqId': value !== this.data.user.qqId
+    });
+  },
+
+  // 个人简介输入
+  onBioInput(e) {
+    const value = e.detail.value;
+    this.setData({
+      'inputData.bio': value,
+      'modified.bio': value !== this.data.user.bio
+    });
+  },
+
+  // 保存更改
   async saveChanges() {
     try {
-      wx.showLoading({ title: '保存中...' });
+      const { modified, inputData } = this.data;
       
-      // 获取用户ID
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
-      
-      // 构建更新数据，只包含已修改的字段
-      const userData = {};
-
-      // 只有当内容真正发生变化时才更新
-      if (this.data.newNickName !== (this.data.userInfo.nickname || this.data.userInfo.nickName)) {
-        userData.nickname = this.data.newNickName;
-      }
-
-      if (this.data.newStatus !== this.data.userInfo.status) {
-        userData.status = this.data.newStatus;
-      }
-
-      // 如果没有任何字段需要更新，直接返回
-      if (Object.keys(userData).length === 0) {
-        wx.hideLoading();
+      // 检查是否有修改
+      const hasModifications = Object.values(modified).some(v => v);
+      if (!hasModifications) {
         wx.showToast({
           title: '未做任何修改',
           icon: 'none'
         });
         return;
       }
-
+      
+      this.setData({ isUpdating: true });
+      
+      // 构建更新对象，只包含修改过的字段
+      const updateData = {};
+      
+      if (modified.nickname) updateData.nickname = inputData.nickname;
+      if (modified.birthday) updateData.birthday = inputData.birthday;
+      if (modified.wechatId) updateData.wechatId = inputData.wechatId;
+      if (modified.qqId) updateData.qqId = inputData.qqId;
+      if (modified.bio) updateData.bio = inputData.bio;
+      
       // 调用API更新用户信息
-      const res = await userAPI.updateUserInfo(userId, userData);
-
-      if (res && !res.error) {
-        // 更新本地用户信息
-        userManager.updateUserInfo(userData);
-
-        wx.hideLoading();
+      const result = await userAPI.updateUserInfo(updateData);
+      
+      if (result.success) {
+        // 更新本地用户数据
+        const updatedUser = {...this.data.user, ...updateData};
+        userManager.updateUser(updatedUser);
+        
         wx.showToast({
           title: '保存成功',
           icon: 'success'
         });
-
+        
+        // 重置修改状态
+        this.setData({
+          user: updatedUser,
+          modified: {
+            nickname: false,
+            birthday: false,
+            wechatId: false,
+            qqId: false,
+            bio: false,
+            avatar: false
+          }
+        });
+        
+        // 延迟返回
         setTimeout(() => {
           wx.navigateBack();
         }, 1500);
       } else {
-        throw new Error(res?.error || '保存失败');
+        throw new Error(result.message || '更新失败');
       }
-    } catch (err) {
-      console.error('保存失败：', err);
-      wx.hideLoading();
+    } catch (error) {
+      logger.error('保存个人信息失败:', error);
       wx.showToast({
-        title: '保存失败',
+        title: '保存失败，请重试',
         icon: 'none'
       });
+    } finally {
+      this.setData({ isUpdating: false });
     }
   },
   
-  // 处理头像加载错误
+  // 头像加载错误处理
   onAvatarError() {
-    // 如果头像加载失败，使用默认头像
-    const userInfo = this.data.userInfo;
-    userInfo.avatarUrl = '/assets/icons/default-avatar.png';
-    this.setData({ userInfo });
+    this.setData({
+      'user.avatar': '/assets/icons/default-avatar.png'
+    });
   }
 });

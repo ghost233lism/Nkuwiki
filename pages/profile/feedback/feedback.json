@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "意见反馈",
-  "usingComponents": {}
+  "usingComponents": {},
+  "backgroundColor": "#f8f8f8",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black"
 } 

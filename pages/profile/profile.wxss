@@ -3,16 +3,34 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #f8f8f8;
 }
 
-/* 顶部用户信息区域 */
-.user-header {
-  background-color: #ffffff;
-  padding: 30rpx;
+/* 顶部标题栏 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 24rpx 20rpx;
+  background-color: #fff;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.setting-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+/* 用户信息区域 */
+.user-info-section {
+  background-color: #fff;
+  padding: 20rpx 24rpx 30rpx;
   margin-bottom: 20rpx;
-  border-radius: 0 0 20rpx 20rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
 /* 未登录状态 */
@@ -27,13 +45,12 @@
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
-  background-color: #f0f0f0;
   margin-bottom: 20rpx;
 }
 
 .login-text {
   font-size: 28rpx;
-  color: #888888;
+  color: #666;
   margin-bottom: 30rpx;
 }
 
@@ -41,73 +58,73 @@
   width: 240rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background-color: #4caf50;
-  color: #ffffff;
+  background-color: #4080ff;
+  color: #fff;
   font-size: 28rpx;
   border-radius: 40rpx;
-  text-align: center;
 }
 
-/* 已登录状态 */
+/* 已登录用户信息 */
 .user-info {
   display: flex;
-  align-items: center;
-  padding-bottom: 30rpx;
-}
-
-.avatar-container {
-  margin-right: 30rpx;
+  position: relative;
+  margin-bottom: 30rpx;
 }
 
 .avatar {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 70rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 60rpx;
+  margin-right: 24rpx;
   background-color: #f0f0f0;
-  border: 2rpx solid #e0e0e0;
 }
 
-.info-container {
+.user-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   flex: 1;
-  position: relative;
 }
 
 .username {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 500;
-  color: #333333;
-  margin-bottom: 8rpx;
+  color: #333;
+  margin-bottom: 6rpx;
 }
 
-.user-status {
-  font-size: 26rpx;
-  color: #888888;
-  margin-bottom: 15rpx;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  max-width: 450rpx;
+.school {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 6rpx;
 }
 
-.edit-btn {
+.bio {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.edit-profile-btn {
   position: absolute;
   right: 0;
   top: 0;
-  padding: 10rpx 25rpx;
-  background-color: #f5f5f5;
-  color: #666666;
   font-size: 24rpx;
+  color: #4080ff;
+  background-color: rgba(64, 128, 255, 0.1);
   border-radius: 30rpx;
-  border: 1rpx solid #e0e0e0;
+  padding: 10rpx 24rpx;
+  line-height: 1.2;
+  min-height: auto;
+  border: none;
 }
 
-/* 统计数据 */
-.stats-container {
+/* 数据统计行 */
+.stats-row {
   display: flex;
   justify-content: space-around;
-  padding-top: 20rpx;
-  border-top: 1rpx solid #eeeeee;
+  align-items: center;
+  padding: 20rpx 0;
 }
 
 .stat-item {
@@ -119,61 +136,79 @@
 .stat-number {
   font-size: 32rpx;
   font-weight: 500;
-  color: #333333;
+  color: #333;
+  margin-bottom: 8rpx;
 }
 
 .stat-label {
   font-size: 24rpx;
-  color: #888888;
-  margin-top: 5rpx;
+  color: #999;
 }
 
-/* 功能列表区域 */
-.function-list {
-  flex: 1;
-  padding: 0 20rpx;
-}
-
-.function-group {
-  background-color: #ffffff;
-  border-radius: 15rpx;
+/* 功能图标区域 */
+.feature-icons {
+  display: flex;
+  flex-wrap: wrap;
+  background-color: #fff;
+  padding: 30rpx 20rpx;
   margin-bottom: 20rpx;
-  overflow: hidden;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
-.function-title {
+.icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 33.33%;
+  padding: 20rpx 0;
+}
+
+.icon-circle {
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 45rpx;
+  background-color: rgba(64, 128, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.feature-icon {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.icon-text {
   font-size: 26rpx;
-  color: #888888;
-  padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  color: #666;
 }
 
-.function-item {
+/* 设置菜单区域 */
+.settings-menu {
+  background-color: #fff;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  padding: 30rpx;
-  position: relative;
-}
-
-.function-item:not(:last-child) {
+  padding: 30rpx 24rpx;
   border-bottom: 1rpx solid #f0f0f0;
 }
 
-.function-icon {
-  width: 42rpx;
-  height: 42rpx;
-  margin-right: 25rpx;
+.menu-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 24rpx;
 }
 
-.function-name {
-  font-size: 28rpx;
-  color: #333333;
+.menu-text {
   flex: 1;
+  font-size: 28rpx;
+  color: #333;
 }
 
 .arrow-icon {
-  width: 30rpx;
-  height: 30rpx;
+  width: 32rpx;
+  height: 32rpx;
   opacity: 0.5;
 }

@@ -1,146 +1,321 @@
-const fs = wx.getFileSystemManager();
+const feedbackAPI = require('../../../api/feedback_api');
+const logger = require('../../../utils/logger');
+const userManager = require('../../../utils/user_manager');
+const uploadHelper = require('../../../utils/upload_helper');
 
 Page({
   data: {
-    feedbackTypes: [
-      { label: '功能异常', value: 'bug', checked: true },
-      { label: '功能建议', value: 'suggestion' },
-      { label: '其他问题', value: 'other' }
-    ],
-    type: 'bug',
+    isLoggedIn: false,
+    userId: '',
     content: '',
     contact: '',
-    images: []
+    type: 'feature', // 默认为功能建议
+    types: [
+      { id: 'bug', name: '功能异常' },
+      { id: 'feature', name: '功能建议' },
+      { id: 'content', name: '内容问题' },
+      { id: 'other', name: '其他' }
+    ],
+    images: [],
+    maxImageCount: 3,
+    isSubmitting: false,
+    feedbackList: [],
+    loadingFeedbacks: false
   },
 
-  // 选择反馈类型
-  onTypeChange(e) {
-    this.setData({
-      type: e.detail.value
-    });
+  onLoad: function (options) {
+    // 检查登录状态
+    const userInfo = userManager.getUser();
+    const isLoggedIn = userManager.isLoggedIn();
+    
+    if (isLoggedIn && userInfo) {
+      this.setData({
+        isLoggedIn: true,
+        userId: userInfo.id || userInfo._id,
+        contact: userInfo.email || ''
+      });
+      
+      // 加载用户反馈列表
+      this.loadFeedbackList();
+    } else {
+      this.setData({
+        isLoggedIn: false
+      });
+      
+      // 提示用户登录
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000
+      });
+      
+      // 2秒后返回上一页
+      setTimeout(() => {
+        wx.navigateBack();
+      }, 2000);
+    }
   },
 
-  // 输入反馈内容
-  onContentInput(e) {
+  // 加载反馈列表
+  loadFeedbackList: function () {
+    const userId = this.data.userId;
+    
+    this.setData({ loadingFeedbacks: true });
+    
+    feedbackAPI.getUserFeedback(userId)
+      .then(res => {
+        logger.debug('获取用户反馈列表成功:', res);
+        
+        // 更新数据
+        this.setData({
+          feedbackList: res.feedbacks || [],
+          loadingFeedbacks: false
+        });
+      })
+      .catch(err => {
+        logger.error('获取用户反馈列表失败:', err);
+        this.setData({
+          loadingFeedbacks: false
+        });
+      });
+  },
+
+  // 输入内容
+  onContentInput: function (e) {
     this.setData({
       content: e.detail.value
     });
   },
 
   // 输入联系方式
-  onContactInput(e) {
+  onContactInput: function (e) {
     this.setData({
       contact: e.detail.value
     });
   },
 
+  // 选择反馈类型
+  onTypeChange: function (e) {
+    this.setData({
+      type: e.detail.value
+    });
+  },
+
   // 选择图片
-  chooseImage() {
-    wx.chooseMedia({
-      count: 3 - this.data.images.length,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        const newImages = res.tempFiles.map(file => file.tempFilePath);
-        this.setData({
-          images: [...this.data.images, ...newImages]
-        });
-      }
-    });
-  },
-
-  // 预览图片
-  previewImage(e) {
-    const url = e.currentTarget.dataset.url;
-    wx.previewImage({
-      urls: this.data.images,
-      current: url
-    });
-  },
-
-  // 删除图片
-  deleteImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.images;
-    images.splice(index, 1);
-    this.setData({ images });
-  },
-
-  // 保存反馈信息到本地文件
-  saveFeedback(feedback) {
-    const timestamp = new Date().getTime();
-    const fileName = `feedback_${timestamp}.json`;
-    const filePath = `${wx.env.USER_DATA_PATH}/feedback/${fileName}`;
-
-    // 确保feedback文件夹存在
-    try {
-      fs.accessSync(`${wx.env.USER_DATA_PATH}/feedback`);
-    } catch (e) {
-      fs.mkdirSync(`${wx.env.USER_DATA_PATH}/feedback`, true);
-    }
-
-    // 保存反馈信息
-    try {
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify(feedback),
-        'utf8'
-      );
-      return true;
-    } catch (e) {
-      console.error('保存反馈失败：', e);
-      return false;
-    }
-  },
-
-  // 提交反馈
-  submitFeedback() {
-    if (!this.data.content.trim()) {
+  chooseImage: function () {
+    const { images, maxImageCount } = this.data;
+    const remainCount = maxImageCount - images.length;
+    
+    if (remainCount <= 0) {
       wx.showToast({
-        title: '请输入反馈内容',
+        title: `最多只能上传${maxImageCount}张图片`,
         icon: 'none'
       });
       return;
     }
-
-    wx.showLoading({
-      title: '提交中...'
-    });
-
-    // 准备反馈数据
-    const feedback = {
-      type: this.data.type,
-      content: this.data.content,
-      contact: this.data.contact,
-      images: this.data.images,
-      createTime: new Date().toISOString(),
-      deviceInfo: {
-        ...wx.getDeviceInfo(),
-        ...wx.getAppBaseInfo(),
-        ...wx.getSystemSetting(),
-        windowInfo: wx.getWindowInfo()
+    
+    wx.chooseMedia({
+      count: remainCount,
+      mediaType: ['image'],
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempFiles = res.tempFiles.map(file => file.tempFilePath);
+        // 上传图片到云存储
+        this.uploadImages(tempFiles);
       }
-    };
+    });
+  },
 
-    // 保存反馈
-    if (this.saveFeedback(feedback)) {
-      wx.hideLoading();
-      wx.showToast({
-        title: '反馈提交成功',
-        icon: 'success',
-        duration: 2000,
-        success: () => {
-          setTimeout(() => {
-            wx.navigateBack();
-          }, 2000);
-        }
+  // 上传图片
+  async uploadImages(tempFilePaths) {
+    if (!tempFilePaths || tempFilePaths.length === 0) return;
+    
+    wx.showLoading({
+      title: '上传中...',
+      mask: true
+    });
+    
+    try {
+      // 使用uploadHelper批量上传图片
+      const fileIDs = await uploadHelper.batchUploadImages(
+        tempFilePaths,
+        'feedback',
+        this.data.userId,
+        true,  // 压缩
+        80     // 质量
+      );
+      
+      // 更新图片列表
+      this.setData({
+        images: [...this.data.images, ...fileIDs]
       });
-    } else {
+      
       wx.hideLoading();
       wx.showToast({
-        title: '提交失败，请重试',
-        icon: 'error'
+        title: '上传成功',
+        icon: 'success'
+      });
+      
+    } catch (err) {
+      logger.error('上传图片失败:', err);
+      wx.hideLoading();
+      wx.showToast({
+        title: '上传失败',
+        icon: 'none'
       });
     }
+  },
+
+  // 预览图片
+  previewImage: function (e) {
+    const index = e.currentTarget.dataset.index;
+    const { images } = this.data;
+    
+    wx.previewImage({
+      current: images[index],
+      urls: images
+    });
+  },
+
+  // 删除图片
+  deleteImage: function (e) {
+    const index = e.currentTarget.dataset.index;
+    const { images } = this.data;
+    
+    // 获取要删除的fileID
+    const fileID = images[index];
+    
+    // 从数组中删除该图片
+    images.splice(index, 1);
+    
+    // 更新UI
+    this.setData({
+      images: images
+    });
+    
+    // 从云存储中删除图片
+    uploadHelper.deleteFile(fileID)
+      .then(success => {
+        if (!success) {
+          logger.debug('删除云存储图片失败:', fileID);
+        }
+      })
+      .catch(err => {
+        logger.error('删除云存储图片出错:', err);
+      });
+  },
+
+  // 提交反馈
+  submitFeedback: function () {
+    // 内容验证
+    const { content, type, contact, userId, images } = this.data;
+    
+    if (!content || content.trim().length < 5) {
+      wx.showToast({
+        title: '反馈内容不能少于5个字',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 防止重复提交
+    if (this.data.isSubmitting) {
+      return;
+    }
+    
+    this.setData({ isSubmitting: true });
+    
+    // 获取设备信息
+    const systemInfo = wx.getSystemInfoSync();
+    const deviceInfo = {
+      brand: systemInfo.brand,
+      model: systemInfo.model,
+      system: systemInfo.system,
+      platform: systemInfo.platform,
+      SDKVersion: systemInfo.SDKVersion
+    };
+    
+    // 构建反馈数据
+    const feedbackData = {
+      user_id: userId,
+      content: content.trim(),
+      type: type,
+      contact: contact || null,
+      images: images,
+      device_info: deviceInfo
+    };
+    
+    // 调用API提交反馈
+    feedbackAPI.submitFeedback(feedbackData)
+      .then(res => {
+        logger.debug('提交反馈成功:', res);
+        
+        this.setData({
+          isSubmitting: false,
+          content: '',
+          images: []
+        });
+        
+        wx.showToast({
+          title: '提交成功',
+          icon: 'success'
+        });
+        
+        // 刷新反馈列表
+        this.loadFeedbackList();
+      })
+      .catch(err => {
+        logger.error('提交反馈失败:', err);
+        
+        this.setData({
+          isSubmitting: false
+        });
+        
+        wx.showToast({
+          title: '提交失败，请重试',
+          icon: 'none'
+        });
+      });
+  },
+
+  // 查看反馈详情
+  viewFeedbackDetail: function (e) {
+    const feedback = e.currentTarget.dataset.feedback;
+    
+    // 构建详情内容
+    let detailContent = `类型：${this.getTypeName(feedback.type)}\n`;
+    detailContent += `时间：${feedback.create_time}\n`;
+    detailContent += `状态：${this.getStatusName(feedback.status)}\n\n`;
+    detailContent += `${feedback.content}`;
+    
+    if (feedback.admin_reply) {
+      detailContent += `\n\n回复：${feedback.admin_reply}`;
+    }
+    
+    wx.showModal({
+      title: '反馈详情',
+      content: detailContent,
+      showCancel: false,
+      confirmText: '确定'
+    });
+  },
+
+  // 获取类型名称
+  getTypeName: function (typeId) {
+    const type = this.data.types.find(item => item.id === typeId);
+    return type ? type.name : '其他';
+  },
+
+  // 获取状态名称
+  getStatusName: function (status) {
+    const statusMap = {
+      0: '待处理',
+      1: '处理中',
+      2: '已处理',
+      3: '已关闭'
+    };
+    
+    return statusMap[status] || '待处理';
   }
 }); 

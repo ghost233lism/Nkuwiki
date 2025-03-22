@@ -1,0 +1,95 @@
+<!-- pages/notifications/notifications.wxml -->
+<view class="notifications-container">
+  <!-- 顶部标签切换 -->
+  <view class="tabs-container">
+    <view class="tab {{selectedType === '' ? 'active' : ''}}" bindtap="switchType" data-type="">
+      <text>全部</text>
+    </view>
+    <view class="tab {{selectedType === 'like' ? 'active' : ''}}" bindtap="switchType" data-type="like">
+      <text>点赞</text>
+    </view>
+    <view class="tab {{selectedType === 'comment' ? 'active' : ''}}" bindtap="switchType" data-type="comment">
+      <text>评论</text>
+    </view>
+    <view class="tab {{selectedType === 'system' ? 'active' : ''}}" bindtap="switchType" data-type="system">
+      <text>系统</text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading && notifications.length === 0}}">
+    <view class="loading">
+      <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+      <text class="loading-text">加载中...</text>
+    </view>
+  </view>
+
+  <!-- 通知为空提示 -->
+  <view class="empty-container" wx:if="{{!loading && notifications.length === 0}}">
+    <image class="empty-icon" src="/assets/icons/empty-notification.png" mode="aspectFill"></image>
+    <text class="empty-text">暂无通知消息</text>
+  </view>
+
+  <!-- 通知列表 -->
+  <scroll-view scroll-y="true" class="notifications-list" bindscrolltolower="onReachBottom" wx:if="{{notifications.length > 0}}">
+    <view class="notification-item {{item.is_read ? '' : 'unread'}}" 
+          wx:for="{{notifications}}" 
+          wx:key="id" 
+          bindtap="viewNotificationDetail" 
+          data-notification="{{item}}"
+          data-id="{{item.id}}"
+          data-index="{{index}}">
+      
+      <!-- 左侧图标 -->
+      <view class="notification-icon">
+        <view class="icon-bg {{item.type}}">
+          <image class="icon" src="{{
+            item.type === 'like' ? '/assets/icons/like-fill.png' : 
+            item.type === 'comment' ? '/assets/icons/comment-fill.png' : 
+            item.type === 'follow' ? '/assets/icons/user-fill.png' : 
+            '/assets/icons/notification-fill.png'
+          }}" mode="aspectFill"></image>
+        </view>
+      </view>
+      
+      <!-- 通知内容 -->
+      <view class="notification-content">
+        <view class="notification-title">
+          <text>{{item.title}}</text>
+        </view>
+        <view class="notification-desc">
+          <text>{{item.content}}</text>
+        </view>
+        
+        <!-- 发送者和关联内容信息 -->
+        <view class="notification-meta" wx:if="{{item.sender || item.related_id}}">
+          <text class="meta-text">在「{{item.post_title || '帖子'}}」</text>
+        </view>
+      </view>
+      
+      <!-- 右侧时间和操作区 -->
+      <view class="notification-right">
+        <text class="notification-time">{{item.create_time}}</text>
+        <view class="notification-status" wx:if="{{!item.is_read}}"></view>
+      </view>
+    </view>
+    
+    <!-- 加载更多 -->
+    <view class="loading-more" wx:if="{{loading && notifications.length > 0}}">
+      <text>加载中...</text>
+    </view>
+    
+    <!-- 已到底提示 -->
+    <view class="list-bottom" wx:if="{{lastPage && notifications.length > 0}}">
+      <text>已经到底啦</text>
+    </view>
+  </scroll-view>
+  
+  <!-- 底部操作区 -->
+  <view class="bottom-action">
+    <button class="mark-all-read-btn" bindtap="markAllAsRead" disabled="{{unreadCount === 0}}">
+      <image class="btn-icon" src="/assets/icons/read.png" mode="aspectFill"></image>
+      <text>全部标记为已读</text>
+    </button>
+  </view>
+</view> 

@@ -1,7 +1,7 @@
 // pages/profile/profile.js
 const app = getApp();
 const userManager = require('../../utils/user_manager');
-const { userAPI, postAPI } = require('../../utils/api');
+const { userAPI, postAPI, notificationAPI, feedbackAPI, aboutAPI, logger } = require('../../utils/api');
 
 Page({
   data: {
@@ -11,10 +11,12 @@ Page({
     postsCount: 0,
     followedCount: 0,  // 关注数
     followerCount: 0,  // 粉丝数
-    isLoggedIn: false
+    isLoggedIn: false,
+    tokenCount: 0, // 用户token数量
+    isLogin: false
   },
 
-  onLoad() {
+  onLoad(options) {
     // 使用userManager获取用户信息
     const userInfo = userManager.getCurrentUser();
     const isLoggedIn = userManager.isLoggedIn();
@@ -24,6 +26,21 @@ Page({
       loginType: userInfo?.loginType || '',
       isLoggedIn
     });
+
+    // 检查登录状态
+    if (userInfo && userInfo.id) {
+      this.setData({
+        isLogin: true,
+        userInfo: userInfo
+      });
+      
+      // 获取用户数据
+      this.refreshUserData();
+    } else {
+      this.setData({
+        isLogin: false
+      });
+    }
   },
 
   onShow() {
@@ -88,16 +105,26 @@ Page({
       // 使用API获取用户的所有帖子
       const posts = await postAPI.getUserPosts(userId);
       
-      if (posts && !posts.error) {
+      // 确认posts是一个数组再使用reduce
+      if (posts && Array.isArray(posts) && !posts.error) {
         // 计算所有帖子获得的点赞总数
         const totalLikes = posts.reduce((sum, post) => sum + (post.likes || 0), 0);
         
         this.setData({
           totalLikes
         });
+      } else {
+        // 如果posts不是数组或有错误，设置默认值
+        logger.debug('获取帖子列表格式不是数组:', posts);
+        this.setData({
+          totalLikes: 0
+        });
       }
     } catch (error) {
-      console.error('获取用户获赞总数失败:', error);
+      logger.error('获取用户获赞总数失败:', error);
+      this.setData({
+        totalLikes: 0
+      });
     }
   },
 
@@ -111,14 +138,30 @@ Page({
       // 使用API获取用户关注和粉丝数据
       const res = await userAPI.getUserFollowStats(userId);
       
+      // 日志记录获取到的数据
+      logger.debug('获取用户关注统计:', res);
+      
       if (res && !res.error) {
+        // 设置数据，确保使用默认值避免显示NaN或undefined
         this.setData({
           followedCount: res.followedCount || 0,
           followerCount: res.followerCount || 0
         });
+        
+        logger.debug(`用户关注数据更新: 关注=${res.followedCount}, 粉丝=${res.followerCount}`);
+      } else if (res && res.error) {
+        logger.error('获取用户关注统计返回错误:', res.error);
+        // 不更新数据，保持原有值
       }
     } catch (error) {
-      console.error('获取用户关注粉丝数据失败:', error);
+      logger.error('获取用户关注粉丝数据失败:', error);
+      // 显示错误提示（可选）
+      /*
+      wx.showToast({
+        title: '获取数据失败',
+        icon: 'none'
+      });
+      */
     }
   },
 
@@ -283,5 +326,77 @@ Page({
     wx.navigateTo({
       url: '/pages/login/login',
     });
-  }
+  },
+
+  // 查看用户点赞内容
+  viewLiked() {
+    if (!this.checkLogin()) return;
+    
+    wx.navigateTo({
+      url: '/pages/myLike_fav_comment/myLike_fav_comment?type=like',
+    });
+  },
+  
+  // 跳转到意见反馈页面
+  goToFeedback() {
+    if (!this.checkLogin()) return;
+    
+    wx.navigateTo({
+      url: '/pages/profile/feedback/feedback',
+    });
+  },
+  
+  // 跳转到消息通知页面
+  goToNotifications() {
+    if (!this.checkLogin()) return;
+    
+    wx.navigateTo({
+      url: '/pages/notifications/notifications',
+    });
+  },
+  
+  // 跳转到关于我们页面
+  goToAboutUs() {
+    wx.navigateTo({
+      url: '/pages/profile/about/about',
+    });
+  },
+
+  /**
+   * 刷新用户数据
+   */
+  refreshUserData: function() {
+    const userId = this.data.userInfo.id;
+    
+    // 获取用户信息
+    this.getUserInfo();
+    
+    // 获取用户统计数据
+    this.getUserStats(userId);
+    
+    // 获取用户关注数据
+    this.getUserFollowCounts(userId);
+    
+    // 获取用户Token数量
+    this.getUserTokenCount(userId);
+  },
+
+  /**
+   * 获取用户Token数量
+   */
+  getUserTokenCount: function(userId) {
+    if (!userId) return;
+    
+    userAPI.getUserToken(userId).then(res => {
+      logger.debug('获取用户Token数量:', res);
+      if (res && res.token !== undefined) {
+        const tokenCount = res.token;
+        this.setData({
+          tokenCount: tokenCount
+        });
+      }
+    }).catch(err => {
+      logger.error('获取用户Token数量失败:', err);
+    });
+  },
 });

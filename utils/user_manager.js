@@ -281,6 +281,24 @@ const userManager = {
       console.error('获取临时链接异常:', error);
       return fileID; // 发生异常时返回原fileID
     }
+  },
+  
+  /**
+   * 临时保存云函数获取的用户信息（不作为主要用户信息）
+   * @param {Object} tempUserInfo - 临时用户信息
+   * @returns {Object} 保存后的临时用户信息
+   */
+  updateTempUserInfo(tempUserInfo) {
+    try {
+      // 仅保存到最新用户信息中，不覆盖主要用户信息
+      if (tempUserInfo) {
+        wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, tempUserInfo);
+      }
+      return tempUserInfo;
+    } catch (e) {
+      console.error('保存临时用户信息失败', e);
+      return null;
+    }
   }
 };
 

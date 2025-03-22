@@ -90,152 +90,162 @@ function switchToNextDomain() {
   return `${protocol}${domain}`;
 }
 
-/**
- * 发起请求
- * @param {String} url - 接口地址
- * @param {String} method - 请求方法
- * @param {Object} data - 请求数据
- * @param {Object} header - 请求头
- * @param {Boolean} showLoading - 是否显示加载中
- * @returns {Promise} - 请求Promise
- */
-function request(url, method = 'GET', data = {}, header = {}, showLoading = true) {
-  // 完整URL
-  let baseUrl = API.BASE_URL;
-  const fullUrl = baseUrl + url;
-  
-  // 合并请求头
-  const headers = {
-    'content-type': 'application/json',
-    ...header
+// 处理请求
+function request(option = {}) {
+  // 默认配置
+  const defaultOptions = {
+    url: '',
+    method: 'GET',
+    header: {},
+    data: {},
+    dataType: 'json',
+    responseType: 'text',
+    success: () => {},
+    fail: () => {},
+    complete: () => {}
   };
+
+  // 合并配置
+  const options = {
+    ...defaultOptions,
+    ...option
+  };
+
+  // 构建完整URL
+  const url = options.url.startsWith('http') ? options.url : API.BASE_URL + options.url;
+
+  // 日志
+  logger.debug(`[${options.method}] ${url}`, options.data);
 
   // 获取token
   const token = wx.getStorageSync('token');
+  
+  // 合并请求头
+  const header = {
+    'Content-Type': 'application/json',
+    ...options.header
+  };
+  
+  // 如果有token，添加到请求头
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    header['Authorization'] = `Bearer ${token}`;
   }
 
-  // 是否显示加载中
-  if (showLoading) {
-    wx.showLoading({
-      title: '加载中...',
-    });
-  }
-
-  // 日志
-  logger.debug(`[${method}] ${fullUrl}`);
-  if (method !== 'GET') {
-    logger.debug(`RequestBody: ${JSON.stringify(data)}`);
-  }
-
-  // 发起请求
+  // 返回Promise
   return new Promise((resolve, reject) => {
     wx.request({
-      url: fullUrl,
-      method,
-      data,
-      header: headers,
+      url,
+      method: options.method,
+      data: options.data,
+      header,
       success: (res) => {
-        logger.debug(`Response Status: ${res.statusCode}`);
-        if (res.statusCode === API.STATUS.SUCCESS) {
-          logger.debug(`Response Data: ${JSON.stringify(res.data)}`);
-          resolve(res.data);
-        } else if (res.statusCode === API.STATUS.UNAUTHORIZED) {
-          // 未授权，清除登录信息并跳转到登录页
-          wx.clearStorageSync();
-          wx.navigateTo({
-            url: '/pages/login/login'
-          });
-          reject(new Error('未授权，请重新登录'));
-        } else if (res.statusCode === API.STATUS.SERVER_ERROR || res.statusCode === 501) {
-          // 服务器内部错误或未实现错误，记录更多信息
-          logger.error(`服务器错误(${res.statusCode}): ${fullUrl}`, {
-            url: fullUrl,
-            method,
-            requestData: data,
-            response: res.data
-          });
-          
-          // 对于接口的特殊处理 - 添加更多特殊情况处理
-          if (url.includes('/posts') && method === 'GET') {
-            logger.debug('帖子列表请求失败，使用模拟数据');
-            // 返回空数组作为帖子数据，避免前端崩溃
-            resolve({ data: [], success: true });
-          } else if (url.includes('/favorite') || url.includes('/unfavorite')) {
-            logger.debug('收藏/取消收藏功能不可用，返回模拟响应');
-            resolve({ success: true, message: "操作已记录，等待服务更新" });
-          } else if (url.includes('/like') || url.includes('/unlike')) {
-            logger.debug('点赞/取消点赞功能不可用，返回模拟响应');
-            resolve({ success: true, message: "操作已记录，等待服务更新" });
+        logger.debug(`[${options.method}] ${url} 响应:`, res);
+        
+        // 检查标准响应格式
+        if (res.data && res.data.hasOwnProperty('code')) {
+          // 标准响应格式，使用code判断
+          if (res.data.code === 200 || res.data.code === 0) {
+            // 成功响应
+            resolve(res.data.data || res.data);
+          } else if (res.data.code === 401 || res.data.code === 403) {
+            // 未授权
+            logger.warn('未授权访问，清除登录信息');
+            wx.removeStorageSync('token');
+            wx.removeStorageSync('user_info');
+            
+            // 提示用户
+            wx.showToast({
+              title: res.data.message || '登录已过期，请重新登录',
+              icon: 'none',
+              duration: 2000
+            });
+            
+            // 2秒后跳转到登录页
+            setTimeout(() => {
+              wx.redirectTo({
+                url: '/pages/login/login'
+              });
+            }, 2000);
+            
+            // 返回错误
+            reject(new Error(res.data.message || '未授权'));
           } else {
-            const errorMsg = res.data?.detail || res.data?.message || `服务器错误(${res.statusCode})，请稍后重试`;
-            reject(new Error(errorMsg));
+            // 其他错误
+            logger.warn('请求失败:', res.data);
+            wx.showToast({
+              title: res.data.message || '请求失败',
+              icon: 'none'
+            });
+            reject(new Error(res.data.message || '请求失败'));
+          }
+        } else if (res.statusCode >= 200 && res.statusCode < 300) {
+          // 兼容非标准响应，但状态码正常
+          
+          // 检查响应类型，对特定API进行额外处理
+          if (url.includes('/posts')) {
+            // 处理posts相关接口
+            logger.debug('处理posts接口响应');
+            if (res.data && !Array.isArray(res.data) && res.data.data && Array.isArray(res.data.data)) {
+              // 如果返回了嵌套的data数组，直接提取
+              resolve(res.data.data);
+            } else if (Array.isArray(res.data)) {
+              // 直接返回数组
+              resolve(res.data);
+            } else if (res.data && typeof res.data === 'object') {
+              // 返回对象
+              resolve(res.data);
+            } else {
+              // 其他情况，返回空数组避免错误
+              logger.warn('无法识别的posts响应格式', res.data);
+              resolve([]);
+            }
+          } else {
+            // 默认处理
+            resolve(res.data);
           }
         } else {
-          // 其他错误
-          const errorMsg = res.data?.detail || res.data?.message || '请求失败';
-          logger.error(`请求失败(${res.statusCode}): ${errorMsg}`, res);
-          reject(new Error(errorMsg));
+          // 状态码异常
+          logger.warn(`请求失败: 状态码 ${res.statusCode}`);
+          
+          // 对某些特定接口返回空结果而不是错误
+          if (url.includes('/posts')) {
+            logger.debug('posts接口状态码异常，返回空数组');
+            resolve([]);
+          } else if (url.includes('/follow-stats')) {
+            logger.debug('follow-stats接口状态码异常，返回默认值');
+            resolve({ followedCount: 0, followerCount: 0 });
+          } else {
+            reject(new Error(`网络请求错误 (${res.statusCode})`));
+          }
         }
       },
       fail: (err) => {
-        logger.error('请求异常', err);
+        logger.error(`[${options.method}] ${url} 失败:`, err);
         
-        // 处理域名不在白名单错误
-        if (err.errMsg && err.errMsg.includes('url not in domain list')) {
-          logger.error(`域名[${baseUrl}]未在微信后台配置，请添加到域名白名单`);
-          // 显示提示
+        // 域名错误处理
+        if (err.errMsg && (err.errMsg.includes('domain') || err.errMsg.includes('ssl'))) {
+          // 非白名单域名错误
           wx.showModal({
-            title: '访问受限',
-            content: '当前服务器域名未添加到微信白名单，请在开发工具中关闭域名校验或使用合法域名',
+            title: '提示',
+            content: '请求域名不在白名单中，请检查开发工具设置',
+            confirmText: '我知道了',
             showCancel: false
           });
-          reject(err);
-          return;
         }
         
-        // 网络错误或服务器无响应，尝试备用域名
-        if (err.errMsg.includes('request:fail') || err.errMsg.includes('timeout')) {
-          // 获取下一个可用域名
-          const nextDomain = switchToNextDomain();
-          logger.info(`尝试切换到备用域名: ${nextDomain}`);
-          
-          // 使用新域名重新发起请求
-          wx.request({
-            url: `${nextDomain}${url}`,
-            method,
-            data,
-            header: headers,
-            success: (res) => {
-              if (res.statusCode === API.STATUS.SUCCESS) {
-                logger.info('备用域名请求成功');
-                // 更新默认域名
-                API.BASE_URL = nextDomain;
-                resolve(res.data);
-              } else {
-                const errorMsg = res.data?.detail || res.data?.message || `服务器错误(${res.statusCode})`;
-                reject(new Error(errorMsg));
-              }
-            },
-            fail: (retryErr) => {
-              logger.error('备用域名请求失败', retryErr);
-              // 如果重试也失败，才最终报错
-              reject(new Error('网络连接失败，请检查网络设置或稍后重试'));
-            },
-            complete: () => {
-              if (showLoading) {
-                wx.hideLoading();
-              }
-            }
-          });
+        // 对某些特定接口进行容错处理
+        if (url.includes('/posts')) {
+          logger.debug('posts接口请求失败，返回空数组');
+          resolve([]);
+        } else if (url.includes('/users') && url.includes('/follow-stats')) {
+          logger.debug('用户关注统计接口请求失败，返回默认值');
+          resolve({ followedCount: 0, followerCount: 0 });
+        } else if (url.includes('/like') || url.includes('/favorite')) {
+          logger.debug('点赞/收藏接口请求失败，返回默认成功状态');
+          resolve({ success: true });
         } else {
+          // 其他情况正常抛出错误
           reject(err);
-        }
-      },
-      complete: () => {
-        if (showLoading) {
-          wx.hideLoading();
         }
       }
     });
@@ -269,21 +279,29 @@ async function processAvatarUrl(avatarUrl) {
 // =============== 用户接口 ===============
 const userAPI = {
   /**
-   * 微信登录
+   * 微信登录 - 由云函数处理，此函数仅作为API接口的占位
    * @param {Object} data - 登录数据，包含微信code
    * @returns {Promise} - 请求Promise 
    */
   login: (data) => {
-    return request(`${API.PREFIX.WXAPP}/login`, 'POST', data);
+    // 云函数登录逻辑在pages/login/login.js中实现
+    logger.debug('使用云函数登录，此处不直接处理登录请求');
+    
+    // 返回一个rejected promise，表示需要使用云函数登录
+    return Promise.reject(new Error('请使用云函数登录'));
   },
-  
+
   /**
    * 创建用户
    * @param {Object} userData - 用户数据
    * @returns {Promise} - 请求Promise 
    */
   createUser: (userData) => {
-    return request(`${API.PREFIX.WXAPP}/users`, 'POST', userData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/users`,
+      method: 'POST',
+      data: userData
+    });
   },
 
   /**
@@ -292,7 +310,9 @@ const userAPI = {
    * @returns {Promise} - 请求Promise
    */
   getUserInfo: (userId) => {
-    return request(`${API.PREFIX.WXAPP}/users/${userId}`);
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userId}`
+    });
   },
 
   /**
@@ -301,7 +321,11 @@ const userAPI = {
    * @returns {Promise} - 请求Promise
    */
   getUsers: (params = {}) => {
-    return request(`${API.PREFIX.WXAPP}/users`, 'GET', params);
+    return request({
+      url: `${API.PREFIX.WXAPP}/users`,
+      method: 'GET',
+      data: params
+    });
   },
 
   /**
@@ -311,7 +335,11 @@ const userAPI = {
    * @returns {Promise} - 请求Promise
    */
   updateUserInfo: (userId, userData) => {
-    return request(`${API.PREFIX.WXAPP}/users/${userId}`, 'PUT', userData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userId}`,
+      method: 'PUT',
+      data: userData
+    });
   },
 
   /**
@@ -322,14 +350,113 @@ const userAPI = {
   getUserFollowStats: async (userId) => {
     try {
       const res = await request({
-        url: `${API.BASE_URL}/api/users/${userId}/follow-stats`,
+        url: `${API.PREFIX.WXAPP}/users/${userId}/follow-stats`,
         method: 'GET'
       });
-      return res;
+      
+      // 处理标准响应格式
+      if (res && !res.error) {
+        if (res.data) {
+          // 返回标准格式中的data字段
+          return res.data;
+        } else if (res.followedCount !== undefined && res.followerCount !== undefined) {
+          // 直接返回原始数据
+          return res;
+        }
+      }
+      
+      logger.debug('关注统计数据格式不符合预期:', res);
+      return { followedCount: 0, followerCount: 0 };
     } catch (error) {
-      console.error('获取用户关注统计失败:', error);
-      return { error: error.message || '获取用户关注统计失败' };
+      logger.error('获取用户关注统计失败:', error);
+      // 返回默认值，避免前端出错
+      return { 
+        followedCount: 0, 
+        followerCount: 0,
+        error: error.message || '获取用户关注统计失败'
+      };
     }
+  },
+
+  /**
+   * 获取用户Token数量
+   * @param {string} userId 用户ID
+   * @returns {Promise<object>} Token数据，包含token字段
+   */
+  getUserToken: async (userId) => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/users/${userId}/token`,
+        method: 'GET'
+      });
+      
+      if (res && !res.error) {
+        if (res.data && res.data.token !== undefined) {
+          return { token: res.data.token };
+        } else if (res.token !== undefined) {
+          return { token: res.token };
+        }
+      }
+      
+      logger.debug('获取用户Token失败或格式不符合预期:', res);
+      return { token: 0 };
+    } catch (error) {
+      logger.error('获取用户Token失败:', error);
+      return { token: 0, error: error.message || '获取用户Token失败' };
+    }
+  },
+
+  // 获取用户喜欢的帖子
+  getUserLikedPosts(userId, page = 1, pageSize = 10) {
+    return request({
+      url: `/users/${userId}/liked-posts`,
+      method: 'GET',
+      data: { page, pageSize }
+    });
+  },
+
+  // 获取用户收藏的帖子
+  getUserFavorites(userId, page = 1, pageSize = 10) {
+    return request({
+      url: `/users/${userId}/favorites`,
+      method: 'GET',
+      data: { page, pageSize }
+    });
+  },
+
+  /**
+   * 获取用户发布的帖子
+   * @param {number|string} userId - 用户ID
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserPosts: (userId, params = {}) => {
+    return new Promise((resolve, reject) => {
+      request({
+        url: `${API.PREFIX.WXAPP}/posts`,
+        method: 'GET',
+        data: { 
+          ...params,
+          author_id: userId 
+        }
+      })
+        .then(res => {
+          // 检查返回的数据是否为数组，如果不是则转换为空数组
+          if (Array.isArray(res)) {
+            resolve(res);
+          } else if (res && Array.isArray(res.data)) {
+            resolve(res.data);
+          } else {
+            logger.debug('获取用户帖子返回的不是数组:', res);
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          logger.error('获取用户帖子失败:', err);
+          // 返回空数组而不是错误，避免前端崩溃
+          resolve([]);
+        });
+    });
   }
 };
 
@@ -341,7 +468,11 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   createPost: (postData) => {
-    return request(`${API.PREFIX.WXAPP}/posts`, 'POST', postData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts`,
+      method: 'POST',
+      data: postData
+    });
   },
 
   /**
@@ -350,7 +481,9 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   getPostDetail: (postId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}`);
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts/${postId}`
+    });
   },
 
   /**
@@ -360,7 +493,11 @@ const postAPI = {
    */
   getPosts: (params = {}) => {
     return new Promise((resolve, reject) => {
-      request(`${API.PREFIX.WXAPP}/posts`, 'GET', params)
+      request({
+        url: `${API.PREFIX.WXAPP}/posts`,
+        method: 'GET',
+        data: params
+      })
         .then(res => {
           // 正常返回数据
           resolve(res);
@@ -385,7 +522,11 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   updatePost: (postId, postData) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}`, 'PUT', postData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts/${postId}`,
+      method: 'PUT',
+      data: postData
+    });
   },
 
   /**
@@ -394,7 +535,10 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   deletePost: (postId) => {
-    return request(`${API.PREFIX.WXAPP}/posts/${postId}`, 'DELETE');
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts/${postId}`,
+      method: 'DELETE'
+    });
   },
 
   /**
@@ -415,7 +559,11 @@ const postAPI = {
       ? `${API.PREFIX.WXAPP}/posts/${postId}/like`
       : `${API.PREFIX.WXAPP}/posts/${postId}/unlike`;
     
-    return request(url, 'POST', { userId });
+    return request({
+      url,
+      method: 'POST',
+      data: { userId }
+    });
   },
 
   /**
@@ -436,27 +584,13 @@ const postAPI = {
       ? `${API.PREFIX.WXAPP}/posts/${postId}/favorite`
       : `${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`;
     
-    return request(url, 'POST', { userId });
+    return request({
+      url,
+      method: 'POST',
+      data: { userId }
+    });
   },
 
-  /**
-   * 获取用户收藏的帖子
-   * @param {number} userId - 用户ID
-   * @returns {Promise} - 请求Promise
-   */
-  getUserFavorites: (userId) => {
-    return request(`${API.PREFIX.WXAPP}/users/${userId}/favorites`);
-  },
-  
-  /**
-   * 获取用户点赞的帖子
-   * @param {number} userId - 用户ID
-   * @returns {Promise} - 请求Promise
-   */
-  getUserLikedPosts: (userId) => {
-    return request(`${API.PREFIX.WXAPP}/users/${userId}/liked-posts`);
-  },
-  
   /**
    * 获取用户发布的帖子
    * @param {number|string} userId - 用户ID
@@ -464,9 +598,31 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   getUserPosts: (userId, params = {}) => {
-    return request(`${API.PREFIX.WXAPP}/posts`, 'GET', { 
-      ...params,
-      author_id: userId 
+    return new Promise((resolve, reject) => {
+      request({
+        url: `${API.PREFIX.WXAPP}/posts`,
+        method: 'GET',
+        data: { 
+          ...params,
+          author_id: userId 
+        }
+      })
+        .then(res => {
+          // 检查返回的数据是否为数组，如果不是则转换为空数组
+          if (Array.isArray(res)) {
+            resolve(res);
+          } else if (res && Array.isArray(res.data)) {
+            resolve(res.data);
+          } else {
+            logger.debug('获取用户帖子返回的不是数组:', res);
+            resolve([]);
+          }
+        })
+        .catch(err => {
+          logger.error('获取用户帖子失败:', err);
+          // 返回空数组而不是错误，避免前端崩溃
+          resolve([]);
+        });
     });
   }
 };
@@ -479,7 +635,11 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   createComment: (commentData) => {
-    return request(`${API.PREFIX.WXAPP}/comments`, 'POST', commentData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments`,
+      method: 'POST',
+      data: commentData
+    });
   },
 
   /**
@@ -488,7 +648,9 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   getCommentDetail: (commentId) => {
-    return request(`${API.PREFIX.WXAPP}/comments/${commentId}`);
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}`
+    });
   },
 
   /**
@@ -499,11 +661,18 @@ const commentAPI = {
   getComments: (postIdOrParams = {}) => {
     // 判断是否直接传入了帖子ID
     if (typeof postIdOrParams === 'string' || typeof postIdOrParams === 'number') {
-      return request(`${API.PREFIX.WXAPP}/posts/${postIdOrParams}/comments`, 'GET');
+      return request({
+        url: `${API.PREFIX.WXAPP}/posts/${postIdOrParams}/comments`,
+        method: 'GET'
+      });
     }
     
     // 否则按照原有逻辑查询所有评论
-    return request(`${API.PREFIX.WXAPP}/comments`, 'GET', postIdOrParams);
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments`,
+      method: 'GET',
+      data: postIdOrParams
+    });
   },
 
   /**
@@ -513,7 +682,11 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   updateComment: (commentId, commentData) => {
-    return request(`${API.PREFIX.WXAPP}/comments/${commentId}`, 'PUT', commentData);
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}`,
+      method: 'PUT',
+      data: commentData
+    });
   },
 
   /**
@@ -522,7 +695,10 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   deleteComment: (commentId) => {
-    return request(`${API.PREFIX.WXAPP}/comments/${commentId}`, 'DELETE');
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}`,
+      method: 'DELETE'
+    });
   },
 
   /**
@@ -532,7 +708,11 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   likeComment: (commentId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/comments/${commentId}/like`, 'POST', { userId });
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}/like`,
+      method: 'POST',
+      data: { userId }
+    });
   },
 
   /**
@@ -542,7 +722,11 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   unlikeComment: (commentId, userId) => {
-    return request(`${API.PREFIX.WXAPP}/comments/${commentId}/unlike`, 'POST', { userId });
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}/unlike`,
+      method: 'POST',
+      data: { userId }
+    });
   }
 };
 
@@ -555,7 +739,11 @@ const agentAPI = {
    * @returns {Promise} - 请求Promise
    */
   chat: (query, history = []) => {
-    return request(`${API.PREFIX.AGENT}/chat`, 'POST', { query, history });
+    return request({
+      url: `${API.PREFIX.AGENT}/chat`,
+      method: 'POST',
+      data: { query, history }
+    });
   },
 
   /**
@@ -565,7 +753,11 @@ const agentAPI = {
    * @returns {Promise} - 请求Promise
    */
   search: (keyword, limit = 10) => {
-    return request(`${API.PREFIX.AGENT}/search`, 'POST', { keyword, limit });
+    return request({
+      url: `${API.PREFIX.AGENT}/search`,
+      method: 'POST',
+      data: { keyword, limit }
+    });
   },
 
   /**
@@ -573,7 +765,10 @@ const agentAPI = {
    * @returns {Promise} - 请求Promise
    */
   getStatus: () => {
-    return request(`${API.PREFIX.AGENT}/status`);
+    return request({
+      url: `${API.PREFIX.AGENT}/status`,
+      method: 'GET'
+    });
   }
 };
 
@@ -587,7 +782,11 @@ const mysqlAPI = {
    * @returns {Promise} - 请求Promise
    */
   customQuery: (query, params = [], fetch = true) => {
-    return request(`${API.PREFIX.MYSQL}/custom_query`, 'POST', { query, params, fetch });
+    return request({
+      url: `${API.PREFIX.MYSQL}/custom_query`,
+      method: 'POST',
+      data: { query, params, fetch }
+    });
   },
   
   /**
@@ -600,12 +799,16 @@ const mysqlAPI = {
    * @returns {Promise} - 请求Promise
    */
   query: (tableName, conditions = {}, orderBy = '', limit = 100, offset = 0) => {
-    return request(`${API.PREFIX.MYSQL}/query`, 'POST', {
-      table_name: tableName,
-      conditions,
-      order_by: orderBy,
-      limit,
-      offset
+    return request({
+      url: `${API.PREFIX.MYSQL}/query`,
+      method: 'POST',
+      data: {
+        table_name: tableName,
+        conditions,
+        order_by: orderBy,
+        limit,
+        offset
+      }
     });
   },
 
@@ -616,10 +819,227 @@ const mysqlAPI = {
    * @returns {Promise} - 请求Promise
    */
   count: (tableName, conditions = {}) => {
-    return request(`${API.PREFIX.MYSQL}/count`, 'POST', {
-      table_name: tableName,
-      conditions
+    return request({
+      url: `${API.PREFIX.MYSQL}/count`,
+      method: 'POST',
+      data: {
+        table_name: tableName,
+        conditions
+      }
     });
+  }
+};
+
+// =============== 新增模块 ===============
+
+// 消息通知接口
+const notificationAPI = {
+  /**
+   * 获取用户的通知列表
+   * @param {string} userId 用户ID
+   * @param {Object} params 查询参数，可包含type、is_read等条件
+   * @returns {Promise<Object>} 通知列表数据
+   */
+  getUserNotifications: async (userId, params = {}) => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/users/${userId}/notifications`,
+        method: 'GET',
+        data: params
+      });
+      
+      if (res && res.notifications) {
+        return res;
+      } else if (res && res.data && res.data.notifications) {
+        return res.data;
+      }
+      
+      logger.debug('获取通知列表返回格式不符合预期:', res);
+      return { notifications: [], unread_count: 0, total: 0 };
+    } catch (error) {
+      logger.error('获取用户通知列表失败:', error);
+      return { notifications: [], unread_count: 0, total: 0, error: error.message };
+    }
+  },
+  
+  /**
+   * 获取通知详情
+   * @param {number} notificationId 通知ID
+   * @returns {Promise<Object>} 通知详情
+   */
+  getNotificationDetail: async (notificationId) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
+      method: 'GET'
+    });
+  },
+  
+  /**
+   * 标记通知为已读
+   * @param {number} notificationId 通知ID
+   * @returns {Promise<Object>} 更新结果
+   */
+  markAsRead: async (notificationId) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
+      method: 'PUT',
+      data: { is_read: true }
+    });
+  },
+  
+  /**
+   * 标记所有通知为已读
+   * @param {string} userId 用户ID
+   * @param {string} type 可选，通知类型
+   * @returns {Promise<Object>} 操作结果
+   */
+  markAllAsRead: async (userId, type = null) => {
+    const data = type ? { type } : {};
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userId}/notifications/read-all`,
+      method: 'PUT',
+      data
+    });
+  },
+  
+  /**
+   * 删除通知
+   * @param {number} notificationId 通知ID
+   * @returns {Promise<Object>} 操作结果
+   */
+  deleteNotification: async (notificationId) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
+      method: 'DELETE'
+    });
+  }
+};
+
+// 意见反馈接口
+const feedbackAPI = {
+  /**
+   * 提交意见反馈
+   * @param {Object} feedbackData 反馈数据
+   * @returns {Promise<Object>} 提交结果
+   */
+  submitFeedback: async (feedbackData) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/feedback`,
+      method: 'POST',
+      data: feedbackData
+    });
+  },
+  
+  /**
+   * 获取用户的反馈列表
+   * @param {string} userId 用户ID
+   * @param {Object} params 查询参数
+   * @returns {Promise<Object>} 反馈列表
+   */
+  getUserFeedback: async (userId, params = {}) => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/users/${userId}/feedback`,
+        method: 'GET',
+        data: params
+      });
+      
+      if (res && res.feedbacks) {
+        return res;
+      } else if (res && res.data && res.data.feedbacks) {
+        return res.data;
+      }
+      
+      logger.debug('获取反馈列表返回格式不符合预期:', res);
+      return { feedbacks: [], total: 0 };
+    } catch (error) {
+      logger.error('获取用户反馈列表失败:', error);
+      return { feedbacks: [], total: 0, error: error.message };
+    }
+  },
+  
+  /**
+   * 获取反馈详情
+   * @param {number} feedbackId 反馈ID
+   * @returns {Promise<Object>} 反馈详情
+   */
+  getFeedbackDetail: async (feedbackId) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/feedback/${feedbackId}`,
+      method: 'GET'
+    });
+  }
+};
+
+// 关于我们接口
+const aboutAPI = {
+  /**
+   * 获取平台信息
+   * @returns {Promise<Object>} 平台信息
+   */
+  getPlatformInfo: async () => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/about`,
+        method: 'GET'
+      });
+      
+      if (res && res.data) {
+        return res.data;
+      }
+      
+      return res || {};
+    } catch (error) {
+      logger.error('获取平台信息失败:', error);
+      return { error: error.message };
+    }
+  },
+  
+  /**
+   * 获取版本更新历史
+   * @param {number} limit 限制返回数量
+   * @returns {Promise<Object>} 版本更新历史
+   */
+  getVersionHistory: async (limit = 10) => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/versions`,
+        method: 'GET',
+        data: { limit }
+      });
+      
+      if (res && res.data) {
+        return res.data;
+      }
+      
+      return res || { versions: [] };
+    } catch (error) {
+      logger.error('获取版本历史失败:', error);
+      return { versions: [], error: error.message };
+    }
+  },
+  
+  /**
+   * 获取用户协议或隐私政策
+   * @param {string} type 协议类型：user-用户协议, privacy-隐私政策
+   * @returns {Promise<Object>} 协议内容
+   */
+  getAgreement: async (type) => {
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/agreement/${type}`,
+        method: 'GET'
+      });
+      
+      if (res && res.data) {
+        return res.data;
+      }
+      
+      return res || { content: '' };
+    } catch (error) {
+      logger.error(`获取${type}协议失败:`, error);
+      return { content: '', error: error.message };
+    }
   }
 };
 
@@ -634,5 +1054,10 @@ module.exports = {
   postAPI,
   commentAPI,
   agentAPI,
-  mysqlAPI
+  mysqlAPI,
+  
+  // 新增模块API
+  notificationAPI,
+  feedbackAPI,
+  aboutAPI
 }; 

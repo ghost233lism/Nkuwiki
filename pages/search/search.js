@@ -893,36 +893,110 @@ Page({
 
   // 处理上传文件
   uploadFile() {
+    const that = this;
+    
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
-      success: (res) => {
-        const tempFilePath = res.tempFiles[0].path;
-        const fileName = res.tempFiles[0].name;
-        
-        wx.showLoading({
-          title: '正在上传...',
-        });
-        
-        // 这里可以实现实际的文件上传逻辑
-        console.log('选择的文件:', fileName);
-        console.log('文件路径:', tempFilePath);
-        
-        // 模拟上传过程
-        setTimeout(() => {
-          wx.hideLoading();
-          wx.showToast({
-            title: '文件已上传',
-            icon: 'success'
+      async success(res) {
+        try {
+          if (!res.tempFiles || !res.tempFiles.length) {
+            wx.showToast({
+              title: '未选择文件',
+              icon: 'none'
+            });
+            return;
+          }
+          
+          const file = res.tempFiles[0];
+          const filePath = file.path;
+          const fileName = file.name;
+          
+          wx.showLoading({
+            title: '正在上传文件...',
+            mask: true
           });
           
-          // 可以根据需要处理上传后的逻辑
-          this.setData({
-            searchValue: `已上传: ${fileName}`
+          // 获取用户ID
+          const userManager = require('../../utils/user_manager');
+          const uploadHelper = require('../../utils/upload_helper');
+          
+          const userId = userManager.getUser()?.id || 'anonymous';
+          
+          // 使用uploadHelper上传文件
+          const fileID = await uploadHelper.uploadFile(
+            filePath, 
+            'search_docs', 
+            userId, 
+            false // 不压缩
+          );
+          
+          if (!fileID) {
+            throw new Error('文件上传失败');
+          }
+          
+          wx.showLoading({
+            title: '正在建立索引...',
+            mask: true
           });
-        }, 1500);
+          
+          // 调用后端API建立索引
+          const searchAPI = require('../../api/search_api');
+          const result = await searchAPI.indexDocument({
+            file_id: fileID,
+            file_name: fileName,
+            user_id: userId
+          });
+          
+          wx.hideLoading();
+          
+          if (result.success) {
+            wx.showToast({
+              title: '文档已成功索引',
+              icon: 'success'
+            });
+            
+            // 将文件名设为搜索词
+            that.setData({
+              searchValue: fileName.split('.')[0]
+            });
+            
+            // 如果有建议的关键词，提示用户
+            if (result.suggested_keywords && result.suggested_keywords.length > 0) {
+              const keywords = result.suggested_keywords.join(', ');
+              
+              wx.showModal({
+                title: '发现以下关键词',
+                content: `文档包含这些关键词: ${keywords}\n\n是否立即搜索这些关键词?`,
+                confirmText: '搜索',
+                cancelText: '取消',
+                success(modalRes) {
+                  if (modalRes.confirm) {
+                    // 使用关键词搜索
+                    that.setData({
+                      searchValue: keywords
+                    });
+                    that.handleSearch();
+                  }
+                }
+              });
+            }
+          } else {
+            wx.showToast({
+              title: result.message || '建立索引失败',
+              icon: 'none'
+            });
+          }
+        } catch (error) {
+          console.error('文件上传失败:', error);
+          wx.hideLoading();
+          wx.showToast({
+            title: '文件处理失败',
+            icon: 'none'
+          });
+        }
       },
-      fail: (err) => {
+      fail(err) {
         console.error('选择文件失败:', err);
         wx.showToast({
           title: '选择文件失败',

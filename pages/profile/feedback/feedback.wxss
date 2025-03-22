@@ -114,4 +114,280 @@
 
 .submit-btn:active {
   opacity: 0.8;
+}
+
+.feedback-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f8f8;
+}
+
+.page-header {
+  padding: 20rpx 30rpx;
+  background-color: #fff;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.feedback-form {
+  background-color: #fff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.form-item {
+  margin-bottom: 30rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.required {
+  color: #ff3b30;
+}
+
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  margin-right: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.radio-text {
+  font-size: 28rpx;
+  color: #333;
+  margin-left: 8rpx;
+}
+
+.content-textarea {
+  width: 100%;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  min-height: 200rpx;
+  box-sizing: border-box;
+}
+
+.textarea-placeholder {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.char-counter {
+  text-align: right;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+.image-uploader {
+  margin-top: 10rpx;
+}
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.image-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+  margin-right: 20rpx;
+  margin-bottom: 20rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+}
+
+.delete-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40rpx;
+  height: 40rpx;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-button {
+  width: 160rpx;
+  height: 160rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-icon {
+  font-size: 60rpx;
+  color: #999;
+  font-weight: lighter;
+  margin-bottom: 10rpx;
+}
+
+.add-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.contact-input {
+  width: 100%;
+  height: 80rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.input-placeholder {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.submit-button {
+  width: 100%;
+  height: 90rpx;
+  background-color: #5E6BF7;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 45rpx;
+  margin-top: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-button.disabled {
+  background-color: #cccccc;
+}
+
+.history-section {
+  margin-top: 20rpx;
+  background-color: #fff;
+  padding: 30rpx;
+}
+
+.section-header {
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.feedback-list {
+  
+}
+
+.feedback-item {
+  border-bottom: 1rpx solid #eee;
+  padding: 20rpx 0;
+}
+
+.feedback-item:last-child {
+  border-bottom: none;
+}
+
+.feedback-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.feedback-type {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.feedback-status {
+  font-size: 24rpx;
+  color: #5E6BF7;
+  background-color: rgba(94, 107, 247, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.feedback-content {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.feedback-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40rpx 0;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-icon {
+  width: 80rpx;
+  height: 80rpx;
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #999;
+  font-size: 28rpx;
 } 

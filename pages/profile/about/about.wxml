@@ -1,117 +1,142 @@
 <view class="about-container">
-  <!-- Logo区域 -->
-  <view class="logo-section">
-    <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-    <text class="app-name">应用名称</text>
-    <text class="version">版本 1.0.0</text>
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <text class="page-title">关于我们</text>
   </view>
-
-  <!-- 公司信息区域 -->
-  <view class="company-info">
-    <view class="info-item">
-      <text class="label">公司名称</text>
-      <text class="content">{{companyName}}</text>
-    </view>
-    
-    <view class="info-item">
-      <text class="label">联系地址</text>
-      <text class="content">{{address}}</text>
-    </view>
-    
-    <view class="info-item">
-      <text class="label">联系邮箱</text>
-      <text class="content">support@nkuwiki.com</text>
-    </view>
-
-     <view class="info-item">
-      <text class="label">微信公众号</text>
-      <text class="content">nkuwiki</text>
+  
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading">
+      <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+      <text class="loading-text">加载中...</text>
     </view>
   </view>
-
-  <!-- 项目介绍 -->
-  <view class="company-intro">
-    <view class="intro-title">项目介绍</view>
-    <view class="intro-content">
-      <!-- 服务平台部分 -->
-      <view class="section">
-        <view class="section-title">服务平台</view>
+  
+  <!-- 标签页切换 -->
+  <view class="tab-container">
+    <view class="tab {{activeTab === 'info' ? 'active' : ''}}" bindtap="switchTab" data-tab="info">平台信息</view>
+    <view class="tab {{activeTab === 'versions' ? 'active' : ''}}" bindtap="switchTab" data-tab="versions">版本历史</view>
+    <view class="tab {{activeTab === 'agreement' ? 'active' : ''}}" bindtap="switchTab" data-tab="agreement">用户协议</view>
+    <view class="tab {{activeTab === 'privacy' ? 'active' : ''}}" bindtap="switchTab" data-tab="privacy">隐私政策</view>
+  </view>
+  
+  <!-- 内容区域 -->
+  <view class="content-container">
+    <!-- 平台信息页 -->
+    <view class="content-section" wx:if="{{activeTab === 'info' && platformInfo}}">
+      <view class="platform-header">
+        <image class="platform-logo" src="{{platformInfo.team[0].avatar || '/assets/icons/logo.png'}}" mode="aspectFill"></image>
+        <view class="platform-title">{{platformInfo.name}}</view>
+        <view class="platform-version">v{{platformInfo.version}}</view>
+      </view>
+      
+      <view class="platform-desc">{{platformInfo.description}}</view>
+      
+      <view class="platform-slogan">{{platformInfo.slogan}}</view>
+      
+      <view class="divider"></view>
+      
+      <view class="section-title">功能特性</view>
+      <view class="features-list">
+        <view class="feature-item" wx:for="{{platformInfo.features}}" wx:key="name">
+          <view class="feature-title">{{item.name}}</view>
+          <view class="feature-desc">{{item.description}}</view>
+        </view>
+      </view>
+      
+      <view class="divider"></view>
+      
+      <view class="section-title">团队成员</view>
+      <view class="team-list">
+        <view class="team-item" wx:for="{{platformInfo.team}}" wx:key="name" bindtap="viewTeamMember" data-index="{{index}}">
+          <image class="team-avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
+          <view class="team-info">
+            <view class="team-name">{{item.name}}</view>
+            <view class="team-role">{{item.role}}</view>
+          </view>
+        </view>
+      </view>
+      
+      <view class="divider"></view>
+      
+      <view class="section-title">联系我们</view>
+      <view class="contact-list">
+        <view class="contact-item" wx:if="{{platformInfo.email}}" bindtap="copyContact" data-type="email">
+          <image class="contact-icon" src="/assets/icons/email.png" mode="aspectFill"></image>
+          <view class="contact-info">{{platformInfo.email}}</view>
+          <view class="copy-hint">点击复制</view>
+        </view>
         
-        <view class="platform-item">
-          <view class="item-title">1. Website</view>
-          <view class="item-content">
-            <view class="list-item">• Coze</view>
-            <view class="list-item">• Hiagent</view>
-          </view>
+        <view class="contact-item" wx:if="{{platformInfo.wechat}}" bindtap="copyContact" data-type="wechat">
+          <image class="contact-icon" src="/assets/icons/wechat.png" mode="aspectFill"></image>
+          <view class="contact-info">{{platformInfo.wechat}}</view>
+          <view class="copy-hint">点击复制</view>
         </view>
-
-        <view class="platform-item">
-          <view class="item-title">2. 微信公众号</view>
-          <view class="item-content">
-            <view class="list-item">• nkuwiki知识社区服务号（无限制，服务体验更佳）</view>
-            <view class="list-item">• nkuwiki订阅号（消极回复限制）</view>
-          </view>
+        
+        <view class="contact-item" wx:if="{{platformInfo.github}}" bindtap="copyContact" data-type="github">
+          <image class="contact-icon" src="/assets/icons/github.png" mode="aspectFill"></image>
+          <view class="contact-info">{{platformInfo.github}}</view>
+          <view class="copy-hint">点击复制</view>
         </view>
-
-        <view class="platform-item">
-          <view class="item-title">3. 企业微信</view>
-          <view class="item-content">可以群聊里@nkuwiki南开小知与wiki互动，或者把wiki拉入自己的群聊哦！（需要转为企微群）</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">4. 小程序</view>
-          <view class="item-content">nkuwiki小程序</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">5. 邮箱</view>
-          <view class="item-content">反馈：support@nkuwiki.com</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">6. 飞书Wiki</view>
-          <view class="item-content">敬请期待</view>
+        
+        <view class="contact-item" wx:if="{{platformInfo.website}}">
+          <image class="contact-icon" src="/assets/icons/website.png" mode="aspectFill"></image>
+          <view class="contact-info">{{platformInfo.website}}</view>
         </view>
       </view>
-
-      <!-- 参与方式部分 -->
-      <view class="section">
-        <view class="section-title">参与方式</view>
-        <view class="section-subtitle">（根据项目进度动态更新中）</view>
-
-        <view class="contribution-item">
-          <view class="item-title">1. 知识维护</view>
-          <view class="item-content">更新Coze知识库/飞书Wiki</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">2. 数据源开发</view>
-          <view class="item-content">（需编程）完善网站/校园集市/社交平台数据接口</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">3. 智能体开发</view>
-          <view class="item-content">（零代码/低代码）通过Prompt工程/工作流编排/LLMs等技术优化Coze智能体。目前咱们主打的是nkuwiki（定位为南开百事通），也欢迎大家利用社区提供的海量数据资源探索搭建其他智能体。</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">4. 产品体验</view>
-          <view class="item-content">测试智能体回答准确率/用户对话日志分析/用户需求调研/指出未来开发演进方向</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">5. 创意传播</view>
-          <view class="item-content">
-            撰写宣传文案/公众号运营/制作展示素材/根据知识库和智能体生成有价值的insight
+    </view>
+    
+    <!-- 版本历史页 -->
+    <view class="content-section" wx:if="{{activeTab === 'versions'}}">
+      <view class="section-title">版本更新历史</view>
+      <view class="versions-list">
+        <view class="version-item" wx:for="{{versions}}" wx:key="version">
+          <view class="version-header">
+            <view class="version-number">v{{item.version}}</view>
+            <view class="version-date">{{item.date}}</view>
+          </view>
+          <view class="version-title">{{item.title}}</view>
+          <view class="version-desc">{{item.description}}</view>
+          <view class="changes-list">
+            <view class="change-item" wx:for="{{item.changes}}" wx:for-item="change" wx:key="*this">
+              • {{change}}
+            </view>
           </view>
         </view>
       </view>
     </view>
+    
+    <!-- 用户协议页 -->
+    <view class="content-section" wx:if="{{activeTab === 'agreement'}}">
+      <block wx:if="{{!agreement.content}}">
+        <view class="loading">
+          <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+          <text class="loading-text">加载中...</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="agreement-title">{{agreement.title}}</view>
+        <rich-text nodes="{{agreement.content}}"></rich-text>
+      </block>
+    </view>
+    
+    <!-- 隐私政策页 -->
+    <view class="content-section" wx:if="{{activeTab === 'privacy'}}">
+      <block wx:if="{{!privacy.content}}">
+        <view class="loading">
+          <image class="loading-icon" src="/assets/icons/loading.png" mode="aspectFill"></image>
+          <text class="loading-text">加载中...</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="agreement-title">{{privacy.title}}</view>
+        <rich-text nodes="{{privacy.content}}"></rich-text>
+      </block>
+    </view>
   </view>
-
-  <!-- 版权信息 -->
-  <view class="copyright">
-    <text>Copyright © 2025 沈阳最优解教育科技有限公司</text>
-    <text>All Rights Reserved</text>
+  
+  <!-- 底部版权信息 -->
+  <view class="footer">
+    <text class="copyright">© {{platformInfo ? platformInfo.name : '南开知识共享平台'}} {{platformInfo ? platformInfo.website : ''}}</text>
   </view>
 </view>

@@ -1,43 +1,63 @@
 <!--pages/profile/edit/edit.wxml-->
 <view class="edit-container">
+  <!-- 顶部标题和保存按钮 -->
   <view class="header">
     <text class="title">编辑资料</text>
+    <view class="save-btn-top" bindtap="saveChanges">保存</view>
   </view>
   
   <view class="form-container">
     <!-- 头像选择区域 -->
     <view class="avatar-section">
-      <text class="section-label">头像</text>
-      <view class="avatar-picker">
-        <!-- 当前头像显示 -->
-        <image class="current-avatar" 
-          src="{{userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
-          mode="aspectFill" binderror="onAvatarError"></image>
-        
-        <!-- 不同登录方式的头像选择功能 -->
-        <block wx:if="{{userInfo.loginType === 'wechat'}}">
-          <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-            <text>更换头像</text>
-          </button>
-        </block>
-        <block wx:else>
-          <button class="avatar-button" bindtap="onChooseImage">
-            <text>更换头像</text>
-          </button>
-        </block>
+      <image class="current-avatar" 
+        src="{{userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
+        mode="aspectFill" binderror="onAvatarError"></image>
+      <view class="avatar-text" bindtap="onChooseAvatar">点击更换头像</view>
+    </view>
+    
+    <!-- 基本信息区域 -->
+    <view class="info-section">
+      <view class="section-title">基本信息</view>
+      
+      <!-- 昵称 -->
+      <view class="info-item">
+        <text class="item-label">昵称</text>
+        <input class="item-input" value="{{newNickName}}" bindinput="onInputNickName" placeholder="请输入昵称" maxlength="20"/>
       </view>
-    </view>
-    
-    <!-- 昵称输入区域 -->
-    <view class="input-section">
-      <text class="section-label">昵称</text>
-      <input class="input-field" value="{{newNickName}}" bindinput="onInputNickName" placeholder="请输入昵称" maxlength="20"/>
-    </view>
-    
-    <!-- 个性签名输入区域 -->
-    <view class="input-section">
-      <text class="section-label">个性签名</text>
-      <textarea class="input-textarea" value="{{newStatus}}" bindinput="onInputStatus" placeholder="介绍一下自己吧" maxlength="50"/>
+      
+      <!-- 生日 -->
+      <view class="info-item">
+        <text class="item-label">生日</text>
+        <picker mode="date" value="{{newBirthday}}" start="1900-01-01" end="2023-12-31" bindchange="onBirthdayChange">
+          <view class="picker-content">
+            <text class="picker-text">{{newBirthday || '请选择生日'}}</text>
+            <view class="arrow">></view>
+          </view>
+        </picker>
+      </view>
+      
+      <!-- 社交账号 -->
+      <view class="info-item">
+        <text class="item-label">社交账号</text>
+      </view>
+      
+      <!-- 微信号 -->
+      <view class="info-item">
+        <text class="item-label">微信号</text>
+        <input class="item-input" value="{{newWechatId}}" bindinput="onInputWechatId" placeholder="请输入微信号" maxlength="30"/>
+      </view>
+      
+      <!-- QQ号 -->
+      <view class="info-item">
+        <text class="item-label">QQ号</text>
+        <input class="item-input" value="{{newQQId}}" bindinput="onInputQQId" placeholder="请输入QQ号" maxlength="15" type="number"/>
+      </view>
+      
+      <!-- 个人简介 -->
+      <view class="info-item textarea-item">
+        <text class="item-label">个人简介</text>
+        <textarea class="item-textarea" value="{{newBio}}" bindinput="onInputBio" placeholder="介绍一下自己吧" maxlength="500" auto-height="true" show-confirm-bar="{{false}}"/>
+      </view>
     </view>
   </view>
   
