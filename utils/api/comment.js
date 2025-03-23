@@ -2,6 +2,7 @@
 // 评论相关API
 
 const { API, logger, request } = require('./core');
+const userManager = require('../../utils/user_manager');
 
 const commentAPI = {
   /**
@@ -10,10 +11,21 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   createComment: (commentData) => {
+    // 确保只发送后端支持的字段
+    const safeCommentData = {
+      post_id: commentData.post_id,
+      openid: commentData.openid,
+      nick_name: commentData.nick_name,
+      avatar: commentData.avatar,
+      content: commentData.content,
+      parent_id: commentData.parent_id || null,
+      images: commentData.images || []
+    };
+    
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,
       method: 'POST',
-      data: commentData
+      data: safeCommentData
     });
   },
 
@@ -24,7 +36,8 @@ const commentAPI = {
    */
   getCommentDetail: (commentId) => {
     return request({
-      url: `${API.PREFIX.WXAPP}/comments/${commentId}`
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}`,
+      method: 'GET'
     });
   },
 
@@ -42,12 +55,11 @@ const commentAPI = {
       });
     }
     
-    // 否则按照原有逻辑查询所有评论
+    // 查询所有评论
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,
       method: 'GET',
-      params: postIdOrParams,  // 使用params而不是data
-      data: {}
+      params: postIdOrParams
     });
   },
 
@@ -58,10 +70,20 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   updateComment: (commentId, commentData) => {
+    // 确保只更新允许的字段
+    const allowedFields = ['content', 'images', 'status'];
+    const updateData = {};
+    
+    allowedFields.forEach(field => {
+      if (commentData[field] !== undefined) {
+        updateData[field] = commentData[field];
+      }
+    });
+    
     return request({
       url: `${API.PREFIX.WXAPP}/comments/${commentId}`,
       method: 'PUT',
-      data: commentData
+      data: updateData
     });
   },
 
@@ -80,28 +102,20 @@ const commentAPI = {
   /**
    * 点赞评论
    * @param {number} commentId - 评论ID
-   * @param {number} userId - 用户ID
+   * @param {string} openid - 用户openid
+   * @param {boolean} isLike - 是否点赞，true为点赞，false为取消点赞
    * @returns {Promise} - 请求Promise
    */
-  likeComment: (commentId, userId) => {
+  likeComment: (commentId, openid, isLike = true) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
     return request({
       url: `${API.PREFIX.WXAPP}/comments/${commentId}/like`,
       method: 'POST',
-      data: { userId }
-    });
-  },
-
-  /**
-   * 取消点赞评论
-   * @param {number} commentId - 评论ID
-   * @param {number} userId - 用户ID
-   * @returns {Promise} - 请求Promise
-   */
-  unlikeComment: (commentId, userId) => {
-    return request({
-      url: `${API.PREFIX.WXAPP}/comments/${commentId}/unlike`,
-      method: 'POST',
-      data: { userId }
+      params: { openid, is_like: isLike }
     });
   }
 };

@@ -57,6 +57,31 @@ const mysqlAPI = {
         conditions
       }
     });
+  },
+
+  /**
+   * 获取所有表列表
+   * @param {string} database - 数据库名称，默认为当前数据库
+   * @returns {Promise} - 请求Promise
+   */
+  getTables: (database = '') => {
+    return request({
+      url: `${API.PREFIX.MYSQL}/tables`,
+      method: 'GET',
+      params: database ? { database } : {}
+    });
+  },
+
+  /**
+   * 获取表结构
+   * @param {string} tableName - 表名
+   * @returns {Promise} - 请求Promise 
+   */
+  getTableStructure: (tableName) => {
+    return request({
+      url: `${API.PREFIX.MYSQL}/table/${tableName}/structure`,
+      method: 'GET'
+    });
   }
 };
 

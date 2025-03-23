@@ -2,6 +2,7 @@
 // 用户相关API
 
 const { API, logger, request } = require('./core');
+const userManager = require('../../utils/user_manager');
 
 const userAPI = {
   /**
@@ -18,13 +19,13 @@ const userAPI = {
   },
 
   /**
-   * 创建用户
+   * 同步微信用户信息
    * @param {Object} userData - 用户数据
    * @returns {Promise} - 请求Promise 
    */
-  createUser: (userData) => {
+  syncUser: (userData) => {
     return request({
-      url: `${API.PREFIX.WXAPP}/users`,
+      url: `${API.PREFIX.WXAPP}/users/sync`,
       method: 'POST',
       data: userData
     });
@@ -32,62 +33,53 @@ const userAPI = {
 
   /**
    * 获取用户信息
-   * @param {number|string} userId - 用户ID，可能包含查询参数
+   * @param {string} openid - 用户openid
    * @returns {Promise} - 请求Promise
    */
-  getUserInfo: (userId) => {
-    if (!userId) {
-      logger.error('获取用户信息失败: 用户ID为空');
-      return Promise.reject(new Error('用户ID为空'));
+  getUserInfo: (openid) => {
+    if (!openid) {
+      logger.error('获取用户信息失败: openid为空');
+      return Promise.reject(new Error('openid为空'));
     }
-    
-    // 处理userId，提取基本ID，分离查询参数
-    let baseUserId = userId;
-    let queryString = '';
-    
-    // 如果userId包含查询参数（如?t=timestamp），分离开
-    if (typeof userId === 'string' && userId.includes('?')) {
-      const parts = userId.split('?');
-      baseUserId = parts[0];
-      queryString = parts.length > 1 ? `?${parts[1]}` : '';
-      logger.debug(`分离用户ID和查询参数: ID=${baseUserId}, 查询=${queryString}`);
-    }
-    
-    logger.debug(`尝试获取用户信息，用户ID=${baseUserId}${queryString}`);
     
     return request({
-      url: `${API.PREFIX.WXAPP}/users/${baseUserId}${queryString}`,
+      url: `${API.PREFIX.WXAPP}/users/${openid}`,
       method: 'GET',
       showError: false,
-      retryCount: 5,  // 增加重试次数
-      retryDelay: 1000, // 增加重试延迟
-      // 在出现404错误时使用备用接口
+      retryCount: 3,
       statusCodeCallback: {
-        404: (error) => {
-          logger.warn(`用户ID ${baseUserId} 不存在，尝试获取当前用户信息`);
-          // 添加一个时间戳避免缓存
-          const timestamp = new Date().getTime();
-          // 尝试获取当前用户信息作为替代
+        404: () => {
+          logger.warn(`用户openid ${openid} 不存在，尝试获取当前用户信息`);
           return request({
             url: `${API.PREFIX.WXAPP}/users/me`,
             method: 'GET',
-            data: { user_id: baseUserId, t: timestamp },
-            showError: false,
-            retryCount: 3
+            params: { openid },
+            showError: false
           }).catch(err => {
             logger.error('获取当前用户信息也失败:', err);
-            return getLocalFallbackUserInfo(baseUserId);
+            return getLocalFallbackUserInfo(openid);
           });
         }
       },
-      // 失败时回退方案
-      fail: (err) => {
-        logger.error(`获取用户信息失败: ${err.message || err}`);
-        return getLocalFallbackUserInfo(baseUserId);
-      }
-    }).catch(error => {
-      logger.error('获取用户信息出错:', error);
-      return getLocalFallbackUserInfo(baseUserId);
+      fail: () => getLocalFallbackUserInfo(openid)
+    });
+  },
+
+  /**
+   * 获取当前用户信息
+   * @param {string} openid - 用户openid
+   * @returns {Promise} - 请求Promise
+   */
+  getCurrentUser: (openid) => {
+    if (!openid) {
+      logger.error('获取当前用户信息失败: openid为空');
+      return Promise.reject(new Error('openid为空'));
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/me`,
+      method: 'GET',
+      params: { openid }
     });
   },
 
@@ -100,197 +92,176 @@ const userAPI = {
     return request({
       url: `${API.PREFIX.WXAPP}/users`,
       method: 'GET',
-      data: params
+      params: params
     });
   },
 
   /**
    * 更新用户信息
-   * @param {number} userId - 用户ID 
+   * @param {string} openid - 用户openid 
    * @param {Object} userData - 更新数据
    * @returns {Promise} - 请求Promise
    */
-  updateUserInfo: (userId, userData) => {
+  updateUser: (openid, userData) => {
     return request({
-      url: `${API.PREFIX.WXAPP}/users/${userId}`,
+      url: `${API.PREFIX.WXAPP}/users/${openid}`,
       method: 'PUT',
       data: userData
     });
   },
 
   /**
+   * 删除用户
+   * @param {string} openid - 用户openid 
+   * @returns {Promise} - 请求Promise
+   */
+  deleteUser: (openid) => {
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}`,
+      method: 'DELETE'
+    });
+  },
+
+  /**
    * 获取用户关注和粉丝统计
-   * @param {string} userId 用户ID
+   * @param {string} openid - 用户openid
    * @returns {Promise<object>} 关注和粉丝数据
    */
-  getUserFollowStats: async (userId) => {
-    try {
-      if (!userId) {
-        logger.warn('获取关注统计失败: 没有提供用户ID');
-        return { followedCount: 0, followerCount: 0, error: '无效的用户ID' };
-      }
-      
-      logger.debug(`获取用户关注统计, 用户ID: ${userId}`);
-      
-      const result = await request({
-        url: `${API.PREFIX.WXAPP}/users/${userId}/follow-stats`,
-        method: 'GET',
-        showError: false
-      });
-      
-      logger.debug('获取关注统计响应:', result);
-      
-      // 标准响应中应该直接包含followedCount和followerCount字段
-      if (result && typeof result === 'object') {
-        // 提取关注和粉丝数量
-        const followedCount = result.followedCount !== undefined ? result.followedCount : 0;
-        const followerCount = result.followerCount !== undefined ? result.followerCount : 0;
-        
-        return { followedCount, followerCount };
-      }
-      
-      // 返回默认值
-      logger.warn('无法从响应中获取关注统计数据:', result);
-      return { followedCount: 0, followerCount: 0 };
-    } catch (error) {
-      logger.error('获取用户关注统计失败:', error);
-      // 返回默认值，避免前端出错
-      return { 
-        followedCount: 0, 
-        followerCount: 0,
-        error: error.message || '获取用户关注统计失败'
-      };
+  getUserFollowStats: (openid) => {
+    if (!openid) {
+      logger.warn('获取关注统计失败: 没有提供openid');
+      return Promise.resolve({ followedCount: 0, followerCount: 0 });
     }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}/follow-stats`,
+      method: 'GET',
+      showError: false
+    }).catch(error => {
+      logger.error('获取用户关注统计失败:', error);
+      return { followedCount: 0, followerCount: 0 };
+    });
   },
 
   /**
    * 获取用户Token数量
-   * @param {string} userId 用户ID
-   * @returns {Promise<object>} Token数据，包含token字段
+   * @param {string} openid - 用户openid
+   * @returns {Promise<object>} Token数据
    */
-  getUserToken: async (userId) => {
-    try {
-      if (!userId) {
-        logger.warn('获取Token失败: 没有提供用户ID');
-        return { token: 0, error: '无效的用户ID' };
-      }
-      
-      logger.debug(`开始请求用户Token, 用户ID: ${userId}`);
-      const result = await request({
-        url: `${API.PREFIX.WXAPP}/users/${userId}/token`,
-        method: 'GET',
-        showError: false
-      });
-      
-      logger.debug('获取Token响应:', JSON.stringify(result));
-      
-      // 标准响应中，token字段应该直接可用
-      if (result && typeof result === 'object') {
-        if (result.token !== undefined) {
-          return { token: parseInt(result.token) || 0 };
-        }
-      } 
-      // 如果是数字，直接返回
-      else if (typeof result === 'number') {
-        return { token: result };
-      }
-      
-      // 返回默认值
-      logger.warn('无法从响应中获取token字段:', result);
-      return { token: 0 };
-    } catch (error) {
-      logger.error('获取用户Token失败:', error);
-      return { token: 0, error: error.message || '获取用户Token失败' };
+  getUserToken: (openid) => {
+    if (!openid) {
+      logger.warn('获取Token失败: 没有提供openid');
+      return Promise.resolve({ token: 0 });
     }
-  },
-
-  // 获取用户喜欢的帖子
-  getUserLikedPosts(userId, page = 1, pageSize = 10) {
+    
     return request({
-      url: `/users/${userId}/liked-posts`,
+      url: `${API.PREFIX.WXAPP}/users/${openid}/token`,
       method: 'GET',
-      data: { page, pageSize }
+      showError: false
+    }).catch(error => {
+      logger.error('获取用户Token失败:', error);
+      return { token: 0 };
     });
   },
 
-  // 获取用户收藏的帖子
-  getUserFavorites(userId, page = 1, pageSize = 10) {
+  /**
+   * 获取用户喜欢的帖子
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserLikedPosts: (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
     return request({
-      url: `/users/${userId}/favorites`,
+      url: `${API.PREFIX.WXAPP}/users/${openid}/liked-posts`,
       method: 'GET',
-      data: { page, pageSize }
+      params: params
+    });
+  },
+
+  /**
+   * 获取用户收藏的帖子
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserFavorites: (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}/favorites`,
+      method: 'GET',
+      params: params
     });
   },
 
   /**
    * 获取用户发布的帖子
-   * @param {string|number} userId - 用户ID
+   * @param {string} openid - 用户openid
    * @param {Object} params - 查询参数
-   * @returns {Promise<Array>} - 帖子列表
+   * @returns {Promise} - 请求Promise
    */
-  getUserPosts: (userId, params = {}) => {
-    return new Promise((resolve, reject) => {
-      logger.debug(`获取用户${userId}发布的帖子，参数:`, params);
-      
-      if (!userId) {
-        logger.warn('获取用户帖子失败: 用户ID为空');
-        resolve([]);
-        return;
-      }
-      
-      request({
-        url: `${API.PREFIX.WXAPP}/posts`,
-        method: 'GET',
-        params: { 
-          ...params,
-          user_id: userId 
-        },
-        showError: false
-      })
-        .then(result => {
-          logger.debug(`用户${userId}帖子API响应:`, result);
-          
-          // 标准响应应该直接返回帖子数组
-          if (Array.isArray(result)) {
-            resolve(result);
-          } else if (result && result.posts && Array.isArray(result.posts)) {
-            // 如果有嵌套的posts字段
-            resolve(result.posts);
-          } else {
-            // 返回空数组避免前端错误
-            logger.warn('无法从响应中获取帖子列表:', result);
-            resolve([]);
-          }
-        })
-        .catch(err => {
-          logger.error(`获取用户${userId}帖子失败:`, err);
-          // 返回空数组而不是错误，避免前端崩溃
-          resolve([]);
-        });
+  getUserPosts: (openid, params = {}) => {
+    if (!openid) {
+      logger.warn('获取用户帖子失败: openid为空');
+      return Promise.resolve([]);
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts`,
+      method: 'GET',
+      params: { ...params, openid },
+      showError: false
+    }).catch(error => {
+      logger.error('获取用户帖子失败:', error);
+      return [];
     });
   }
 };
 
 /**
- * 获取本地存储的备用用户信息
- * @param {string} userId - 用户ID
- * @returns {Object} - 用户信息对象
+ * 获取本地备用用户信息，在API请求失败时使用
+ * @param {string} openid - 用户openid
+ * @returns {Object} - 本地备用用户信息
  */
-function getLocalFallbackUserInfo(userId) {
-  // 尝试从本地存储获取用户信息
-  const userInfo = wx.getStorageSync('userInfo') || {};
-  if (userInfo && (userInfo.id || userInfo._id)) {
-    logger.debug('使用本地存储的用户信息作为回退');
-    return userInfo;
+function getLocalFallbackUserInfo(openid) {
+  try {
+    // 尝试从本地存储获取
+    const localUserInfo = wx.getStorageSync('userInfo') || {};
+    
+    // 如果本地存储有匹配ID的用户信息，直接返回
+    if (localUserInfo && (localUserInfo.id == openid || localUserInfo.openid == openid)) {
+      logger.debug('使用本地存储的用户信息作为备用');
+      return localUserInfo;
+    }
+    
+    // 构建基础用户信息
+    return {
+      id: openid,
+      openid: openid,
+      nick_name: '未知用户',
+      avatar: '/assets/icons/default-avatar.png',
+      status: 1,
+      is_local: true
+    };
+  } catch (error) {
+    logger.error('获取本地备用用户信息失败:', error);
+    return {
+      id: openid,
+      openid: openid,
+      nick_name: '未知用户',
+      avatar: '/assets/icons/default-avatar.png',
+      status: 1,
+      is_local: true
+    };
   }
-  
-  // 创建一个最小可用的用户数据
-  return {
-    id: userId,
-    _id: userId,
-    nickname: '未知用户',
-    avatar_url: '/assets/icons/default_avatar.png'
-  };
 }
 
 module.exports = userAPI; 

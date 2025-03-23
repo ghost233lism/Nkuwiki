@@ -99,22 +99,22 @@ App({
       
       console.debug('应用启动，初始化用户信息:', userInfo);
       
-      // 检查用户ID是否完整
-      const userId = userInfo?.id || userInfo?._id || userInfo?.user_id;
+      // 检查用户openid是否有效
+      const openid = userInfo?.openid || userInfo?.id || userInfo?._id;
       
-      if (userId) {
-        console.debug(`用户ID检查: ${userId} (完整的ID)`);
+      if (openid) {
+        console.debug(`用户openid检查: ${openid} (有效的用户标识符)`);
       }
       
       // 如果用户已登录但信息不完整，尝试从服务器刷新
       if (userManager.isLoggedIn() && !userManager.isUserInfoComplete(userInfo)) {
         console.debug('用户信息不完整，尝试从服务器刷新');
         
-        // 在API请求中使用完整ID
+        // 在API请求中使用openid
         const { userAPI } = require('./utils/api/index');
-        if (userId) {
+        if (openid) {
           try {
-            const updatedUserInfo = await userAPI.getUserInfo(userId);
+            const updatedUserInfo = await userAPI.getUserInfo(openid);
             if (updatedUserInfo && updatedUserInfo.id) {
               // 更新用户信息
               userManager.saveUserInfo(updatedUserInfo);

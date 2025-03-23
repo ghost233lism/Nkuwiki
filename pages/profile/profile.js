@@ -578,15 +578,15 @@ Page({
   async fetchUserInfo() {
     try {
       const userInfo = userManager.getCurrentUser();
-      // 确保使用完整的用户ID，不做任何截断或修改
-      const userId = userInfo?.id || userInfo?._id || userInfo?.user_id;
+      // 确保使用openid作为用户标识符
+      const openid = userInfo?.openid;
       
-      if (!userId) {
-        console.error("没有有效的用户ID，无法获取用户信息");
+      if (!openid) {
+        console.error("没有有效的用户openid，无法获取用户信息");
         return;
       }
       
-      console.debug(`尝试获取用户ID=${userId}的完整用户信息`);
+      console.debug(`尝试获取用户openid=${openid}的完整用户信息`);
       
       // 显示加载状态
       wx.showLoading({
@@ -595,7 +595,7 @@ Page({
       });
       
       // 使用API获取最新用户信息
-      const result = await userAPI.getUserInfo(userId);
+      const result = await userAPI.getUserInfo(openid);
       console.debug("获取到的用户信息:", result);
       
       if (result && result.id) {

@@ -473,7 +473,7 @@ Page({
       const imageUrls = [];
       if (this.data.commentImages.length > 0) {
         for (const imagePath of this.data.commentImages) {
-          const cloudPath = `comments/${userInfo.id}/${Date.now()}_${Math.random().toString(36).substr(2, 8)}.${imagePath.split('.').pop()}`;
+          const cloudPath = `comments/${userInfo.openid}/${Date.now()}_${Math.random().toString(36).substr(2, 8)}.${imagePath.split('.').pop()}`;
           const res = await wx.cloud.uploadFile({
             cloudPath,
             filePath: imagePath
@@ -486,7 +486,7 @@ Page({
       const commentData = {
         wxapp_id: `comment_${Date.now()}`,
         post_id: this.data.currentCommentPostId,
-        user_id: userInfo.id,
+        openid: userInfo.openid,
         author_name: userInfo.nickname,
         author_avatar: userInfo.avatar_url,
         content: this.data.commentText.trim(),

@@ -1,4 +1,4 @@
-const feedbackAPI = require('../../../api/feedback_api');
+const feedbackAPI = require('../../../utils/api/feedback');
 const logger = require('../../../utils/logger');
 const userManager = require('../../../utils/user_manager');
 const uploadHelper = require('../../../utils/upload_helper');
@@ -6,7 +6,7 @@ const uploadHelper = require('../../../utils/upload_helper');
 Page({
   data: {
     isLoggedIn: false,
-    userId: '',
+    openid: '',
     content: '',
     contact: '',
     type: 'feature', // 默认为功能建议
@@ -31,7 +31,7 @@ Page({
     if (isLoggedIn && userInfo) {
       this.setData({
         isLoggedIn: true,
-        userId: userInfo.id || userInfo._id,
+        openid: userInfo.openid || userInfo.id || userInfo._id,
         contact: userInfo.email || ''
       });
       
@@ -58,11 +58,11 @@ Page({
 
   // 加载反馈列表
   loadFeedbackList: function () {
-    const userId = this.data.userId;
+    const openid = this.data.openid;
     
     this.setData({ loadingFeedbacks: true });
     
-    feedbackAPI.getUserFeedback(userId)
+    feedbackAPI.getUserFeedback(openid)
       .then(res => {
         logger.debug('获取用户反馈列表成功:', res);
         
@@ -141,7 +141,7 @@ Page({
       const fileIDs = await uploadHelper.batchUploadImages(
         tempFilePaths,
         'feedback',
-        this.data.userId,
+        this.data.openid,
         true,  // 压缩
         80     // 质量
       );
@@ -209,7 +209,7 @@ Page({
   // 提交反馈
   submitFeedback: function () {
     // 内容验证
-    const { content, type, contact, userId, images } = this.data;
+    const { content, type, contact, openid, images } = this.data;
     
     if (!content || content.trim().length < 5) {
       wx.showToast({
@@ -238,7 +238,7 @@ Page({
     
     // 构建反馈数据
     const feedbackData = {
-      user_id: userId,
+      openid: openid,
       content: content.trim(),
       type: type,
       contact: contact || null,

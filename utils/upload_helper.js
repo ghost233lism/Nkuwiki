@@ -16,13 +16,13 @@ const uploadHelper = {
    * 上传单张图片
    * @param {String} filePath 图片本地路径
    * @param {String} module 模块名称（如avatars, posts, feedback等）
-   * @param {String} userId 用户ID，用于权限隔离，匿名用户传anonymous
+   * @param {String} openid 用户openid，用于权限隔离，匿名用户传anonymous
    * @param {Boolean} compress 是否需要压缩
    * @param {Number} quality 压缩质量(0-100)
    * @param {Number} maxWidth 最大宽度(px)
    * @returns {Promise<String>} 返回云文件ID
    */
-  async uploadImage(filePath, module, userId = 'anonymous', compress = true, quality = 80, maxWidth = 800) {
+  async uploadImage(filePath, module, openid = 'anonymous', compress = true, quality = 80, maxWidth = 800) {
     try {
       let path = filePath;
       
@@ -38,11 +38,11 @@ const uploadHelper = {
       }
       
       // 生成标准云存储路径
-      // 格式：模块名/用户ID/时间戳_随机数.扩展名
+      // 格式：模块名/用户openid/时间戳_随机数.扩展名
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 8);
       const extName = path.substring(path.lastIndexOf('.'));
-      const cloudPath = `${module}/${userId}/${timestamp}_${randomStr}${extName}`;
+      const cloudPath = `${module}/${openid}/${timestamp}_${randomStr}${extName}`;
       
       logger.debug(`开始上传图片到云存储: ${cloudPath}`);
       
@@ -134,19 +134,19 @@ const uploadHelper = {
    * 批量上传图片
    * @param {Array<String>} filePaths 图片路径数组
    * @param {String} module 模块名称
-   * @param {String} userId 用户ID
+   * @param {String} openid 用户openid
    * @param {Boolean} compress 是否压缩
    * @param {Number} quality 压缩质量
    * @returns {Promise<Array<String>>} 云文件ID数组
    */
-  async batchUploadImages(filePaths, module, userId = 'anonymous', compress = true, quality = 80) {
+  async batchUploadImages(filePaths, module, openid = 'anonymous', compress = true, quality = 80) {
     if (!filePaths || filePaths.length === 0) {
       return [];
     }
     
     try {
       const uploadPromises = filePaths.map(path => 
-        this.uploadImage(path, module, userId, compress, quality)
+        this.uploadImage(path, module, openid, compress, quality)
       );
       
       return await Promise.all(uploadPromises);
@@ -160,11 +160,11 @@ const uploadHelper = {
    * 上传普通文件（不压缩）
    * @param {String} filePath 文件路径
    * @param {String} module 模块名称
-   * @param {String} userId 用户ID
+   * @param {String} openid 用户openid
    * @param {Boolean} useOriginalName 是否使用原始文件名
    * @returns {Promise<String>} 云文件ID
    */
-  uploadFile(filePath, module, userId = 'anonymous', useOriginalName = false) {
+  uploadFile(filePath, module, openid = 'anonymous', useOriginalName = false) {
     return new Promise((resolve, reject) => {
       try {
         // 提取文件名
@@ -173,12 +173,12 @@ const uploadHelper = {
         // 生成云存储路径
         let cloudPath;
         if (useOriginalName) {
-          cloudPath = `${module}/${userId}/${fileName}`;
+          cloudPath = `${module}/${openid}/${fileName}`;
         } else {
           const timestamp = Date.now();
           const randomStr = Math.random().toString(36).substring(2, 8);
           const extName = fileName.substring(fileName.lastIndexOf('.'));
-          cloudPath = `${module}/${userId}/${timestamp}_${randomStr}${extName}`;
+          cloudPath = `${module}/${openid}/${timestamp}_${randomStr}${extName}`;
         }
         
         logger.debug(`开始上传文件到云存储: ${cloudPath}`);
@@ -250,18 +250,20 @@ const uploadHelper = {
       wx.cloud.deleteFile({
         fileList: fileIDs,
         success: res => {
-          // 检查是否有失败的项
-          const hasFailure = res.fileList.some(item => item.status !== 0);
-          if (hasFailure) {
-            const failedFiles = res.fileList
-              .filter(item => item.status !== 0)
-              .map(item => `${item.fileID} (${item.errMsg})`);
-            logger.error(`部分文件删除失败: ${failedFiles.join(', ')}`);
-            resolve(false);
-          } else {
-            logger.debug(`成功删除${fileIDs.length}个文件`);
-            resolve(true);
+          // 检查结果
+          let allSuccess = true;
+          const results = res.fileList || [];
+          
+          logger.debug(`批量删除结果: ${JSON.stringify(results)}`);
+          
+          for (let i = 0; i < results.length; i++) {
+            if (results[i].status !== 0) {
+              allSuccess = false;
+              logger.error(`删除文件失败: ${results[i].fileID}, 错误: ${results[i].errMsg}`);
+            }
           }
+          
+          resolve(allSuccess);
         },
         fail: err => {
           logger.error('批量删除文件失败:', err);

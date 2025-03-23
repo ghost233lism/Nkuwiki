@@ -1,9 +1,13 @@
+const app = getApp();
+const userManager = require('../../utils/user_manager');
+const { postAPI, logger } = require('../../utils/api/index');
+
 Page({
   data: {
     posts: [],
+    loading: false,
     page: 1,
     pageSize: 10,
-    loading: false,
     hasMore: true
   },
 
@@ -17,18 +21,18 @@ Page({
   },
 
   // 处理下拉刷新
-  async onPullDownRefresh() {
-    try {
-      this.setData({
-        page: 1,
-        hasMore: true
-      })
-      await this.loadPosts(true)
+  onPullDownRefresh() {
+    // 下拉刷新，重置为第一页
+    this.setData({
+      posts: [],
+      page: 1,
+      hasMore: true
+    })
+    this.loadPosts(true).then(() => {
       wx.stopPullDownRefresh()
-    } catch (err) {
-      console.error('刷新失败：', err)
+    }).catch(() => {
       wx.stopPullDownRefresh()
-    }
+    })
   },
 
   // 加载帖子列表
@@ -38,9 +42,7 @@ Page({
     this.setData({ loading: true })
     
     try {
-      // 使用HTTP API代替云数据库调用
-      const api = require('../../utils/api/index');
-      const result = await api.postAPI.getPosts({
+      const result = await postAPI.getPosts({
         limit: this.data.pageSize,
         offset: (this.data.page - 1) * this.data.pageSize,
         order_by: 'update_time DESC'
@@ -53,7 +55,7 @@ Page({
         content: post.content,
         images: post.images || [],
         author: {
-          id: post.user_id,
+          id: post.openid,
           name: post.user_name || '用户',
           avatar: post.user_avatar || '/assets/icons/default_avatar.png'
         },
@@ -70,9 +72,8 @@ Page({
       
       // 安全获取当前用户ID并设置点赞状态
       try {
-        const app = getApp();
-        const currentUser = app && app.getUserInfo ? app.getUserInfo() : null;
-        const userId = currentUser && currentUser.id;
+        const currentUser = userManager.getCurrentUser();
+        const userId = currentUser && currentUser.openid;
         
         if (userId) {
           // 设置点赞状态
@@ -82,23 +83,20 @@ Page({
             }
           });
         }
-      } catch (e) {
-        console.warn('获取用户信息失败，默认显示未点赞状态:', e);
+      } catch (userErr) {
+        console.error('获取用户信息失败:', userErr);
       }
 
+      // 更新数据
       this.setData({
         posts: refresh ? posts : [...this.data.posts, ...posts],
+        loading: false,
         page: this.data.page + 1,
-        hasMore: posts.length === this.data.pageSize,
-        loading: false
-      })
-    } catch (err) {
-      console.error('加载帖子失败：', err)
-      this.setData({ loading: false })
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
+        hasMore: posts.length === this.data.pageSize
+      });
+    } catch (error) {
+      console.error('加载帖子失败:', error);
+      this.setData({ loading: false });
     }
   },
 
@@ -114,22 +112,9 @@ Page({
   async handleLike(e) {
     const { id, index } = e.currentTarget.dataset
     try {
-      // 使用HTTP API代替云函数调用
-      const api = require('../../utils/api/index');
-      
       // 安全获取当前用户
-      const app = getApp();
-      if (!app) {
-        console.error('获取App实例失败');
-        wx.showToast({
-          title: '系统错误',
-          icon: 'none'
-        });
-        return;
-      }
-      
-      const currentUser = app.getUserInfo ? app.getUserInfo() : null;
-      if (!currentUser || !currentUser.id) {
+      const currentUser = userManager.getCurrentUser();
+      if (!currentUser || !currentUser.openid) {
         wx.showToast({
           title: '请先登录',
           icon: 'none'
@@ -137,7 +122,7 @@ Page({
         return;
       }
       
-      const res = await api.postAPI.likePost(id, currentUser.id);
+      const res = await postAPI.likePost(id, currentUser.openid);
       
       if (res && res.success !== false) {
         const key = `posts[${index}].stats.likes`
@@ -161,6 +146,21 @@ Page({
         title: '操作失败',
         icon: 'none'
       });
+    }
+  },
+
+  // 点击帖子跳转到详情页
+  goToDetail(e) {
+    const { id } = e.currentTarget.dataset
+    wx.navigateTo({
+      url: `/pages/post/detail/detail?id=${id}`
+    })
+  },
+
+  // 上拉加载更多
+  onReachBottom() {
+    if (this.data.hasMore && !this.data.loading) {
+      this.loadPosts()
     }
   }
 }) 

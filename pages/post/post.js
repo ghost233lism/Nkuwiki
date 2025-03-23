@@ -311,7 +311,7 @@ Page({
     const isLoggedIn = userManager.isLoggedIn();
     
     // 在这里再次检查登录状态
-    if (!isLoggedIn || !userInfo || !userInfo.id || userInfo.id === '0') {
+    if (!isLoggedIn || !userInfo || !userInfo.openid || userInfo.openid === '0') {
       console.debug('发帖时发现未登录状态:', userInfo);
       wx.hideLoading();
       
@@ -399,7 +399,7 @@ Page({
         // 准备要发送到API的数据
         const postData = {
           wxapp_id: `post_${Date.now()}`, // 生成唯一ID
-          user_id: userInfo.id, // 使用user_id字段
+          openid: userInfo.openid, // 使用openid字段
           author_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
           author_avatar: avatarUrl,
           title: title,
@@ -459,7 +459,7 @@ Page({
       // 无图片帖子，直接调用API
       const postData = {
         wxapp_id: `post_${Date.now()}`,
-        user_id: userInfo.id, // 使用user_id字段
+        openid: userInfo.openid, // 使用openid字段
         author_name: userInfo.nickname,
         author_avatar: userInfo.avatar_url,
         title: title,

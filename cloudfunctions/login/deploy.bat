@@ -1,6 +1,6 @@
 @echo off
 echo 开始部署登录云函数...
-echo 注意：此版本使用云ID作为用户主键，请确保服务器接口接受云ID
+echo 注意：此版本使用openid作为用户主键，严格遵循API文档规范
 
 rem 删除旧的node_modules
 if exist "node_modules" (
@@ -18,4 +18,4 @@ set ENV=nkuwiki-0g6bkdy9e8455d93
 wx upload-function login --env %ENV%
 
 echo 部署完成！
-echo 重要提示：确保服务器端已实现/wxapp/users/sync接口并接受云ID作为用户标识！
+echo 重要提示：确保服务器端已实现/wxapp/users/sync接口，接口参数已遵循最新API文档规范！

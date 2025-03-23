@@ -2,20 +2,26 @@
 // 消息通知相关API
 
 const { API, logger, request } = require('./core');
+const userManager = require('../../utils/user_manager');
 
 const notificationAPI = {
   /**
    * 获取用户的通知列表
-   * @param {string} userId 用户ID
+   * @param {string} openid 用户openid
    * @param {Object} params 查询参数，可包含type、is_read等条件
    * @returns {Promise<Object>} 通知列表数据
    */
-  getUserNotifications: async (userId, params = {}) => {
+  getUserNotifications: async (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
     try {
       const res = await request({
-        url: `${API.PREFIX.WXAPP}/users/${userId}/notifications`,
+        url: `${API.PREFIX.WXAPP}/users/${openid}/notifications`,
         method: 'GET',
-        data: params
+        params
       });
       
       if (res && res.notifications) {
@@ -59,14 +65,19 @@ const notificationAPI = {
   
   /**
    * 标记所有通知为已读
-   * @param {string} userId 用户ID
+   * @param {string} openid 用户openid
    * @param {string} type 可选，通知类型
    * @returns {Promise<Object>} 操作结果
    */
-  markAllAsRead: async (userId, type = null) => {
+  markAllAsRead: async (openid, type = null) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
     const data = type ? { type } : {};
     return request({
-      url: `${API.PREFIX.WXAPP}/users/${userId}/notifications/read-all`,
+      url: `${API.PREFIX.WXAPP}/users/${openid}/notifications/read`,
       method: 'PUT',
       data
     });

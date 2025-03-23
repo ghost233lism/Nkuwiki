@@ -18,6 +18,40 @@ const DEFAULT_NAME = '南开大学用户';
  */
 const userManager = {
   /**
+   * 将微信原始openid转换为十六进制字符串格式
+   * @param {string} openid - 微信原始openid
+   * @returns {string} - 转换后的十六进制字符串
+   */
+  formatOpenid(openid) {
+    if (!openid) return '';
+    
+    // 已经是MD5格式的直接返回
+    if (/^[0-9a-f]{32}$/.test(openid)) {
+      return openid;
+    }
+    
+    try {
+      // 使用简单的字符串哈希代替crypto.createHash（小程序环境不支持）
+      let hash = 0;
+      for (let i = 0; i < openid.length; i++) {
+        const char = openid.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // 转换为32位整数
+      }
+      
+      // 转换为16进制字符串并补齐前导0
+      const hashHex = Math.abs(hash).toString(16).padStart(8, '0');
+      
+      // 重复到32位长度
+      return (hashHex.repeat(4)).substring(0, 32);
+    } catch (e) {
+      console.error('openid格式化失败:', e);
+      // 返回一个备用值
+      return openid.replace(/[^a-zA-Z0-9]/g, '').padEnd(32, '0').substring(0, 32);
+    }
+  },
+
+  /**
    * 调试用户ID问题
    * @returns {Object} 从所有可能的来源获取的用户ID信息
    */
@@ -32,8 +66,8 @@ const userManager = {
         sources.main_storage = {
           id: userInfo.id,
           _id: userInfo._id,
-          user_id: userInfo.user_id,
-          openid: userInfo.openid
+          openid: userInfo.openid,
+          formatted_openid: this.formatOpenid(userInfo.openid)
         };
       } catch (e) {
         sources.main_storage = { error: e.message };
@@ -45,8 +79,8 @@ const userManager = {
         sources.latest_storage = {
           id: latestUserInfo.id,
           _id: latestUserInfo._id,
-          user_id: latestUserInfo.user_id,
-          openid: latestUserInfo.openid
+          openid: latestUserInfo.openid,
+          formatted_openid: this.formatOpenid(latestUserInfo.openid)
         };
       } catch (e) {
         sources.latest_storage = { error: e.message };
@@ -60,8 +94,8 @@ const userManager = {
           sources.global_data = {
             id: globalUserInfo.id,
             _id: globalUserInfo._id,
-            user_id: globalUserInfo.user_id,
-            openid: globalUserInfo.openid
+            openid: globalUserInfo.openid,
+            formatted_openid: this.formatOpenid(globalUserInfo.openid)
           };
         } else {
           sources.global_data = { error: '全局用户数据不可用' };
@@ -125,77 +159,63 @@ const userManager = {
           console.debug('全局状态不可用或无用户信息');
         }
         
-        // 合并信息，优先使用最新的信息
-        userInfo = this.mergeUserInfo([userInfo, latestUserInfo, globalUserInfo]);
-        console.debug('合并后的用户信息:', JSON.stringify(userInfo));
+        // 合并信息，优先使用主存储，然后是最新存储，最后是全局状态
+        const mergedUserInfo = {
+          ...globalUserInfo,
+          ...latestUserInfo,
+          ...userInfo
+        };
         
-        // 更新存储
-        if (this.isUserInfoComplete(userInfo)) {
-          console.debug('已获取完整用户信息，更新存储');
-          this.saveUserInfo(userInfo);
-        } else {
-          console.debug('合并后的用户信息仍不完整');
+        // 设置必要的默认值并更新
+        userInfo = {
+          ...mergedUserInfo,
+          avatar: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || DEFAULT_AVATAR,
+          nickname: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
+          // 兼容字段
+          nickName: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
+          avatarUrl: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || DEFAULT_AVATAR
+        };
+        
+        // 同步更新到存储
+        this.saveUserInfo(userInfo, false);
+      }
+      
+      // 确保openid被格式化
+      if (userInfo.openid) {
+        // 如果有原始openid但没有格式化openid，添加格式化的版本
+        if (!userInfo.formatted_openid) {
+          userInfo.formatted_openid = this.formatOpenid(userInfo.openid);
         }
+        
+        // 总是确保返回的openid是格式化的
+        userInfo.openid = this.formatOpenid(userInfo.openid);
       }
-      
-      // 填充默认值，确保关键字段存在
-      const defaultInfo = this.getDefaultUserInfo();
-      for (const key in defaultInfo) {
-        if (!userInfo[key]) {
-          userInfo[key] = defaultInfo[key];
-        }
-      }
-      
-      // 确保ID字段一致性 - 保留完整ID
-      if (userInfo._id && !userInfo.id) {
-        userInfo.id = userInfo._id; // 完整复制，不截断
-      } else if (userInfo.id && !userInfo._id) {
-        userInfo._id = userInfo.id; // 完整复制，不截断
-      }
-      
-      // 始终确保用户ID在调试日志中完整显示
-      console.debug(`用户ID信息: id=${userInfo.id}, _id=${userInfo._id}, user_id=${userInfo.user_id}`);
       
       return userInfo;
     } catch (error) {
-      console.error('获取用户信息出错:', error);
-      return this.getDefaultUserInfo();
+      console.error('获取当前用户信息失败:', error);
+      // 返回最小可用的用户信息
+      return {
+        avatar: DEFAULT_AVATAR,
+        nickname: DEFAULT_NAME,
+        nickName: DEFAULT_NAME,
+        avatarUrl: DEFAULT_AVATAR
+      };
     }
   },
   
   /**
-   * 获取用于API请求的用户信息
-   * @returns {Object} 用于API的用户信息
+   * 获取用户信息用于API请求
+   * @returns {Object} 包含openid的用户信息对象
    */
   getUserInfoForAPI() {
     const userInfo = this.getCurrentUser();
-    
-    // 记录用户信息验证过程，帮助调试
-    console.debug('获取API用户信息, 原始数据:', JSON.stringify(userInfo));
-    
-    // 确保有用户ID，保持原始ID格式不变
-    const userId = userInfo.id || userInfo._id || userInfo.user_id || '';
-    console.debug('解析得到的完整用户ID:', userId);
-    
-    if (!userId) {
-      console.warn('警告：用户ID不存在，使用临时ID');
-    }
-    
-    // 创建包含多个字段的对象，确保后端可以识别
-    const apiInfo = {
-      id: userId,  // 保持原始ID，不做处理
-      _id: userId,  // 保持原始ID，不做处理
-      user_id: userId,  // 保持原始ID，不做处理
-      wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${Date.now()}`,
-      openid: userInfo.openid || '',  // 确保openid字段
-      author_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
-      nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
-      author_avatar: userInfo.avatar_url || userInfo.avatarUrl || DEFAULT_AVATAR,
-      avatar_url: userInfo.avatar_url || userInfo.avatarUrl || DEFAULT_AVATAR,
+    // getCurrentUser方法已确保返回格式化的openid
+    return {
+      openid: userInfo.openid,
+      nick_name: userInfo.nick_name || userInfo.nickName || DEFAULT_NAME,
+      avatar: userInfo.avatar || userInfo.avatarUrl || DEFAULT_AVATAR
     };
-    
-    console.debug('准备发送给API的用户信息:', JSON.stringify(apiInfo));
-    return apiInfo;
   },
   
   /**
@@ -211,7 +231,7 @@ const userManager = {
     console.debug('检查用户信息完整性:', JSON.stringify(userInfo));
     
     // 检查用户ID (可能存在于多个字段)
-    const hasUserId = !!(userInfo.id || userInfo._id || userInfo.user_id || userInfo.openid);
+    const hasUserId = !!(userInfo.id || userInfo._id || userInfo.openid);
     
     // 检查用户昵称 (可能存在于多个字段)
     const hasNickname = !!(userInfo.nickname || userInfo.nickName || userInfo.author_name);
@@ -263,7 +283,7 @@ const userManager = {
    * 保存用户信息到本地存储
    * @param {Object} userInfo - 用户信息
    */
-  saveUserInfo(userInfo) {
+  saveUserInfo(userInfo, updateLatest = true) {
     if (!userInfo) return;
     
     try {
@@ -289,7 +309,9 @@ const userManager = {
       wx.setStorageSync(STORAGE_KEYS.USER_INFO, standardUserInfo);
       
       // 更新最新信息
-      wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, standardUserInfo);
+      if (updateLatest) {
+        wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, standardUserInfo);
+      }
       
       // 更新全局状态
       const app = getApp();
@@ -367,8 +389,8 @@ const userManager = {
       console.debug('登录检查 - Token:', token ? '存在' : '不存在');
       
       // 检查用户ID (可能存在于多个字段)
-      const userId = userInfo?.id || userInfo?._id || userInfo?.user_id || userInfo?.openid;
-      console.debug('登录检查 - 解析后的用户ID:', userId || '无ID');
+      const openid = userInfo?.openid || userInfo?.id || userInfo?._id;
+      console.debug('登录检查 - 解析后的用户openid:', openid || '无ID');
       
       // 验证token
       let tokenValid = false;
@@ -399,7 +421,7 @@ const userManager = {
       // 1. 必须有用户信息
       // 2. 用户ID必须存在且不为'0'
       // 3. 最佳情况有token且有效，但临时允许无token也算登录
-      const isLoggedIn = !!(userInfo && userId && userId !== '0');
+      const isLoggedIn = !!(userInfo && openid && openid !== '0');
       
       console.debug('登录状态判断最终结果:', isLoggedIn);
       return isLoggedIn;

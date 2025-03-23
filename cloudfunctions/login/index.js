@@ -2,6 +2,8 @@
 const cloud = require('wx-server-sdk')
 // 引入网络请求模块
 const axios = require('axios')
+// 引入crypto模块用于openid处理
+const crypto = require('crypto')
 
 cloud.init({
   env: 'nkuwiki-0g6bkdy9e8455d93'
@@ -10,6 +12,18 @@ const db = cloud.database()
 
 // 主服务器API地址
 const API_BASE_URL = 'https://nkuwiki.com'
+
+/**
+ * 将微信原始openid转换为十六进制字符串格式
+ * @param {string} openid - 微信原始openid
+ * @returns {string} - 转换后的十六进制字符串
+ */
+function formatOpenid(openid) {
+  if (!openid) return '';
+  
+  // 使用md5将openid转换为一致的十六进制字符串
+  return crypto.createHash('md5').update(openid).digest('hex');
+}
 
 // 将用户信息同步到主服务器
 async function syncUserToMainServer(userData) {
@@ -25,21 +39,25 @@ async function syncUserToMainServer(userData) {
   }
   
   try {
-    // 严格按照UserSyncRequest模型构造数据
+    // 转换微信原始openid为十六进制格式
+    const formattedOpenid = formatOpenid(userData.openid);
+    console.log('原始openid:', userData.openid);
+    console.log('格式化后的openid:', formattedOpenid);
+    
+    // 严格按照API文档中的UserSyncRequest模型构造数据
     const syncRequest = {
       // 必填字段
-      "id": userData._id,
-      "cloud_id_alias": userData._id,
-      "wxapp_id": userData.openid,
-      "openid": userData.openid,
-      
-      // 选填字段
-      "nickname": userData.nickName || ('用户' + userData.openid.slice(-4)),
-      "avatar_url": userData.avatarUrl || "/assets/icons/default-avatar.png",
+      "openid": formattedOpenid,
+      "unionid": userData.unionid || "",
+      "nick_name": userData.nickName || ('用户' + formattedOpenid.slice(-4)),
+      "avatar": userData.avatarUrl || "/assets/icons/default-avatar.png",
+      "gender": userData.gender || 0,
+      "country": userData.country || "",
+      "province": userData.province || "",
+      "city": userData.city || "",
+      "language": userData.language || "",
       "university": userData.university || "南开大学",
-      "login_type": "wechat",
-      "cloud_source": true,
-      "use_cloud_id": false  // 不使用云ID作为主键
+      "login_type": "wechat"
     };
     
     // 打印完整的请求信息
@@ -146,6 +164,11 @@ exports.main = async (event, context) => {
         loginType: 'wechat',
         nickName: '用户' + wxContext.OPENID.slice(-4),
         avatarUrl: '/assets/icons/default-avatar.png',
+        gender: 0,
+        country: '',
+        province: '',
+        city: '',
+        language: '',
         status: '这个人很懒，什么都没写~',
         university: '南开大学',
         posts: 0,
@@ -187,19 +210,29 @@ exports.main = async (event, context) => {
     console.log('同步用户完成，结果:', JSON.stringify(syncResult))
     
     // 如果同步成功，使用服务器返回的用户信息
+    let resultUserData = userData;
+    
     if (syncResult.success && syncResult.data) {
-      // 记录服务器的数据同步情况，但不覆盖我们的云ID
-      // 确保客户端和服务器使用同一个ID
-      userData.server_synced = true
-      userData.server_sync_time = new Date().toISOString()
-      userData.server_id = syncResult.data.id || syncResult.data.data?.id // 服务器分配的ID
+      // 使用服务器返回的用户信息，更加完整
+      resultUserData = syncResult.data;
       
-      // 更新云数据库中的用户，添加同步状态
+      // 确保将云数据库ID一并返回
+      resultUserData._id = userData._id;
+      
+      // 更新云数据库中的用户，添加同步状态和服务器返回的信息
       await db.collection('users').doc(userData._id).update({
         data: {
           server_synced: true,
           server_sync_time: now,
-          server_id: userData.server_id,
+          formatted_openid: formatOpenid(userData.openid), // 存储格式化的openid
+          nickName: resultUserData.nick_name,
+          avatarUrl: resultUserData.avatar,
+          gender: resultUserData.gender || 0,
+          country: resultUserData.country || '',
+          province: resultUserData.province || '',
+          city: resultUserData.city || '',
+          language: resultUserData.language || '',
+          university: resultUserData.university || '南开大学',
           updateTime: now
         }
       })
@@ -207,9 +240,29 @@ exports.main = async (event, context) => {
       console.warn('用户同步失败，仅使用云数据库用户信息，原因:', syncResult.error || '未知错误')
     }
 
+    // 返回结果
     return {
       code: 0,
-      data: userData,
+      data: {
+        // 用户基本信息
+        _id: resultUserData._id,
+        openid: formatOpenid(userData.openid), // 返回格式化的openid
+        wx_openid: userData.openid, // 原始微信openid
+        unionid: resultUserData.unionid || '',
+        nick_name: resultUserData.nick_name || resultUserData.nickName,
+        avatar: resultUserData.avatar || resultUserData.avatarUrl,
+        gender: resultUserData.gender || 0,
+        country: resultUserData.country || '',
+        province: resultUserData.province || '',
+        city: resultUserData.city || '',
+        language: resultUserData.language || '',
+        university: resultUserData.university || '南开大学',
+        
+        // 额外信息
+        login_type: 'wechat',
+        cloud_id: resultUserData._id,
+        server_synced: syncResult.success
+      },
       message: isNewUser ? '新用户创建成功' : '登录成功',
       syncResult: syncResult.success ? '同步成功' : '同步失败:' + (syncResult.error || '未知错误')
     }

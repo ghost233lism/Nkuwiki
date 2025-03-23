@@ -383,7 +383,7 @@ Page({
       query: query,
       stream: true,  // 开启流式响应
       format: 'text', // 直接请求纯文本
-      user_id: openid || 'default_user' // 使用用户的微信ID，如果没有则使用默认值
+      openid: openid || 'default_user' // 使用用户的微信ID，如果没有则使用默认值
     };
 
     console.log('请求参数:', requestData);
@@ -921,13 +921,13 @@ Page({
           const userManager = require('../../utils/user_manager');
           const uploadHelper = require('../../utils/upload_helper');
           
-          const userId = userManager.getUser()?.id || 'anonymous';
+          const openid = userManager.getUser()?.id || 'anonymous';
           
           // 使用uploadHelper上传文件
           const fileID = await uploadHelper.uploadFile(
             filePath, 
             'search_docs', 
-            userId, 
+            openid, 
             false // 不压缩
           );
           
@@ -945,7 +945,7 @@ Page({
           const result = await searchAPI.indexDocument({
             file_id: fileID,
             file_name: fileName,
-            user_id: userId
+            openid: openid
           });
           
           wx.hideLoading();
