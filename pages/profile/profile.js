@@ -635,35 +635,13 @@ Page({
       
       // 如果需要强制刷新，则清理缓存
       if (needRefresh) {
-        logger.info('检测到需要刷新用户信息，正在清理缓存...');
+        logger.info('检测到需要刷新用户信息，清理缓存');
         wx.removeStorageSync('_cached_user_info');
-        // 清理完成后重置标志
         wx.setStorageSync('needRefreshUserInfo', false);
-      }
-      
-      // 获取缓存的用户信息
-      let cachedUserInfo = wx.getStorageSync('_cached_user_info');
-      
-      // 如果有缓存且不需要强制刷新，则使用缓存
-      if (cachedUserInfo && !needRefresh) {
-        logger.debug('使用缓存的用户信息:', JSON.stringify(cachedUserInfo));
-        this.setData({ userInfo: cachedUserInfo });
-        return;
       }
       
       // 从userManager获取最新用户信息
       const user = userManager.getCurrentUser();
-      
-      // 打印获取到的用户信息，特别关注昵称和个性签名字段
-      logger.info('获取到的用户信息:', JSON.stringify({
-        openid: user ? user.openid : null,
-        hasUser: !!user,
-        nickname: user ? user.nickname : null,
-        nickName: user ? user.nickName : null,
-        nick_name: user ? user.nick_name : null,
-        bio: user ? user.bio : null,
-        avatar: user ? user.avatar : null
-      }));
       
       // 检查用户信息是否存在且有效
       if (!user || !user.openid) {
@@ -672,31 +650,21 @@ Page({
         return;
       }
       
-      // 标准化用户信息，确保昵称和个性签名字段存在
-      const standardizedUser = {
+      // 标准化用户信息，确保必要字段存在
+      const userInfo = {
         ...user,
         nickname: user.nickname || user.nickName || user.nick_name || '南开大学用户',
         nickName: user.nickname || user.nickName || user.nick_name || '南开大学用户',
         nick_name: user.nickname || user.nickName || user.nick_name || '南开大学用户',
-        bio: user.bio || user.signature || user.description || user.status || '这个人很懒，什么都没留下',
-        avatar: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
-        avatar_url: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
-        avatarUrl: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png'
+        bio: user.bio || user.signature || '这个人很懒，什么都没留下',
+        avatar: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png'
       };
-      
-      logger.info('标准化后的用户信息:', JSON.stringify({
-        nickname: standardizedUser.nickname,
-        bio: standardizedUser.bio
-      }));
       
       // 更新页面数据
       this.setData({
         isLogin: true,
-        userInfo: standardizedUser
+        userInfo: userInfo
       });
-      
-      // 缓存标准化后的用户信息
-      wx.setStorageSync('_cached_user_info', standardizedUser);
       
       // 更新用户统计信息
       this.refreshUserData();

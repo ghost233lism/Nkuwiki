@@ -279,7 +279,7 @@ const userManager = {
    * @param {Object} userInfo - 用户信息
    * @param {Boolean} updateLatest - 是否同时更新最新用户信息
    */
-  saveUserInfo(userInfo, updateLatest = true) {
+  saveUserInfo(userInfo) {
     if (!userInfo) {
       console.error('保存的用户信息为空');
       return false;
@@ -294,39 +294,20 @@ const userManager = {
       }
       
       // 标准化用户信息
-      const standardUserInfo = {
-        id: userInfo.id || userInfo._id,
+      const finalUserInfo = {
+        ...userInfo,
+        // 确保关键字段存在
         openid: userInfo.openid || userInfo.wxapp_id || userInfo.open_id || `user_${userInfo.id || Date.now()}`,
-        wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${userInfo.id || Date.now()}`,
         nickname: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
-        // 确保三个昵称字段保持一致
         nickName: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
         nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
         bio: userInfo.bio || userInfo.signature || userInfo.description || userInfo.status || '这个人很懒，什么都没留下',
-        // 确保三个头像字段保持一致
         avatar: userInfo.avatar || userInfo.avatarUrl || userInfo.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
         avatar_url: userInfo.avatar_url || userInfo.avatarUrl || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
         avatarUrl: userInfo.avatarUrl || userInfo.avatar_url || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
         school: userInfo.school || userInfo.university || '南开大学',
         update_time: new Date().toISOString()
       };
-      
-      // 保留已有字段
-      const finalUserInfo = {
-        ...userInfo,
-        ...standardUserInfo
-      };
-      
-      // 添加调试日志
-      console.info('标准化后的用户信息:', JSON.stringify({
-        nickname: finalUserInfo.nickname,
-        nickName: finalUserInfo.nickName,
-        nick_name: finalUserInfo.nick_name,
-        bio: finalUserInfo.bio,
-        avatar: finalUserInfo.avatar,
-        avatar_url: finalUserInfo.avatar_url,
-        avatarUrl: finalUserInfo.avatarUrl
-      }));
       
       // 保存到本地存储
       wx.setStorageSync(STORAGE_KEYS.USER_INFO, finalUserInfo);
@@ -337,11 +318,14 @@ const userManager = {
       if (app && app.globalData) {
         app.globalData.userInfo = finalUserInfo;
         app.globalData.hasLogin = true;
-        // 触发全局更新事件
         if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
           app.globalDataChanged('userInfo', finalUserInfo);
         }
       }
+      
+      // 设置刷新标记
+      wx.removeStorageSync('_cached_user_info');
+      wx.setStorageSync('needRefreshUserInfo', true);
       
       console.info('用户信息已成功保存');
       return true;
@@ -371,12 +355,6 @@ const userManager = {
         console.error('当前无用户信息或无有效openid，无法更新');
         return false;
       }
-      
-      // 检查传入对象中是否有昵称和个性签名字段
-      const hasNickname = !!(newInfo.nickname || newInfo.nickName || newInfo.nick_name);
-      const hasBio = !!(newInfo.bio || newInfo.signature || newInfo.description || newInfo.status);
-      
-      console.info('更新用户信息，包含昵称:', hasNickname, '包含个性签名:', hasBio);
       
       // 合并新信息到现有用户信息
       const updatedUserInfo = { ...currentUserInfo };
@@ -412,31 +390,17 @@ const userManager = {
         updatedUserInfo.nickName = newInfo.nick_name;
       }
       
-      // 特殊处理个性签名字段
-      if (newInfo.bio) {
-        updatedUserInfo.bio = newInfo.bio;
-      } else if (newInfo.signature) {
-        updatedUserInfo.bio = newInfo.signature;
-      } else if (newInfo.description) {
-        updatedUserInfo.bio = newInfo.description;
-      } else if (newInfo.status) {
-        updatedUserInfo.bio = newInfo.status;
-      }
-      
       // 确保昵称和个性签名有默认值
-      updatedUserInfo.nickname = updatedUserInfo.nickname || updatedUserInfo.nickName || updatedUserInfo.nick_name || '南开大学用户';
+      updatedUserInfo.nickname = updatedUserInfo.nickname || '南开大学用户';
       updatedUserInfo.nickName = updatedUserInfo.nickname;
       updatedUserInfo.nick_name = updatedUserInfo.nickname;
-      
       updatedUserInfo.bio = updatedUserInfo.bio || '这个人很懒，什么都没留下';
       
       // 更新时间戳
       updatedUserInfo.update_time = new Date().toISOString();
       
-      // 保存更新后的用户信息到所有存储位置
+      // 保存更新后的用户信息
       console.info('保存更新后的用户信息:', JSON.stringify({
-        ...updatedUserInfo,
-        // 突出显示以下关键字段
         nickname: updatedUserInfo.nickname,
         bio: updatedUserInfo.bio
       }));
@@ -447,18 +411,14 @@ const userManager = {
       // 更新全局状态
       const app = getApp();
       if (app && app.globalData) {
-        console.info('更新全局用户信息状态');
         app.globalData.userInfo = updatedUserInfo;
-        // 触发全局更新事件
         if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
           app.globalDataChanged('userInfo', updatedUserInfo);
         }
       }
       
-      // 强制清理缓存的用户信息
-      wx.removeStorageSync('_cached_user_info');
-      
       // 设置刷新标记
+      wx.removeStorageSync('_cached_user_info');
       wx.setStorageSync('needRefreshUserInfo', true);
       
       console.info('用户信息已成功更新');
