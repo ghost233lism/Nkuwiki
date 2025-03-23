@@ -33,42 +33,57 @@
   font-weight: bold;
 }
 
-.form-container {
-  background-color: #ffffff;
-  margin-bottom: 20rpx;
-}
-
 /* 头像选择区域 */
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 40rpx 0;
   background-color: #ffffff;
-  position: relative;
+  margin-bottom: 20rpx;
 }
 
-.current-avatar {
+.avatar-image {
   width: 160rpx;
   height: 160rpx;
   border-radius: 80rpx;
-  background-color: #f0f0f0;
-  border: 2rpx solid #e0e0e0;
   margin-bottom: 20rpx;
 }
 
 .avatar-text {
   font-size: 28rpx;
   color: #666666;
+  margin-bottom: 20rpx;
+}
+
+.avatar-buttons {
+  display: flex;
+  justify-content: center;
+  width: 70%;
+}
+
+.avatar-btn {
+  font-size: 30rpx;
+  color: #333333;
+  background-color: #f5f5f5;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 16rpx 0;
+  width: 100%;
+}
+
+.avatar-btn::after {
+  border: none;
 }
 
 /* 基本信息区域 */
 .info-section {
   background-color: #ffffff;
+  padding-bottom: 30rpx;
 }
 
 .section-title {
+  display: block;
   font-size: 32rpx;
   font-weight: bold;
   color: #333333;
@@ -87,50 +102,41 @@
 .item-label {
   font-size: 28rpx;
   color: #333333;
-  flex: 1;
+  flex: 0 0 200rpx;
 }
 
-.item-input {
-  flex: 3;
+.item-value {
+  flex: 1;
   text-align: right;
   font-size: 28rpx;
   color: #333333;
 }
 
-.textarea-item {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.item-textarea {
-  width: 100%;
-  font-size: 28rpx;
-  color: #333333;
-  margin-top: 20rpx;
-}
-
-/* 日期选择器 */
-.picker-content {
-  flex: 3;
+.picker-view {
+  flex: 1;
   display: flex;
   justify-content: flex-end;
   align-items: center;
 }
 
-.picker-text {
-  font-size: 28rpx;
-  color: #333333;
-  margin-right: 10rpx;
-}
-
 .arrow {
   color: #cccccc;
   font-size: 28rpx;
+  margin-left: 10rpx;
 }
 
-/* 底部按钮区域 */
-.button-container {
+.textarea-value {
+  width: 100%;
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: #333333;
+  min-height: 100rpx;
+}
+
+/* 底部保存按钮 */
+.bottom-btn {
   padding: 40rpx 30rpx 60rpx;
+  margin-top: auto;
 }
 
 .save-btn {

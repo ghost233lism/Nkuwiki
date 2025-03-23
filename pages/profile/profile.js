@@ -13,7 +13,8 @@ Page({
     followerCount: 0,  // 粉丝数
     isLoggedIn: false,
     tokenCount: 0, // 用户token数量
-    isLogin: false
+    isLogin: false,
+    forceRefresh: false
   },
 
   onLoad(options) {
@@ -51,12 +52,36 @@ Page({
     const idDebugInfo = userManager.debugUserId();
     console.debug('用户ID调试信息:', idDebugInfo);
     
-    // 每次页面显示时刷新用户信息
+    // 检查是否需要强制刷新
+    const needRefresh = this.data.forceRefresh || wx.getStorageSync('needRefreshUserInfo');
+    if (needRefresh) {
+      console.info('检测到强制刷新标记，清除缓存并刷新用户数据');
+      // 清除刷新标记
+      this.setData({ forceRefresh: false });
+      wx.removeStorageSync('needRefreshUserInfo');
+      // 清除所有用户数据缓存
+      wx.removeStorageSync('_cached_user_info');
+      
+      // 立即重新获取用户信息 
+      this.fetchUserInfo();
+    }
+    
+    // 每次页面显示时都强制从storage获取最新用户信息
+    // 注意：不要使用缓存，确保每次都获取最新数据
+    wx.removeStorageSync('_cached_user_info');
+    
+    // 从存储获取最新用户信息
     const userInfo = userManager.getCurrentUser();
     const isLoggedIn = userManager.isLoggedIn();
     
     console.debug('当前用户信息:', userInfo);
     console.debug('登录状态:', isLoggedIn);
+    
+    // 检查用户信息是否有更新
+    const hasUserInfoChanged = JSON.stringify(userInfo) !== JSON.stringify(this.data.userInfo);
+    if (hasUserInfoChanged) {
+      console.info('用户信息已更新，刷新界面');
+    }
     
     this.setData({
       userInfo,
@@ -65,15 +90,20 @@ Page({
     });
     
     // 检查登录状态是否变化
-    if (isLoggedIn && (!this.data.isLogin || !this.data.isLoggedIn)) {
-      // 登录状态变化，更新登录状态并刷新数据
-      console.debug('登录状态发生变化：从未登录变为已登录');
+    if (isLoggedIn && (!this.data.isLogin || !this.data.isLoggedIn || hasUserInfoChanged || needRefresh)) {
+      // 登录状态变化或用户信息变化，更新登录状态并刷新数据
+      console.debug('登录状态或用户信息发生变化，刷新数据');
       this.setData({
         isLogin: true
       });
+      
+      // 立即执行数据获取
       this.refreshUserData();
-      // 尝试重新获取用户信息
-      this.fetchUserInfo();
+      
+      // 异步获取完整用户信息
+      wx.nextTick(() => {
+        this.fetchUserInfo();
+      });
     } else if (!isLoggedIn && (this.data.isLogin || this.data.isLoggedIn)) {
       // 退出登录
       console.debug('登录状态发生变化：从已登录变为未登录');
@@ -100,16 +130,17 @@ Page({
         return Promise.resolve(0);
       }
       
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
-      if (!userId) {
-        console.debug('获取用户发帖数失败: 用户ID不存在');
+      // 修正：使用openid而不是数字id
+      const openid = this.data.userInfo.openid || this.data.userInfo._openid;
+      if (!openid) {
+        console.debug('获取用户发帖数失败: 用户openid不存在');
         return Promise.resolve(0);
       }
       
-      console.debug('获取用户发帖数量，用户ID:', userId);
+      console.debug('获取用户发帖数量，用户openid:', openid);
       
       // 使用API获取用户的所有帖子
-      const posts = await postAPI.getUserPosts(userId);
+      const posts = await postAPI.getUserPosts(openid);
       
       // 标准响应会直接返回帖子数组
       console.debug(`成功获取用户帖子列表，帖子数量: ${posts.length}`);
@@ -137,16 +168,17 @@ Page({
         return Promise.resolve(0);
       }
       
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
-      if (!userId) {
-        console.debug('获取用户获赞总数失败: 用户ID不存在');
+      // 修正：使用openid而不是数字id
+      const openid = this.data.userInfo.openid || this.data.userInfo._openid;
+      if (!openid) {
+        console.debug('获取用户获赞总数失败: 用户openid不存在');
         return Promise.resolve(0);
       }
       
-      console.debug('获取用户获赞总数，用户ID:', userId);
+      console.debug('获取用户获赞总数，用户openid:', openid);
       
       // 使用API获取用户的所有帖子
-      const posts = await postAPI.getUserPosts(userId);
+      const posts = await postAPI.getUserPosts(openid);
       
       // 日志记录获取到的数据
       console.debug('获取到的帖子原始数据:', typeof posts, posts ? (Array.isArray(posts) ? `数组(${posts.length}项)` : '非数组') : '空');
@@ -212,16 +244,17 @@ Page({
         return Promise.resolve({ followedCount: 0, followerCount: 0 });
       }
       
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
-      if (!userId) {
-        console.debug('获取用户关注统计失败: 用户ID不存在');
+      // 修正：使用openid而不是数字id
+      const openid = this.data.userInfo.openid || this.data.userInfo._openid;
+      if (!openid) {
+        console.debug('获取用户关注统计失败: 用户openid不存在');
         return Promise.resolve({ followedCount: 0, followerCount: 0 });
       }
       
-      console.debug('获取用户关注统计，用户ID:', userId);
+      console.debug('获取用户关注统计，用户openid:', openid);
       
-      // 使用API获取关注和粉丝数量
-      const result = await userAPI.getUserFollowStats(userId);
+      // 使用API获取关注和粉丝数量，传入openid而非userId
+      const result = await userAPI.getUserFollowStats(openid);
       console.debug('获取用户关注统计响应:', result);
       
       // 后端标准响应，关注和粉丝数应该直接可用
@@ -490,10 +523,10 @@ Page({
       const currentUserInfo = userManager.getCurrentUser();
       console.debug('当前用户信息:', currentUserInfo);
       
-      // 检查是否有有效的用户ID
-      const userId = currentUserInfo?.id || currentUserInfo?._id || '';
-      if (!userId) {
-        console.error('刷新用户数据失败: 无法获取有效的用户ID');
+      // 检查是否有有效的用户openid
+      const openid = currentUserInfo?.openid || currentUserInfo?._openid || '';
+      if (!openid) {
+        console.error('刷新用户数据失败: 无法获取有效的用户openid');
         wx.showToast({
           title: '获取用户信息失败',
           icon: 'none'
@@ -506,16 +539,35 @@ Page({
         title: '加载中...'
       });
       
+      // 强制先显示基本资料（可能在API请求前）
+      this.setData({
+        userInfo: currentUserInfo
+      });
+      
       // 并行获取用户的各项数据
       try {
-        await Promise.all([
+        const [postsCount, likesCount, followStats, tokenCount] = await Promise.all([
           this.getUserPostsCount(),         // 获取发帖数
           this.getUserTotalLikes(),         // 获取获赞数
           this.getUserFollowCounts(),       // 获取关注/粉丝数
           this.getUserTokenCount()          // 获取Token数量
         ]);
         
-        console.debug('用户数据刷新成功');
+        console.debug('用户数据刷新成功', {
+          postsCount, 
+          likesCount, 
+          followStats, 
+          tokenCount
+        });
+        
+        // 在Promise.all完成后，再次确认数据已正确设置
+        this.setData({
+          postCount: postsCount || 0,
+          likeCount: likesCount || 0,
+          followedCount: followStats?.followedCount || 0,
+          followerCount: followStats?.followerCount || 0,
+          tokenCount: tokenCount || 0
+        });
       } catch (apiError) {
         console.error('API请求失败:', apiError);
         // 显示错误但继续运行
@@ -545,15 +597,16 @@ Page({
         return Promise.resolve(0);
       }
       
-      const userId = this.data.userInfo.id || this.data.userInfo._id;
-      if (!userId) {
-        console.debug('获取用户Token数失败: 用户ID不存在');
+      // 修正：使用openid而不是数字id
+      const openid = this.data.userInfo.openid || this.data.userInfo._openid;
+      if (!openid) {
+        console.debug('获取用户Token数失败: 用户openid不存在');
         return Promise.resolve(0);
       }
       
-      console.debug('获取用户Token数量，用户ID:', userId);
+      console.debug('获取用户Token数量，用户openid:', openid);
       
-      const result = await userAPI.getUserToken(userId);
+      const result = await userAPI.getUserToken(openid);
       console.debug('获取用户Token响应:', JSON.stringify(result));
       
       // 后端标准化响应，result.token应该直接可用
@@ -574,59 +627,82 @@ Page({
     }
   },
 
-  // 尝试手动获取用户信息并更新本地数据
-  async fetchUserInfo() {
+  // 获取用户信息
+  fetchUserInfo() {
     try {
-      const userInfo = userManager.getCurrentUser();
-      // 确保使用openid作为用户标识符
-      const openid = userInfo?.openid;
+      // 检查是否需要强制刷新
+      const needRefresh = wx.getStorageSync('needRefreshUserInfo');
       
-      if (!openid) {
-        console.error("没有有效的用户openid，无法获取用户信息");
+      // 如果需要强制刷新，则清理缓存
+      if (needRefresh) {
+        logger.info('检测到需要刷新用户信息，正在清理缓存...');
+        wx.removeStorageSync('_cached_user_info');
+        // 清理完成后重置标志
+        wx.setStorageSync('needRefreshUserInfo', false);
+      }
+      
+      // 获取缓存的用户信息
+      let cachedUserInfo = wx.getStorageSync('_cached_user_info');
+      
+      // 如果有缓存且不需要强制刷新，则使用缓存
+      if (cachedUserInfo && !needRefresh) {
+        logger.debug('使用缓存的用户信息:', JSON.stringify(cachedUserInfo));
+        this.setData({ userInfo: cachedUserInfo });
         return;
       }
       
-      console.debug(`尝试获取用户openid=${openid}的完整用户信息`);
+      // 从userManager获取最新用户信息
+      const user = userManager.getCurrentUser();
       
-      // 显示加载状态
-      wx.showLoading({
-        title: '获取用户信息...',
-        mask: true
-      });
+      // 打印获取到的用户信息，特别关注昵称和个性签名字段
+      logger.info('获取到的用户信息:', JSON.stringify({
+        openid: user ? user.openid : null,
+        hasUser: !!user,
+        nickname: user ? user.nickname : null,
+        nickName: user ? user.nickName : null,
+        nick_name: user ? user.nick_name : null,
+        bio: user ? user.bio : null,
+        avatar: user ? user.avatar : null
+      }));
       
-      // 使用API获取最新用户信息
-      const result = await userAPI.getUserInfo(openid);
-      console.debug("获取到的用户信息:", result);
-      
-      if (result && result.id) {
-        // 更新用户信息
-        userManager.saveUserInfo(result);
-        
-        // 更新页面显示
-        this.setData({
-          userInfo: result,
-          isLoggedIn: true,
-          isLogin: true
-        });
-        
-        // 刷新数据
-        this.refreshUserData();
-        
-        return true;
-      } else {
-        console.warn("获取用户信息成功，但返回的数据不包含用户ID:", result);
-        return false;
+      // 检查用户信息是否存在且有效
+      if (!user || !user.openid) {
+        logger.error('获取用户信息失败或用户未登录');
+        this.setData({ isLogin: false, userInfo: null });
+        return;
       }
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-      // 尝试使用备选方案
-      wx.showToast({
-        title: '获取信息失败，使用本地数据',
-        icon: 'none'
+      
+      // 标准化用户信息，确保昵称和个性签名字段存在
+      const standardizedUser = {
+        ...user,
+        nickname: user.nickname || user.nickName || user.nick_name || '南开大学用户',
+        nickName: user.nickname || user.nickName || user.nick_name || '南开大学用户',
+        nick_name: user.nickname || user.nickName || user.nick_name || '南开大学用户',
+        bio: user.bio || user.signature || user.description || user.status || '这个人很懒，什么都没留下',
+        avatar: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
+        avatar_url: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
+        avatarUrl: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png'
+      };
+      
+      logger.info('标准化后的用户信息:', JSON.stringify({
+        nickname: standardizedUser.nickname,
+        bio: standardizedUser.bio
+      }));
+      
+      // 更新页面数据
+      this.setData({
+        isLogin: true,
+        userInfo: standardizedUser
       });
-      return false;
-    } finally {
-      wx.hideLoading();
+      
+      // 缓存标准化后的用户信息
+      wx.setStorageSync('_cached_user_info', standardizedUser);
+      
+      // 更新用户统计信息
+      this.refreshUserData();
+    } catch (error) {
+      logger.error('获取用户信息失败:', error);
+      this.setData({ isLogin: false, userInfo: null });
     }
   }
 });

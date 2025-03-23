@@ -6,63 +6,63 @@
     <view class="save-btn-top" bindtap="saveChanges">保存</view>
   </view>
   
-  <view class="form-container">
-    <!-- 头像选择区域 -->
-    <view class="avatar-section">
-      <image class="current-avatar" 
-        src="{{userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
-        mode="aspectFill" binderror="onAvatarError"></image>
-      <view class="avatar-text" bindtap="onChooseAvatar">点击更换头像</view>
-    </view>
+  <!-- 头像选择区域 -->
+  <view class="avatar-section">
+    <image class="avatar-image" src="{{user.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill" binderror="handleAvatarError"></image>
+    <text class="avatar-text">修改头像</text>
     
-    <!-- 基本信息区域 -->
-    <view class="info-section">
-      <view class="section-title">基本信息</view>
-      
-      <!-- 昵称 -->
-      <view class="info-item">
-        <text class="item-label">昵称</text>
-        <input class="item-input" value="{{newNickName}}" bindinput="onInputNickName" placeholder="请输入昵称" maxlength="20"/>
-      </view>
-      
-      <!-- 生日 -->
-      <view class="info-item">
-        <text class="item-label">生日</text>
-        <picker mode="date" value="{{newBirthday}}" start="1900-01-01" end="2023-12-31" bindchange="onBirthdayChange">
-          <view class="picker-content">
-            <text class="picker-text">{{newBirthday || '请选择生日'}}</text>
-            <view class="arrow">></view>
-          </view>
-        </picker>
-      </view>
-      
-      <!-- 社交账号 -->
-      <view class="info-item">
-        <text class="item-label">社交账号</text>
-      </view>
-      
-      <!-- 微信号 -->
-      <view class="info-item">
-        <text class="item-label">微信号</text>
-        <input class="item-input" value="{{newWechatId}}" bindinput="onInputWechatId" placeholder="请输入微信号" maxlength="30"/>
-      </view>
-      
-      <!-- QQ号 -->
-      <view class="info-item">
-        <text class="item-label">QQ号</text>
-        <input class="item-input" value="{{newQQId}}" bindinput="onInputQQId" placeholder="请输入QQ号" maxlength="15" type="number"/>
-      </view>
-      
-      <!-- 个人简介 -->
-      <view class="info-item textarea-item">
-        <text class="item-label">个人简介</text>
-        <textarea class="item-textarea" value="{{newBio}}" bindinput="onInputBio" placeholder="介绍一下自己吧" maxlength="500" auto-height="true" show-confirm-bar="{{false}}"/>
-      </view>
+    <!-- 头像选择按钮 -->
+    <view class="avatar-buttons">
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">用微信头像</button>
     </view>
   </view>
   
-  <!-- 底部按钮区域 -->
-  <view class="button-container">
-    <button class="save-btn" bindtap="saveChanges">保存</button>
+  <view class="info-section">
+    <text class="section-title">基本信息</text>
+    
+    <!-- 昵称 -->
+    <view class="info-item">
+      <text class="item-label">昵称</text>
+      <input class="item-value" value="{{inputData.nickname}}" bindinput="onNicknameInput" placeholder="请输入昵称" maxlength="20"/>
+    </view>
+    
+    <!-- 生日 -->
+    <view class="info-item">
+      <text class="item-label">生日</text>
+      <picker mode="date" value="{{inputData.birthday}}" start="1900-01-01" end="2023-12-31" bindchange="onBirthdayChange">
+        <view class="picker-view">
+          <text class="item-value">{{inputData.birthday || '请选择生日'}}</text>
+          <text class="arrow">></text>
+        </view>
+      </picker>
+    </view>
+    
+    <!-- 社交账号标题 -->
+    <view class="info-item">
+      <text class="item-label">社交账号</text>
+    </view>
+    
+    <!-- 微信号 -->
+    <view class="info-item">
+      <text class="item-label">微信号</text>
+      <input class="item-value" value="{{inputData.wechatId}}" bindinput="onWechatIdInput" placeholder="请输入微信号" maxlength="30"/>
+    </view>
+    
+    <!-- QQ号 -->
+    <view class="info-item">
+      <text class="item-label">QQ号</text>
+      <input class="item-value" value="{{inputData.qqId}}" bindinput="onQQIdInput" placeholder="请输入QQ号" maxlength="15" type="number"/>
+    </view>
+    
+    <!-- 个人简介 -->
+    <view class="info-item">
+      <text class="item-label">个人简介</text>
+      <textarea class="textarea-value" value="{{inputData.bio}}" bindinput="onBioInput" placeholder="介绍一下自己吧" maxlength="500" auto-height="true" show-confirm-bar="{{false}}"/>
+    </view>
+  </view>
+  
+  <!-- 底部保存按钮 -->
+  <view class="bottom-btn">
+    <button class="save-btn" bindtap="saveChanges" loading="{{isUpdating}}">保存</button>
   </view>
 </view>

@@ -141,25 +141,64 @@ function processUrl(url, params) {
  * @returns {Object} 处理后的响应数据
  */
 function handleResponse(res) {
-  // 标准响应格式：{ code: 200, message: 'success', data: {...} }
-  if (res.data && typeof res.data === 'object') {
-    // 检查是否是标准响应格式
-    if (res.data.code !== undefined) {
-      if (res.data.code === 200 || res.data.code === 0) {
-        // 成功响应，返回data字段
-        return res.data.data !== undefined ? res.data.data : res.data;
-      } else {
-        // 业务错误，抛出异常
-        const error = new Error(res.data.message || '请求失败');
-        error.code = res.data.code;
-        error.data = res.data;
-        throw error;
+  // 检查响应是否存在
+  if (!res) {
+    throw new Error('响应为空');
+  }
+
+  // 记录原始响应用于调试
+  logger.debug(`响应状态码: ${res.statusCode}, 响应数据类型: ${typeof res.data}`);
+  
+  // 处理标准响应格式：{ code: 200, message: 'success', data: {...} }
+  if (res.data && typeof res.data === 'object' && res.data.code !== undefined) {
+    // 检查响应码是否成功
+    if (res.data.code === 200 || res.data.code === 0) {
+      // 成功响应，返回data字段并确保包含success标志
+      let responseData = res.data.data;
+      
+      // 如果返回的不是对象，包装成对象
+      if (!responseData || typeof responseData !== 'object') {
+        responseData = { 
+          success: true, 
+          data: responseData 
+        };
+      } else if (responseData.success === undefined) {
+        // 如果是对象但没有success字段，添加success字段
+        responseData.success = true;
       }
+      
+      return responseData;
+    } else {
+      // 业务错误，抛出异常
+      const error = new Error(res.data.message || '业务处理失败');
+      error.code = res.data.code;
+      error.data = res.data;
+      throw error;
     }
   }
   
-  // 非标准响应，直接返回
-  return res.data;
+  // 非标准响应，使用HTTP状态码判断
+  if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+    // 成功的HTTP状态码，返回响应数据并确保包含success标志
+    if (typeof res.data === 'object' && res.data !== null) {
+      if (res.data.success === undefined) {
+        res.data.success = true;
+      }
+      return res.data;
+    } else {
+      // 非对象类型数据，包装成对象
+      return {
+        success: true,
+        data: res.data
+      };
+    }
+  }
+  
+  // 其他错误情况
+  const error = new Error('未知响应格式或请求失败');
+  error.statusCode = res.statusCode;
+  error.data = res.data;
+  throw error;
 }
 
 // 基础请求函数
@@ -201,10 +240,21 @@ const request = (options = {}) => {
       // 处理查询参数
       url = processUrl(url, options.params);
       
+      // 确保data是一个对象而不是字符串
+      let requestData = options.data;
+      if (requestData && typeof requestData === 'string') {
+        try {
+          requestData = JSON.parse(requestData);
+          logger.debug('请求数据从字符串转换为对象');
+        } catch (e) {
+          logger.error('请求数据解析失败，保持原样', e);
+        }
+      }
+      
       // 记录完整的URL
       logger.debug(`发起请求[${retryAttempt > 0 ? '重试#' + retryAttempt : '首次'}]: ${options.method || 'GET'} ${url}`);
-      if (options.data) {
-        logger.debug(`请求体参数: ${JSON.stringify(options.data)}`);
+      if (requestData) {
+        logger.debug(`请求体参数: ${JSON.stringify(requestData)}`);
       }
       
       // 获取token并添加到请求头
@@ -220,7 +270,7 @@ const request = (options = {}) => {
       // 发起请求
       const requestTask = wx.request({
         url: url,
-        data: options.data,
+        data: requestData,
         method: options.method || 'GET',
         header: headers,
         timeout: options.timeout,
@@ -238,7 +288,12 @@ const request = (options = {}) => {
           try {
             // 请求日志
             if (res.statusCode >= 200 && res.statusCode < 300) {
-              logger.debug(`请求成功: ${options.method || 'GET'} ${url}, 状态码: ${res.statusCode}`);
+              logger.info(`请求成功: ${options.method || 'GET'} ${url}, 状态码: ${res.statusCode}`);
+              
+              // 响应体详细日志（针对重要接口）
+              if (url.includes('/like') || url.includes('/favorite') || url.includes('/comments')) {
+                logger.info(`关键接口响应数据: ${JSON.stringify(res.data)}`);
+              }
               
               // 处理标准响应
               const data = handleResponse(res);
@@ -266,7 +321,7 @@ const request = (options = {}) => {
               reject(new Error('未授权'));
             } else {
               // 其他错误状态码
-              logger.warn(`请求返回错误状态码: ${res.statusCode}`);
+              logger.warn(`请求返回错误状态码: ${res.statusCode}, 响应数据: ${JSON.stringify(res.data)}`);
               
               // 检查是否需要重试
               const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
@@ -306,7 +361,7 @@ const request = (options = {}) => {
             }
           } catch (error) {
             // 处理响应解析错误
-            logger.error(`响应处理错误: ${error.message}`);
+            logger.error(`响应处理错误: ${error.message}, 原始响应: ${JSON.stringify(res.data)}`);
             
             if (loadingShown) {
               wx.hideLoading();

@@ -4,8 +4,115 @@
  * 提供统一的图片/文件上传、压缩等功能
  */
 
-const logger = require('./logger');
-const { showToast } = require('./ui');
+const { API, logger, request } = require('./api/core');
+
+/**
+ * 检查云开发环境是否已初始化
+ * @returns {Boolean} 云开发是否可用
+ */
+function checkCloudEnv() {
+  if (!wx.cloud) {
+    logger.error('云开发SDK未找到，请确认是否在app.js中初始化云开发');
+    return false;
+  }
+  
+  try {
+    // 尝试获取云环境信息
+    const env = wx.cloud.DYNAMIC_CURRENT_ENV || wx.cloud.env || null;
+    if (!env) {
+      logger.warn('未检测到有效的云环境配置');
+      // 获取app实例，尝试从全局配置获取环境ID
+      try {
+        const app = getApp();
+        if (app && app.globalData && app.globalData.cloudEnvId) {
+          logger.debug('从全局配置获取到云环境ID:', app.globalData.cloudEnvId);
+          return true;
+        }
+      } catch (e) {
+        logger.error('获取App实例失败:', e);
+      }
+      return false;
+    }
+    logger.debug('检测到有效的云环境配置:', env);
+    return true;
+  } catch (error) {
+    logger.error('检查云环境时发生错误:', error);
+    return false;
+  }
+}
+
+/**
+ * 使用HTTP API上传图片到服务器
+ * @param {String} filePath 图片本地路径
+ * @param {String} module 模块名称
+ * @param {String} openid 用户openid
+ * @returns {Promise<String>} 返回服务器上的文件URL
+ */
+async function uploadViaHttpApi(filePath, module, openid = 'anonymous') {
+  return new Promise((resolve, reject) => {
+    logger.debug(`开始通过HTTP API上传图片: ${filePath}`);
+    
+    // 获取用户登录态
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      reject(new Error('用户未登录，无法上传文件'));
+      return;
+    }
+    
+    wx.uploadFile({
+      url: `${API.BASE_URL}${API.PREFIX.WXAPP}/upload/${module}`,
+      filePath: filePath,
+      name: 'file',
+      header: {
+        'Authorization': `Bearer ${token}`
+      },
+      formData: {
+        'openid': openid,
+        'module': module
+      },
+      success: function(res) {
+        try {
+          // 尝试解析服务器返回的JSON
+          let result;
+          if (typeof res.data === 'string') {
+            result = JSON.parse(res.data);
+          } else {
+            result = res.data;
+          }
+          
+          // 检查状态码
+          if (res.statusCode !== 200) {
+            logger.error(`上传图片失败，状态码: ${res.statusCode}`, result);
+            reject(new Error(result.message || '上传失败'));
+            return;
+          }
+          
+          // 检查API返回
+          if (result.code === 200) {
+            const fileUrl = result.data && result.data.url;
+            if (!fileUrl) {
+              reject(new Error('服务器未返回文件URL'));
+              return;
+            }
+            
+            logger.debug(`HTTP API上传图片成功: ${fileUrl}`);
+            resolve(fileUrl);
+          } else {
+            logger.error('API返回错误:', result);
+            reject(new Error(result.message || '上传失败'));
+          }
+        } catch (error) {
+          logger.error('解析上传响应失败:', error, res.data);
+          reject(error);
+        }
+      },
+      fail: function(err) {
+        logger.error('HTTP API上传图片失败:', err);
+        reject(err);
+      }
+    });
+  });
+}
 
 /**
  * 统一图片上传工具类
@@ -24,6 +131,16 @@ const uploadHelper = {
    */
   async uploadImage(filePath, module, openid = 'anonymous', compress = true, quality = 80, maxWidth = 800) {
     try {
+      // 输入检查
+      if (!filePath) {
+        logger.error('上传图片失败: 文件路径为空');
+        throw new Error('文件路径不能为空');
+      }
+      
+      if (!module) {
+        module = 'images'; // 设置默认模块
+      }
+      
       let path = filePath;
       
       // 如果需要压缩图片
@@ -35,6 +152,15 @@ const uploadHelper = {
           logger.error('图片压缩失败，使用原图上传', error);
           path = filePath;
         }
+      }
+      
+      // 检查是否可以使用云开发
+      const cloudAvailable = checkCloudEnv();
+      
+      if (!cloudAvailable) {
+        const errorMsg = '云开发环境未初始化，无法上传文件';
+        logger.error(errorMsg);
+        throw new Error(errorMsg);
       }
       
       // 生成标准云存储路径
@@ -57,8 +183,8 @@ const uploadHelper = {
             resolve(fileID);
           },
           fail: err => {
-            logger.error('图片上传失败:', err);
-            reject(err);
+            logger.error('云存储上传失败:', err);
+            reject(new Error(`云存储上传失败: ${err.errMsg || JSON.stringify(err)}`));
           }
         });
       });
@@ -91,40 +217,61 @@ const uploadHelper = {
             canvasHeight = Math.floor(canvasHeight * ratio);
           }
           
-          // 创建离屏Canvas进行压缩
-          const canvas = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: canvasHeight });
-          const ctx = canvas.getContext('2d');
-          
-          // 创建图片对象
-          const img = canvas.createImage();
-          img.onload = () => {
-            // 绘制图片到Canvas
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+          try {
+            // 创建离屏Canvas进行压缩
+            const canvas = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: canvasHeight });
+            const ctx = canvas.getContext('2d');
             
-            // 导出为临时文件
-            canvas.toTempFilePath({
-              destWidth: canvasWidth,
-              destHeight: canvasHeight,
-              quality: quality / 100,
-              success: res => {
-                resolve(res.tempFilePath);
-              },
-              fail: err => {
-                logger.error('图片压缩失败:', err);
-                reject(err);
+            // 创建图片对象
+            const img = canvas.createImage();
+            img.onload = () => {
+              try {
+                // 绘制图片到Canvas
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+                
+                // 离屏Canvas应该使用toDataURL获取base64数据
+                // 然后转为临时文件
+                const base64 = canvas.toDataURL(`image/jpeg`, quality / 100);
+                
+                // 将base64转为临时文件
+                const fsm = wx.getFileSystemManager();
+                const tempFilePath = `${wx.env.USER_DATA_PATH}/temp_${Date.now()}.jpg`;
+                
+                fsm.writeFile({
+                  filePath: tempFilePath,
+                  data: base64.replace(/^data:image\/\w+;base64,/, ''),
+                  encoding: 'base64',
+                  success: () => {
+                    resolve(tempFilePath);
+                  },
+                  fail: err => {
+                    logger.error('写入临时文件失败:', err);
+                    // 失败时直接返回原图
+                    resolve(filePath);
+                  }
+                });
+              } catch (error) {
+                logger.error('处理压缩图像数据失败:', error);
+                // 错误时返回原图
+                resolve(filePath);
               }
-            });
-          };
-          img.onerror = (err) => {
-            logger.error('图片加载失败:', err);
-            reject(err);
-          };
-          img.src = filePath;
+            };
+            img.onerror = (err) => {
+              logger.error('图片加载失败:', err);
+              // 错误时返回原图
+              resolve(filePath);
+            };
+            img.src = filePath;
+          } catch (error) {
+            logger.error('创建离屏Canvas失败，返回原图:', error);
+            resolve(filePath);
+          }
         },
         fail: err => {
           logger.error('获取图片信息失败:', err);
-          reject(err);
+          // 错误时返回原图
+          resolve(filePath);
         }
       });
     });
@@ -167,6 +314,12 @@ const uploadHelper = {
   uploadFile(filePath, module, openid = 'anonymous', useOriginalName = false) {
     return new Promise((resolve, reject) => {
       try {
+        // 检查云环境是否可用
+        if (!checkCloudEnv()) {
+          reject(new Error('云开发环境未初始化，无法上传文件'));
+          return;
+        }
+        
         // 提取文件名
         const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
         
@@ -194,7 +347,7 @@ const uploadHelper = {
           },
           fail: err => {
             logger.error('文件上传失败:', err);
-            reject(err);
+            reject(new Error(`文件上传失败: ${err.errMsg || JSON.stringify(err)}`));
           }
         });
       } catch (error) {
@@ -213,6 +366,12 @@ const uploadHelper = {
     return new Promise((resolve, reject) => {
       if (!fileID) {
         resolve(true);
+        return;
+      }
+      
+      // 检查云环境是否可用
+      if (!checkCloudEnv()) {
+        reject(new Error('云开发环境未初始化，无法删除文件'));
         return;
       }
       
@@ -244,6 +403,11 @@ const uploadHelper = {
   async batchDeleteFiles(fileIDs) {
     if (!fileIDs || fileIDs.length === 0) {
       return true;
+    }
+    
+    // 检查云环境是否可用
+    if (!checkCloudEnv()) {
+      throw new Error('云开发环境未初始化，无法删除文件');
     }
     
     return new Promise((resolve, reject) => {

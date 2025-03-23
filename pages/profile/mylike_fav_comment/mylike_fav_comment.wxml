@@ -32,7 +32,7 @@
             <text>{{item.likes || 0}}</text>
           </view>
           <view class="stat-item">
-            <image src="/assets/icons/search-active.png"></image>
+            <image src="/assets/icons/profile/comment.png"></image>
             <text>{{item.comments ? item.comments.length : 0}}</text>
           </view>
         </view>

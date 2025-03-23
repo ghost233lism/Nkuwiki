@@ -117,6 +117,95 @@ const commentAPI = {
       method: 'POST',
       params: { openid, is_like: isLike }
     });
+  },
+
+  /**
+   * 添加评论
+   * @param {Object} params - 评论参数
+   * @param {string} params.post_id - 帖子ID
+   * @param {string} params.content - 评论内容
+   * @param {string} [params.parent_id] - 父评论ID（回复时使用）
+   * @param {string} [params.openid] - 用户openid，不传则使用当前用户
+   * @returns {Promise} - 请求Promise
+   */
+  addComment: (params) => {
+    let { post_id, content, parent_id, openid } = params;
+    
+    // 如果没有传入openid，尝试获取当前用户
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo ? userInfo.openid : '';
+    }
+    
+    if (!post_id) {
+      return Promise.reject(new Error('缺少必要参数：post_id'));
+    }
+    
+    if (!content || content.trim() === '') {
+      return Promise.reject(new Error('评论内容不能为空'));
+    }
+    
+    const data = {
+      post_id,
+      content,
+      openid
+    };
+    
+    // 如果有父评论ID，添加到请求数据
+    if (parent_id) {
+      data.parent_id = parent_id;
+    }
+    
+    logger.info('添加评论，参数:', JSON.stringify(data));
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments`,
+      method: 'POST',
+      data,
+      showError: true
+    }).then(res => {
+      logger.info('评论API响应成功:', JSON.stringify(res));
+      
+      // 操作完成后，通知全局数据需要更新
+      const app = getApp();
+      if (app && app.globalData) {
+        // 存储最新操作结果
+        if (!app.globalData.postUpdates) {
+          app.globalData.postUpdates = {};
+        }
+        
+        // 如果之前已经有对这个帖子的更新，合并数据
+        const existingUpdate = app.globalData.postUpdates[post_id] || {};
+        const newCommentCount = (existingUpdate.comment_count || 0) + 1;
+        
+        logger.info('更新全局评论数据，帖子ID:', post_id, '新评论数:', newCommentCount);
+        
+        app.globalData.postUpdates[post_id] = {
+          ...existingUpdate,
+          id: post_id,
+          comment_count: newCommentCount,
+          updateTime: Date.now()
+        };
+        
+        // 设置需要更新的标志
+        app.globalData.needUpdatePosts = true;
+        
+        // 立即通知页面更新，不等待下一次同步
+        if (typeof app.notifyPagesUpdate === 'function') {
+          logger.info('调用notifyPagesUpdate通知页面更新评论状态');
+          app.notifyPagesUpdate();
+        } else {
+          logger.error('notifyPagesUpdate方法不存在或不可用');
+        }
+      } else {
+        logger.error('获取app实例或globalData失败');
+      }
+      
+      return res;
+    }).catch(error => {
+      logger.error('评论API请求失败:', error);
+      throw error;
+    });
   }
 };
 

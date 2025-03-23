@@ -82,6 +82,11 @@ Page({
       currentPostId: '',  // 初始化为空字符串
       currentPostIndex: -1
     })
+    
+    // 启动帖子数据同步任务
+    if (app && typeof app.startDataSyncTask === 'function') {
+      app.startDataSyncTask();
+    }
   },
   onShow() {
     console.log('页面显示')
@@ -90,6 +95,98 @@ Page({
       this.loadPosts(true) // 参数true表示强制刷新
       app.globalData.needRefreshIndexPosts = false // 重置标志
     }
+    
+    // 检查是否有全局数据更新
+    this.checkGlobalUpdates();
+  },
+  // 检查全局数据更新
+  checkGlobalUpdates() {
+    const app = getApp();
+    const lastUpdateTime = this.lastUpdateTime || 0;
+    
+    // 如果全局数据已更新且本页面数据较旧，则更新本页面数据
+    if (app.globalData.postUpdateTimestamp > lastUpdateTime) {
+      console.debug('检测到全局数据更新，同步到本页面');
+      
+      // 获取更新的帖子数据
+      const updates = app.globalData.postUpdates || {};
+      
+      // 更新页面数据
+      this.updatePostsWithLatestData(updates);
+      
+      // 更新本页面最后更新时间
+      this.lastUpdateTime = app.globalData.postUpdateTimestamp;
+    }
+  },
+  
+  // 使用最新数据更新帖子列表
+  updatePostsWithLatestData(updates) {
+    if (!updates || Object.keys(updates).length === 0) {
+      return;
+    }
+    
+    // 获取当前帖子列表
+    const posts = this.data.posts;
+    if (!posts || !posts.length) {
+      return;
+    }
+    
+    // 标记是否有更新
+    let hasUpdates = false;
+    
+    // 遍历帖子列表，更新数据
+    const updatedPosts = posts.map(post => {
+      // 获取帖子ID
+      const postId = post.id || post._id;
+      
+      // 检查是否有此帖子的更新数据
+      if (postId && updates[postId]) {
+        // 合并更新数据
+        const update = updates[postId];
+        
+        // 创建新的帖子对象，避免直接修改原对象
+        const updatedPost = { ...post };
+        
+        // 更新点赞状态和数量
+        if (update.hasOwnProperty('isLiked')) {
+          updatedPost.isLiked = update.isLiked;
+        }
+        if (update.hasOwnProperty('likes')) {
+          updatedPost.likes = update.likes;
+        }
+        
+        // 更新收藏状态和数量
+        if (update.hasOwnProperty('isFavorited')) {
+          updatedPost.isFavorited = update.isFavorited;
+        }
+        if (update.hasOwnProperty('favorite_count')) {
+          updatedPost.favoriteCounts = update.favorite_count;
+        }
+        
+        // 更新评论数量
+        if (update.hasOwnProperty('comment_count')) {
+          updatedPost.commentCount = update.comment_count;
+        }
+        
+        hasUpdates = true;
+        return updatedPost;
+      }
+      
+      // 如果没有更新，返回原帖子对象
+      return post;
+    });
+    
+    // 如果有更新，则更新页面数据
+    if (hasUpdates) {
+      console.debug('更新帖子列表数据');
+      this.setData({ posts: updatedPosts });
+    }
+  },
+  
+  // 接收全局数据更新通知
+  onPostsDataUpdate(updates) {
+    console.debug('收到全局数据更新通知');
+    this.updatePostsWithLatestData(updates);
   },
   // 下拉刷新
   onPullDownRefresh() {
@@ -140,6 +237,23 @@ Page({
           newPosts = [];
         }
         
+        // 处理帖子ID，确保每个帖子都有有效的ID
+        newPosts = newPosts.map(post => {
+          // 确保帖子有ID字段，优先使用id，如果不存在则使用_id
+          if (!post._id && post.id) {
+            post._id = post.id;
+          } else if (!post._id && !post.id) {
+            // 如果两者都不存在，生成一个临时ID，避免空对象情况
+            logger.warn('帖子缺少ID字段:', post);
+            post._id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          } else if (typeof post._id === 'object' && Object.keys(post._id).length === 0) {
+            // 处理_id为空对象的情况
+            logger.warn('帖子ID为空对象:', post);
+            post._id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          }
+          return post;
+        });
+        
         // 如果是重置，直接替换帖子列表
         const posts = reset ? newPosts : [...this.data.posts, ...newPosts];
         
@@ -186,6 +300,22 @@ Page({
       // 处理每个帖子的数据，与WXML模板期望的格式保持一致
       const processedPosts = await Promise.all(posts.map(async post => {
         try {
+          // 首先确保ID字段存在且有效
+          let postId = null;
+          
+          // 检查并设置帖子ID
+          if (post.id && typeof post.id !== 'object') {
+            postId = post.id;
+          } else if (post._id && typeof post._id !== 'object') {
+            postId = post._id;
+          } else if (post.postId && typeof post.postId !== 'object') {
+            postId = post.postId;
+          } else {
+            // 如果没有有效ID，生成一个临时ID
+            postId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            logger.warn('帖子无有效ID，生成临时ID:', postId);
+          }
+          
           // 获取处理后的头像URL
           let avatarUrl = post.user_avatar || post.author_avatar || (post.author ? post.author.avatar_url : null);
           if (avatarUrl) {
@@ -199,7 +329,8 @@ Page({
           
           // 转换为WXML期望的格式
           return {
-            _id: post.id || post._id,
+            _id: postId, // 使用处理过的ID
+            id: postId,  // 同时设置id字段，确保兼容性
             title: post.title || '',
             content: post.content || '',
             displayContent: displayContent,
@@ -219,8 +350,10 @@ Page({
         } catch (itemError) {
           console.error('处理帖子项失败:', itemError, post);
           // 返回一个基本格式的帖子项，避免整个渲染过程失败
+          const tempId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           return {
-            _id: post.id || post._id || `temp_${Date.now()}`,
+            _id: tempId,
+            id: tempId,
             title: post.title || '帖子标题',
             content: post.content || '帖子内容',
             displayContent: '内容加载失败，请刷新重试...',
@@ -297,8 +430,24 @@ Page({
   // 查看帖子详情
   goToDetail(e) {
     const { id } = e.currentTarget.dataset;
+    
+    // 增强ID验证
     if (!id) {
       console.error('帖子ID不存在:', e.currentTarget.dataset);
+      wx.showToast({
+        title: '无法查看帖子详情',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 检查ID是否为对象
+    if (typeof id === 'object') {
+      console.error('帖子ID格式错误 (对象类型):', id);
+      wx.showToast({
+        title: '帖子数据格式错误',
+        icon: 'none'
+      });
       return;
     }
     
@@ -312,29 +461,35 @@ Page({
   async handleLike(e) {
     if (isLiking) return;
     isLiking = true;
-
+    
+    const { id, index } = e.currentTarget.dataset;
+    const posts = this.data.posts;
+    const currentPost = posts[index];
+    
     try {
-      const { id, index } = e.currentTarget.dataset;
-      const currentPost = this.data.posts[index];
       const isLiked = currentPost.isLiked;
       
-      // 获取当前用户信息
-      const userInfo = userManager.getCurrentUser();
+      // 更新本地点赞状态
+      const likedPosts = wx.getStorageSync('likedPosts') || {};
       
-      // 检查是否登录
-      if (!userManager.isLoggedIn()) {
-        wx.showToast({
-          title: '请先登录',
-          icon: 'none'
-        });
-        isLiking = false;
-        return;
+      if (isLiked) {
+        delete likedPosts[id];
+      } else {
+        likedPosts[id] = true;
       }
       
-      // 乐观更新UI
-      const newPosts = [...this.data.posts];
-      newPosts[index].isLiked = !isLiked;
-      newPosts[index].likes = isLiked ? Math.max(0, currentPost.likes - 1) : currentPost.likes + 1;
+      wx.setStorageSync('likedPosts', likedPosts);
+      
+      // 计算新的点赞数
+      const newLikes = isLiked ? currentPost.likes - 1 : currentPost.likes + 1;
+      
+      // 更新UI - 深拷贝避免引用问题
+      const newPosts = [...posts];
+      newPosts[index] = {
+        ...newPosts[index],
+        isLiked: !isLiked,
+        likes: newLikes
+      };
       
       this.setData({
         posts: newPosts
@@ -342,10 +497,16 @@ Page({
       
       // 调用后端API
       try {
-        if (isLiked) {
-          await postAPI.likePost(id, false);
-        } else {
-          await postAPI.likePost(id, true);
+        const res = isLiked 
+          ? await postAPI.likePost(id, false)
+          : await postAPI.likePost(id, true);
+        
+        // 获取服务器返回的最新点赞数
+        if (res && res.likes !== undefined) {
+          newPosts[index].likes = res.likes;
+          this.setData({
+            posts: newPosts
+          });
         }
       } catch (apiError) {
         console.error('API调用失败:', apiError);
@@ -484,13 +645,13 @@ Page({
       
       // 准备评论数据
       const commentData = {
-        wxapp_id: `comment_${Date.now()}`,
         post_id: this.data.currentCommentPostId,
         openid: userInfo.openid,
-        author_name: userInfo.nickname,
-        author_avatar: userInfo.avatar_url,
+        nick_name: userInfo.nickname,
+        avatar: userInfo.avatar_url,
         content: this.data.commentText.trim(),
-        images: imageUrls
+        images: imageUrls,
+        parent_id: null  // 添加parent_id字段，默认为null表示顶级评论
       };
       
       // 提交评论

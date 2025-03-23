@@ -112,7 +112,7 @@
       </view>
       
       <view class="visibility-option-pill {{allowComment ? 'active' : ''}}" bindtap="toggleComment">
-        <image src="/assets/icons/search-active.png"></image>
+        <image src="/assets/icons/index/comment.png"></image>
         <text>允许评论</text>
       </view>
       

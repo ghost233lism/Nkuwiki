@@ -164,8 +164,8 @@ Page({
     
     // 如果已登录，更新后端用户信息
     if (userInfo.id) {
-      userAPI.updateUserInfo(userInfo.id, {
-        avatar_url: avatarUrl
+      userAPI.updateUser(userInfo.id, {
+        avatar: avatarUrl
       }).catch(err => {
         logger.error('更新头像失败:', err);
       });

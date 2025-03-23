@@ -136,49 +136,43 @@ const userManager = {
         userInfo = {};
       }
       
-      // 检查信息是否完整
-      if (!this.isUserInfoComplete(userInfo)) {
-        console.debug('用户信息不完整，尝试获取更多来源...');
-        
-        // 尝试获取最新存储的用户信息
-        let latestUserInfo = {};
-        try {
-          latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
-          console.debug('从最新存储获取的用户信息:', JSON.stringify(latestUserInfo));
-        } catch (latestError) {
-          console.debug('从最新存储获取用户信息失败:', latestError.message);
-        }
-        
-        // 尝试从全局状态获取
-        const app = getApp();
-        let globalUserInfo = {};
-        if (app && app.globalData) {
-          globalUserInfo = app.globalData.userInfo || {};
-          console.debug('从全局状态获取的用户信息:', JSON.stringify(globalUserInfo));
-        } else {
-          console.debug('全局状态不可用或无用户信息');
-        }
-        
-        // 合并信息，优先使用主存储，然后是最新存储，最后是全局状态
-        const mergedUserInfo = {
-          ...globalUserInfo,
-          ...latestUserInfo,
-          ...userInfo
-        };
-        
-        // 设置必要的默认值并更新
-        userInfo = {
-          ...mergedUserInfo,
-          avatar: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || DEFAULT_AVATAR,
-          nickname: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
-          // 兼容字段
-          nickName: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
-          avatarUrl: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || DEFAULT_AVATAR
-        };
-        
-        // 同步更新到存储
-        this.saveUserInfo(userInfo, false);
+      // 尝试获取最新存储的用户信息
+      let latestUserInfo = {};
+      try {
+        latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
+        console.debug('从最新存储获取的用户信息:', JSON.stringify(latestUserInfo));
+      } catch (latestError) {
+        console.debug('从最新存储获取用户信息失败:', latestError.message);
       }
+      
+      // 尝试从全局状态获取
+      const app = getApp();
+      let globalUserInfo = {};
+      if (app && app.globalData) {
+        globalUserInfo = app.globalData.userInfo || {};
+        console.debug('从全局状态获取的用户信息:', JSON.stringify(globalUserInfo));
+      } else {
+        console.debug('全局状态不可用或无用户信息');
+      }
+      
+      // 合并信息，优先使用最新存储，然后是主存储，最后是全局状态
+      // 修改合并优先级：最新存储 > 主存储 > 全局状态
+      const mergedUserInfo = {
+        ...globalUserInfo,
+        ...userInfo,
+        ...latestUserInfo
+      };
+      
+      // 设置必要的默认值并更新
+      userInfo = {
+        ...mergedUserInfo,
+        avatar: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || mergedUserInfo.avatar_url || DEFAULT_AVATAR,
+        avatar_url: mergedUserInfo.avatar_url || mergedUserInfo.avatarUrl || mergedUserInfo.avatar || DEFAULT_AVATAR,
+        nickname: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
+        // 兼容字段
+        nickName: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
+        avatarUrl: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || mergedUserInfo.avatar_url || DEFAULT_AVATAR
+      };
       
       // 确保openid被格式化
       if (userInfo.openid) {
@@ -197,6 +191,7 @@ const userManager = {
       // 返回最小可用的用户信息
       return {
         avatar: DEFAULT_AVATAR,
+        avatar_url: DEFAULT_AVATAR,
         nickname: DEFAULT_NAME,
         nickName: DEFAULT_NAME,
         avatarUrl: DEFAULT_AVATAR
@@ -282,79 +277,191 @@ const userManager = {
   /**
    * 保存用户信息到本地存储
    * @param {Object} userInfo - 用户信息
+   * @param {Boolean} updateLatest - 是否同时更新最新用户信息
    */
   saveUserInfo(userInfo, updateLatest = true) {
-    if (!userInfo) return;
+    if (!userInfo) {
+      console.error('保存的用户信息为空');
+      return false;
+    }
+    
+    console.info('保存用户信息，原始数据:', JSON.stringify(userInfo));
     
     try {
-      // 确保字段命名一致性
+      if (typeof userInfo !== 'object') {
+        console.error('用户信息格式错误，期望对象类型');
+        return false;
+      }
+      
+      // 标准化用户信息
       const standardUserInfo = {
         id: userInfo.id || userInfo._id,
+        openid: userInfo.openid || userInfo.wxapp_id || userInfo.open_id || `user_${userInfo.id || Date.now()}`,
         wxapp_id: userInfo.wxapp_id || userInfo.openid || `user_${userInfo.id || Date.now()}`,
-        nickname: userInfo.nickname || userInfo.nickName,
-        avatar_url: userInfo.avatar_url || userInfo.avatarUrl,
-        openid: userInfo.openid,
-        unionid: userInfo.unionid,
-        gender: userInfo.gender,
-        country: userInfo.country,
-        province: userInfo.province,
-        city: userInfo.city,
-        language: userInfo.language,
-        create_time: userInfo.create_time,
-        update_time: userInfo.update_time,
-        last_login: userInfo.last_login || new Date().toISOString()
+        nickname: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
+        // 确保三个昵称字段保持一致
+        nickName: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
+        nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
+        bio: userInfo.bio || userInfo.signature || userInfo.description || userInfo.status || '这个人很懒，什么都没留下',
+        // 确保三个头像字段保持一致
+        avatar: userInfo.avatar || userInfo.avatarUrl || userInfo.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
+        avatar_url: userInfo.avatar_url || userInfo.avatarUrl || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
+        avatarUrl: userInfo.avatarUrl || userInfo.avatar_url || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
+        school: userInfo.school || userInfo.university || '南开大学',
+        update_time: new Date().toISOString()
       };
       
-      // 保存到主存储
-      wx.setStorageSync(STORAGE_KEYS.USER_INFO, standardUserInfo);
+      // 保留已有字段
+      const finalUserInfo = {
+        ...userInfo,
+        ...standardUserInfo
+      };
       
-      // 更新最新信息
-      if (updateLatest) {
-        wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, standardUserInfo);
-      }
+      // 添加调试日志
+      console.info('标准化后的用户信息:', JSON.stringify({
+        nickname: finalUserInfo.nickname,
+        nickName: finalUserInfo.nickName,
+        nick_name: finalUserInfo.nick_name,
+        bio: finalUserInfo.bio,
+        avatar: finalUserInfo.avatar,
+        avatar_url: finalUserInfo.avatar_url,
+        avatarUrl: finalUserInfo.avatarUrl
+      }));
+      
+      // 保存到本地存储
+      wx.setStorageSync(STORAGE_KEYS.USER_INFO, finalUserInfo);
+      wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, finalUserInfo);
       
       // 更新全局状态
       const app = getApp();
       if (app && app.globalData) {
-        app.globalData.userInfo = standardUserInfo;
+        app.globalData.userInfo = finalUserInfo;
+        app.globalData.hasLogin = true;
+        // 触发全局更新事件
+        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
+          app.globalDataChanged('userInfo', finalUserInfo);
+        }
       }
       
-      console.debug('用户信息已保存', standardUserInfo);
+      console.info('用户信息已成功保存');
+      return true;
     } catch (error) {
       console.error('保存用户信息失败:', error);
+      return false;
     }
   },
   
   /**
    * 更新用户信息
    * @param {Object} newInfo - 新的用户信息
+   * @returns {Boolean} 是否更新成功
    */
   updateUserInfo(newInfo) {
-    console.debug('更新用户信息:', newInfo);
+    console.info('更新用户信息:', JSON.stringify(newInfo));
     
     try {
-      // 获取当前用户信息
-      const currentUserInfo = this.getCurrentUser();
-      if (!currentUserInfo) {
-        console.error('当前无用户信息，无法更新');
+      if (!newInfo) {
+        console.error('更新信息为空');
         return false;
       }
       
-      // 合并新信息到现有用户信息
-      const updatedUserInfo = { ...currentUserInfo, ...newInfo };
+      // 获取当前用户信息
+      const currentUserInfo = this.getCurrentUser();
+      if (!currentUserInfo || !currentUserInfo.openid) {
+        console.error('当前无用户信息或无有效openid，无法更新');
+        return false;
+      }
       
-      // 特殊处理头像字段，确保avatarUrl和avatar_url保持一致
-      if (newInfo.avatarUrl && !newInfo.avatar_url) {
+      // 检查传入对象中是否有昵称和个性签名字段
+      const hasNickname = !!(newInfo.nickname || newInfo.nickName || newInfo.nick_name);
+      const hasBio = !!(newInfo.bio || newInfo.signature || newInfo.description || newInfo.status);
+      
+      console.info('更新用户信息，包含昵称:', hasNickname, '包含个性签名:', hasBio);
+      
+      // 合并新信息到现有用户信息
+      const updatedUserInfo = { ...currentUserInfo };
+      
+      // 只复制有值的字段
+      Object.keys(newInfo).forEach(key => {
+        if (newInfo[key] !== undefined && newInfo[key] !== null) {
+          updatedUserInfo[key] = newInfo[key];
+        }
+      });
+      
+      // 特殊处理头像字段，确保avatar、avatarUrl和avatar_url保持一致
+      if (newInfo.avatar) {
+        updatedUserInfo.avatar_url = newInfo.avatar;
+        updatedUserInfo.avatarUrl = newInfo.avatar;
+      } else if (newInfo.avatarUrl) {
+        updatedUserInfo.avatar = newInfo.avatarUrl;
         updatedUserInfo.avatar_url = newInfo.avatarUrl;
-      } else if (newInfo.avatar_url && !newInfo.avatarUrl) {
+      } else if (newInfo.avatar_url) {
+        updatedUserInfo.avatar = newInfo.avatar_url;
         updatedUserInfo.avatarUrl = newInfo.avatar_url;
       }
       
-      // 保存更新后的用户信息
-      console.debug('保存更新后的用户信息:', updatedUserInfo);
+      // 特殊处理昵称字段，确保nickname、nickName和nick_name保持一致
+      if (newInfo.nickname) {
+        updatedUserInfo.nickName = newInfo.nickname;
+        updatedUserInfo.nick_name = newInfo.nickname;
+      } else if (newInfo.nickName) {
+        updatedUserInfo.nickname = newInfo.nickName;
+        updatedUserInfo.nick_name = newInfo.nickName;
+      } else if (newInfo.nick_name) {
+        updatedUserInfo.nickname = newInfo.nick_name;
+        updatedUserInfo.nickName = newInfo.nick_name;
+      }
+      
+      // 特殊处理个性签名字段
+      if (newInfo.bio) {
+        updatedUserInfo.bio = newInfo.bio;
+      } else if (newInfo.signature) {
+        updatedUserInfo.bio = newInfo.signature;
+      } else if (newInfo.description) {
+        updatedUserInfo.bio = newInfo.description;
+      } else if (newInfo.status) {
+        updatedUserInfo.bio = newInfo.status;
+      }
+      
+      // 确保昵称和个性签名有默认值
+      updatedUserInfo.nickname = updatedUserInfo.nickname || updatedUserInfo.nickName || updatedUserInfo.nick_name || '南开大学用户';
+      updatedUserInfo.nickName = updatedUserInfo.nickname;
+      updatedUserInfo.nick_name = updatedUserInfo.nickname;
+      
+      updatedUserInfo.bio = updatedUserInfo.bio || '这个人很懒，什么都没留下';
+      
+      // 更新时间戳
+      updatedUserInfo.update_time = new Date().toISOString();
+      
+      // 保存更新后的用户信息到所有存储位置
+      console.info('保存更新后的用户信息:', JSON.stringify({
+        ...updatedUserInfo,
+        // 突出显示以下关键字段
+        nickname: updatedUserInfo.nickname,
+        bio: updatedUserInfo.bio
+      }));
+      
       wx.setStorageSync(STORAGE_KEYS.USER_INFO, updatedUserInfo);
       wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, updatedUserInfo);
       
+      // 更新全局状态
+      const app = getApp();
+      if (app && app.globalData) {
+        console.info('更新全局用户信息状态');
+        app.globalData.userInfo = updatedUserInfo;
+        // 触发全局更新事件
+        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
+          app.globalDataChanged('userInfo', updatedUserInfo);
+        }
+      }
+      
+      // 强制清理缓存的用户信息
+      wx.removeStorageSync('_cached_user_info');
+      
+      // 设置刷新标记
+      wx.setStorageSync('needRefreshUserInfo', true);
+      
+      console.info('用户信息已成功更新');
       return true;
     } catch (error) {
       console.error('更新用户信息失败:', error);

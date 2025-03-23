@@ -100,13 +100,36 @@ const userAPI = {
    * 更新用户信息
    * @param {string} openid - 用户openid 
    * @param {Object} userData - 更新数据
+   * @param {boolean} showError - 是否显示错误提示
    * @returns {Promise} - 请求Promise
    */
-  updateUser: (openid, userData) => {
+  updateUser: (openid, userData, showError = false) => {
+    if (!openid) {
+      logger.error('更新用户信息失败: openid为空');
+      return Promise.reject(new Error('openid为空'));
+    }
+    
+    if (!userData || typeof userData !== 'object') {
+      logger.error('更新用户信息失败: userData不是有效对象', userData);
+      return Promise.reject(new Error('更新数据无效'));
+    }
+    
+    logger.info(`更新用户信息, openid=${openid}, 数据:`, JSON.stringify(userData));
+    
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}`,
       method: 'PUT',
-      data: userData
+      data: userData,
+      showError: showError,
+      retryCount: 2,
+      success: (res) => {
+        logger.info('用户信息更新成功:', JSON.stringify(res));
+        return res;
+      },
+      fail: (error) => {
+        logger.error('用户信息更新失败:', error);
+        throw error;
+      }
     });
   },
 

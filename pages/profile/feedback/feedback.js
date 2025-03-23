@@ -226,14 +226,17 @@ Page({
     
     this.setData({ isSubmitting: true });
     
-    // 获取设备信息
-    const systemInfo = wx.getSystemInfoSync();
-    const deviceInfo = {
-      brand: systemInfo.brand,
-      model: systemInfo.model,
-      system: systemInfo.system,
-      platform: systemInfo.platform,
-      SDKVersion: systemInfo.SDKVersion
+    // 获取设备信息 - 使用新API替代旧的wx.getSystemInfoSync
+    const deviceInfo = wx.getDeviceInfo();
+    const appBaseInfo = wx.getAppBaseInfo();
+    
+    // 构建用于反馈的设备信息对象
+    const deviceInfoForFeedback = {
+      brand: deviceInfo.brand,
+      model: deviceInfo.model,
+      system: deviceInfo.system,
+      platform: deviceInfo.platform,
+      SDKVersion: appBaseInfo.SDKVersion
     };
     
     // 构建反馈数据
@@ -243,7 +246,7 @@ Page({
       type: type,
       contact: contact || null,
       images: images,
-      device_info: deviceInfo
+      device_info: deviceInfoForFeedback
     };
     
     // 调用API提交反馈

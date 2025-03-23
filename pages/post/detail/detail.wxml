@@ -64,8 +64,8 @@
           ></image>
           <text class="{{post.isLiked ? 'liked-text' : ''}}">{{post.likes || 0}}</text>
         </view>
-        <view class="action-item">
-          <image class="action-icon" src="/assets/icons/search-active.png" mode="aspectFit"></image>
+        <view class="action-item" bindtap="expandCommentBox">
+          <image class="action-icon" src="/assets/icons/index/comment.png" mode="aspectFit"></image>
           <text>{{post.comments.length || 0}}</text>
         </view>
         <!-- 添加收藏按钮，放在评论按钮的右侧 -->

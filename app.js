@@ -3,14 +3,23 @@ const userManager = require('./utils/user_manager')
 
 App({
   onLaunch() {
-    // 获取系统信息，设置全局数据
-    const systemInfo = wx.getSystemInfoSync();
+    // 获取系统信息，设置全局数据 (使用新API替换旧的wx.getSystemInfoSync)
+    // 合并各种信息到一个对象中
+    const systemInfo = {
+      ...wx.getDeviceInfo(),
+      ...wx.getAppBaseInfo(),
+      ...wx.getWindowInfo()
+    };
     
     // 初始化全局数据
     this.globalData = {
       systemInfo,
       userInfo: null,
       hasLogin: false,
+      needUpdatePosts: false,     // 标记是否需要更新帖子数据
+      postUpdates: {},            // 存储最近更新的帖子数据
+      postUpdateTimestamp: 0,     // 上次数据同步时间戳
+      needRefreshIndexPosts: false, // 是否需要刷新首页帖子列表
       config: {
         services: {
           app: {
@@ -27,14 +36,38 @@ App({
     // 初始化云开发环境
     if (wx.cloud) {
       try {
+        // 云环境ID从开发者控制台获取
+        // 微信开发者工具 -> 云开发 -> 设置 -> 环境ID
+        const cloudEnvId = 'nkuwiki-0g6bkdy9e8455d93';  // 更新为正确的环境ID
+        
         wx.cloud.init({
-          env: 'nkuwiki-2gftkp7ze3a27f70',  // 更新为正确的环境ID
+          env: cloudEnvId,
           traceUser: true
         });
-        console.debug('云开发环境初始化成功');
+        
+        // 检查初始化是否成功
+        const curEnv = wx.cloud.DYNAMIC_CURRENT_ENV || wx.cloud.env || null;
+        if (curEnv) {
+          console.debug('云开发环境初始化成功，环境ID:', curEnv);
+          this.globalData.cloudEnvId = cloudEnvId;
+        } else {
+          console.error('云开发环境初始化可能失败，未获取到环境信息');
+        }
       } catch (error) {
         console.error('云开发环境初始化失败:', error);
+        
+        // 尝试匿名初始化（不指定环境ID）
+        try {
+          wx.cloud.init({
+            traceUser: true
+          });
+          console.debug('尝试匿名初始化云开发环境');
+        } catch (retryError) {
+          console.error('匿名初始化云开发环境也失败:', retryError);
+        }
       }
+    } else {
+      console.warn('当前微信基础库不支持云开发');
     }
     
     // 日志配置
@@ -48,6 +81,9 @@ App({
 
     // 加载服务器配置
     this.loadServerConfig()
+    
+    // 启动数据同步任务
+    this.startDataSyncTask()
   },
 
   // 检查版本兼容性
@@ -216,23 +252,34 @@ App({
   // 诊断运行环境
   diagnoseEnvironment() {
     try {
-      // 获取系统信息
-      wx.getSystemInfo({
-        success: (res) => {
-          console.debug('系统环境信息:', JSON.stringify({
-            platform: res.platform,
-            system: res.system,
-            version: res.version,
-            SDKVersion: res.SDKVersion
-          }));
-          
-          // 保存系统信息
-          this.globalData.systemInfo = res;
-        },
-        fail: (err) => {
-          console.error('获取系统信息失败:', err);
-        }
-      });
+      // 获取系统信息 - 替换为新的API
+      try {
+        // 合并来自各个新API的信息
+        const deviceInfo = wx.getDeviceInfo();
+        const appBaseInfo = wx.getAppBaseInfo();
+        const windowInfo = wx.getWindowInfo();
+        const systemSetting = wx.getSystemSetting();
+        
+        // 合并所有信息
+        const combinedInfo = {
+          ...deviceInfo,
+          ...appBaseInfo,
+          ...windowInfo,
+          ...systemSetting
+        };
+        
+        console.debug('系统环境信息:', JSON.stringify({
+          platform: combinedInfo.platform,
+          system: combinedInfo.system,
+          version: combinedInfo.version,
+          SDKVersion: combinedInfo.SDKVersion
+        }));
+        
+        // 保存系统信息
+        this.globalData.systemInfo = combinedInfo;
+      } catch (infoErr) {
+        console.error('获取系统信息失败:', infoErr);
+      }
       
       // 检查网络状态
       wx.getNetworkType({
@@ -250,6 +297,104 @@ App({
     } catch (error) {
       console.error('运行环境诊断失败:', error);
     }
+  },
+
+  // 启动定时数据同步任务
+  startDataSyncTask() {
+    console.debug('启动定时数据同步任务');
+    
+    // 清除可能存在的旧定时器
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
+    
+    // 设置定时器，每30秒检查一次是否需要同步数据
+    this.syncTimer = setInterval(() => {
+      this.syncPostsData();
+    }, 30000); // 30秒
+    
+    // 立即执行一次同步
+    this.syncPostsData();
+  },
+  
+  // 同步帖子数据
+  async syncPostsData() {
+    // 如果没有需要更新的数据，直接返回
+    if (!this.globalData.needUpdatePosts) {
+      return;
+    }
+    
+    try {
+      console.debug('开始同步帖子数据');
+      
+      // 获取需要更新的帖子ID
+      const updates = this.globalData.postUpdates || {};
+      const postIds = Object.keys(updates);
+      
+      if (!postIds.length) {
+        return;
+      }
+      
+      // 调用API获取最新帖子数据
+      const { postAPI } = require('./utils/api/index');
+      const latestData = await postAPI.getPostUpdates(postIds);
+      
+      if (!latestData || !latestData.length) {
+        return;
+      }
+      
+      console.debug('获取到最新帖子数据:', latestData.length, '条');
+      
+      // 更新全局数据
+      latestData.forEach(post => {
+        if (post && post.id) {
+          // 合并现有数据与最新数据
+          this.globalData.postUpdates[post.id] = {
+            ...updates[post.id],
+            ...post,
+            updateTime: Date.now()
+          };
+        }
+      });
+      
+      // 更新时间戳
+      this.globalData.postUpdateTimestamp = Date.now();
+      
+      // 重置更新标志
+      this.globalData.needUpdatePosts = false;
+      
+      console.debug('帖子数据同步完成');
+      
+      // 通知所有页面更新数据
+      this.notifyPagesUpdate();
+    } catch (error) {
+      console.error('同步帖子数据失败:', error);
+    }
+  },
+  
+  // 获取帖子最新数据
+  getPostLatestData(postId) {
+    if (!postId || !this.globalData.postUpdates) {
+      return null;
+    }
+    
+    return this.globalData.postUpdates[postId] || null;
+  },
+  
+  // 通知所有页面更新数据
+  notifyPagesUpdate() {
+    const pages = getCurrentPages();
+    
+    pages.forEach(page => {
+      // 如果页面定义了onPostsDataUpdate方法，则调用
+      if (page && typeof page.onPostsDataUpdate === 'function') {
+        try {
+          page.onPostsDataUpdate(this.globalData.postUpdates);
+        } catch (error) {
+          console.error('通知页面更新失败:', error);
+        }
+      }
+    });
   },
 
   globalData: {

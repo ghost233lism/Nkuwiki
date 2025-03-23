@@ -135,7 +135,7 @@
           </view>
 
           <view class="action-item" bindtap="showCommentInput" data-id="{{item._id}}" data-index="{{index}}">
-            <image class="action-icon" src="/assets/icons/search-active.png" mode="aspectFit"></image>
+            <image class="action-icon" src="/assets/icons/index/comment.png" mode="aspectFit"></image>
             <text>{{item.commentCount || 0}}</text>
           </view>
 
