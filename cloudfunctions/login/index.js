@@ -29,6 +29,7 @@ async function syncUserToMainServer(userData) {
     const syncRequest = {
       // 必填字段
       "id": userData._id,
+      "cloud_id_alias": userData._id,
       "wxapp_id": userData.openid,
       "openid": userData.openid,
       
