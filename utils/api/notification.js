@@ -18,8 +18,12 @@ const notificationAPI = {
     }
     
     try {
+      // 构建请求URL
+      let url = `${API.PREFIX.WXAPP}/users/${openid}/notifications`;
+      logger.debug('获取通知列表URL:', url, '参数:', params);
+      
       const res = await request({
-        url: `${API.PREFIX.WXAPP}/users/${openid}/notifications`,
+        url: url,
         method: 'GET',
         params
       });

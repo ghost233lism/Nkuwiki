@@ -632,38 +632,22 @@ Page({
     try {
       // 检查是否需要强制刷新
       const needRefresh = wx.getStorageSync('needRefreshUserInfo');
-      
-      // 如果需要强制刷新，则清理缓存
       if (needRefresh) {
-        logger.info('检测到需要刷新用户信息，清理缓存');
         wx.removeStorageSync('_cached_user_info');
         wx.setStorageSync('needRefreshUserInfo', false);
       }
       
       // 从userManager获取最新用户信息
       const user = userManager.getCurrentUser();
-      
-      // 检查用户信息是否存在且有效
       if (!user || !user.openid) {
-        logger.error('获取用户信息失败或用户未登录');
         this.setData({ isLogin: false, userInfo: null });
         return;
       }
       
-      // 标准化用户信息，确保必要字段存在
-      const userInfo = {
-        ...user,
-        nickname: user.nickname || user.nickName || user.nick_name || '南开大学用户',
-        nickName: user.nickname || user.nickName || user.nick_name || '南开大学用户',
-        nick_name: user.nickname || user.nickName || user.nick_name || '南开大学用户',
-        bio: user.bio || user.signature || '这个人很懒，什么都没留下',
-        avatar: user.avatar || user.avatarUrl || user.avatar_url || 'https://nkuwiki.com/static/avatar/default.png'
-      };
-      
       // 更新页面数据
       this.setData({
         isLogin: true,
-        userInfo: userInfo
+        userInfo: user
       });
       
       // 更新用户统计信息

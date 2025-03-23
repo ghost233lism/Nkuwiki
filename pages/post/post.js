@@ -398,17 +398,15 @@ Page({
         
         // 准备要发送到API的数据
         const postData = {
-          wxapp_id: `post_${Date.now()}`, // 生成唯一ID
-          openid: userInfo.openid, // 使用openid字段
-          author_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
-          author_avatar: avatarUrl,
+          openid: userInfo.openid,
           title: title,
           content: content,
-          images: cloudImages, // 使用云存储的图片地址
+          images: cloudImages,
           tags: [],
-          // 添加API文档中需要的字段
-          category_id: null, // 如果有分类系统，应设置对应的分类ID
-          location: '' // 如果需要位置信息，应设置对应的位置
+          category_id: null,
+          location: '',
+          nick_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
+          avatar: avatarUrl
         };
         
         console.debug('API数据准备完成，准备发送请求');
@@ -458,17 +456,15 @@ Page({
     if (!processedImages || processedImages.length === 0) {
       // 无图片帖子，直接调用API
       const postData = {
-        wxapp_id: `post_${Date.now()}`,
-        openid: userInfo.openid, // 使用openid字段
-        author_name: userInfo.nickname,
-        author_avatar: userInfo.avatar_url,
+        openid: userInfo.openid,
         title: title,
         content: content,
         images: [],
         tags: [],
-        // 添加API文档中需要的字段
-        category_id: null, // 如果有分类系统，应设置对应的分类ID
-        location: '' // 如果需要位置信息，应设置对应的位置
+        category_id: null,
+        location: '',
+        nick_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
+        avatar: userInfo.avatar || userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
       };
       
       console.debug('无图片帖子，直接使用API');

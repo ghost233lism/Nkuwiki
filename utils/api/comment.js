@@ -129,11 +129,12 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   addComment: (params) => {
-    let { post_id, content, parent_id, openid } = params;
+    let { post_id, content, parent_id, openid, images } = params;
     
     // 如果没有传入openid，尝试获取当前用户
+    let userInfo = null;
     if (!openid) {
-      const userInfo = userManager.getCurrentUser();
+      userInfo = userManager.getCurrentUser();
       openid = userInfo ? userInfo.openid : '';
     }
     
@@ -145,10 +146,22 @@ const commentAPI = {
       return Promise.reject(new Error('评论内容不能为空'));
     }
     
+    if (!openid) {
+      return Promise.reject(new Error('用户未登录，无法评论'));
+    }
+    
+    // 确保获取完整的用户信息
+    if (!userInfo) {
+      userInfo = userManager.getCurrentUser();
+    }
+    
     const data = {
       post_id,
       content,
-      openid
+      openid,
+      // 添加用户昵称和头像，后端要求这些字段
+      nick_name: userInfo.nickname || userInfo.nickName || '用户',
+      avatar: userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
     };
     
     // 如果有父评论ID，添加到请求数据
@@ -156,7 +169,12 @@ const commentAPI = {
       data.parent_id = parent_id;
     }
     
-    logger.info('添加评论，参数:', JSON.stringify(data));
+    // 如果有图片，添加到请求数据
+    if (images && Array.isArray(images)) {
+      data.images = images;
+    }
+    
+    logger.debug('添加评论，参数:', JSON.stringify(data));
     
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,

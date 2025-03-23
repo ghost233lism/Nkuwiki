@@ -232,4 +232,15 @@
   width: 36rpx;
   height: 36rpx;
   margin-right: 10rpx;
+}
+
+/* 刷新按钮样式 */
+.refresh-btn {
+  margin: 10px 15px;
+  padding: 8px 15px;
+  background-color: #07c160;
+  color: white;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 14px;
 } 

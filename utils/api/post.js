@@ -153,88 +153,50 @@ const postAPI = {
   },
 
   /**
-   * 点赞帖子
-   * @param {number|string} postId - 帖子ID
-   * @param {boolean|string} isLikeOrOpenid - 是否点赞(布尔值)或用户openid(字符串)
-   * @returns {Promise} - 请求Promise
+   * 点赞/取消点赞帖子
+   * @param {String} postId 帖子ID
+   * @param {Boolean} isLike 是否点赞 (true:点赞, false:取消点赞)
    */
-  likePost: (postId, isLikeOrOpenid) => {
-    // 处理两种调用方式
-    let openid;
-    let isLike = true;
-    
-    // 根据参数类型判断调用方式
-    if (typeof isLikeOrOpenid === 'boolean') {
-      // 新的调用方式: likePost(postId, isLike)
-      isLike = isLikeOrOpenid;
-      // 获取当前用户openid
-      const userInfo = userManager.getCurrentUser();
-      openid = userInfo.openid;
-    } else if (typeof isLikeOrOpenid === 'string') {
-      // 旧的调用方式: likePost(postId, openid)
-      openid = isLikeOrOpenid;
-    } else {
-      // 如果未提供，尝试获取当前用户
-      const userInfo = userManager.getCurrentUser();
-      openid = userInfo.openid;
+  likePost: async function(postId, isLike = true) {
+    const openid = userManager.getOpenid();
+    if (!openid) {
+      logger.error('likePost: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
     }
+
+    if (!postId) {
+      logger.error('likePost: 缺少帖子ID');
+      return Promise.reject(new Error('缺少帖子ID'));
+    }
+
+    logger.debug(`用户${openid}${isLike ? '点赞' : '取消点赞'}帖子${postId}`);
+
+    // 构建请求URL
+    const action = isLike ? 'like' : 'unlike';
+    const url = `${API.PREFIX.WXAPP}/posts/${postId}/${action}`;
     
-    logger.info('点赞操作，帖子ID:', postId, '用户openid:', openid, '操作:', isLike ? '点赞' : '取消点赞');
-    
-    // 根据isLike确定请求URL
-    const url = isLike 
-      ? `${API.PREFIX.WXAPP}/posts/${postId}/like` 
-      : `${API.PREFIX.WXAPP}/posts/${postId}/unlike`;
-    
-    return request({
-      url: url,
-      method: 'POST',
-      params: { openid },
-      success: (res) => {
-        // 确保响应中包含点赞数
-        if (res && res.data && typeof res.data === 'object') {
-          if (res.data.likes === undefined && res.data.like_count !== undefined) {
-            res.data.likes = res.data.like_count;
-          }
-        }
-        logger.info('点赞API响应成功:', JSON.stringify(res));
-        return res;
-      }
-    }).then(res => {
-      // 操作完成后，通知全局事件系统
+    try {
+      const res = await request({
+        url,
+        method: 'POST',
+        data: { openid }
+      });
+      
+      logger.debug(`${isLike ? '点赞' : '取消点赞'}结果:`, JSON.stringify(res));
+      
+      // 通知全局的帖子更新事件
       const app = getApp();
       if (app && app.globalData) {
-        // 存储最新操作结果
-        if (!app.globalData.postUpdates) {
-          app.globalData.postUpdates = {};
-        }
-        
-        app.globalData.postUpdates[postId] = {
-          id: postId,
-          isLiked: isLike,
-          likes: res.likes || res.like_count,
-          updateTime: Date.now()
-        };
-        
-        // 设置需要更新的标志
-        app.globalData.needUpdatePosts = true;
-        
-        // 立即通知页面更新，不等待下一次同步
-        if (typeof app.notifyPagesUpdate === 'function') {
-          logger.info('调用notifyPagesUpdate通知页面更新');
-          app.notifyPagesUpdate();
-        } else {
-          logger.error('notifyPagesUpdate方法不存在或不可用');
-        }
-      } else {
-        logger.error('获取app实例或globalData失败');
+        // 更新帖子点赞状态
+        const updatedPost = { _id: postId, isLiked: isLike };
+        this.notifyPostUpdate(updatedPost);
       }
       
       return res;
-    }).catch(error => {
-      logger.error('点赞API请求失败:', error);
-      throw error;
-    });
+    } catch (err) {
+      logger.error(`${isLike ? '点赞' : '取消点赞'}失败:`, err);
+      throw err;
+    }
   },
 
   /**

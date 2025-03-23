@@ -464,12 +464,20 @@ const request = (options = {}) => {
  * @returns {string} 处理后的头像URL
  */
 function processAvatarUrl(avatarUrl) {
+  // 默认头像路径，使用本地资源
+  const DEFAULT_AVATAR = '/assets/icons/default-avatar.png';
+  
   if (!avatarUrl) {
-    return '/assets/icons/default-avatar.png';
+    return DEFAULT_AVATAR;
   }
   
-  // 如果已经是https或绝对路径，直接返回
-  if (avatarUrl.startsWith('https://') || avatarUrl.startsWith('/')) {
+  // 如果是本地资源路径，直接返回
+  if (avatarUrl.startsWith('/')) {
+    return avatarUrl;
+  }
+  
+  // 如果已经是https链接，直接返回
+  if (avatarUrl.startsWith('https://')) {
     return avatarUrl;
   }
   
@@ -478,8 +486,12 @@ function processAvatarUrl(avatarUrl) {
     return avatarUrl.replace('http://', 'https://');
   }
   
-  // 其他情况，拼接基础URL
-  return API.BASE_URL + (avatarUrl.startsWith('/') ? '' : '/') + avatarUrl;
+  // 如果是相对路径但不带斜杠，加上斜杠
+  if (avatarUrl && !avatarUrl.includes('://')) {
+    return '/' + avatarUrl;
+  }
+  
+  return avatarUrl || DEFAULT_AVATAR;
 }
 
 module.exports = {

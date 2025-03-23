@@ -30,6 +30,17 @@
     <text class="empty-text">暂无通知消息</text>
   </view>
 
+  <!-- 顶部标签导航 -->
+  <view class="notification-tabs">
+    <view class="tab {{activeTab === 'all' ? 'active' : ''}}" bindtap="switchTab" data-tab="all">全部</view>
+    <view class="tab {{activeTab === 'like' ? 'active' : ''}}" bindtap="switchTab" data-tab="like">点赞</view>
+    <view class="tab {{activeTab === 'comment' ? 'active' : ''}}" bindtap="switchTab" data-tab="comment">评论</view>
+    <view class="tab {{activeTab === 'system' ? 'active' : ''}}" bindtap="switchTab" data-tab="system">系统</view>
+  </view>
+
+  <!-- 刷新测试按钮 -->
+  <view class="refresh-btn" bindtap="manualRefresh">手动刷新</view>
+
   <!-- 通知列表 -->
   <scroll-view scroll-y="true" class="notifications-list" bindscrolltolower="onReachBottom" wx:if="{{notifications.length > 0}}">
     <view class="notification-item {{item.is_read ? '' : 'unread'}}" 

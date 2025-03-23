@@ -220,9 +220,9 @@ Page({
     logger.debug('加载帖子，参数：', params);
 
     // 使用API加载帖子
-    postAPI.getPosts(params)
+    return postAPI.getPosts(params)
       .then(res => {
-        logger.debug('帖子加载成功:', res);
+        logger.debug('帖子加载成功, 原始响应:', JSON.stringify(res).substring(0, 500) + '...');
         
         let newPosts = [];
         // 处理返回数据，兼容多种格式
@@ -233,26 +233,49 @@ Page({
         } else if (res && res.posts && Array.isArray(res.posts)) {
           newPosts = res.posts;
         } else {
-          logger.warn('无法解析帖子数据格式:', res);
+          logger.warn('无法解析帖子数据格式:', JSON.stringify(res));
           newPosts = [];
         }
         
-        // 处理帖子ID，确保每个帖子都有有效的ID
+        // 如果有帖子数据，记录第一条帖子的字段
+        if (newPosts && newPosts.length > 0) {
+          logger.debug('第一条帖子数据示例:', JSON.stringify(newPosts[0]));
+        }
+        
+        // 处理帖子数据，统一格式化为前端展示所需的格式
         newPosts = newPosts.map(post => {
-          // 确保帖子有ID字段，优先使用id，如果不存在则使用_id
+          // 确保帖子有ID字段
           if (!post._id && post.id) {
             post._id = post.id;
           } else if (!post._id && !post.id) {
-            // 如果两者都不存在，生成一个临时ID，避免空对象情况
             logger.warn('帖子缺少ID字段:', post);
             post._id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          } else if (typeof post._id === 'object' && Object.keys(post._id).length === 0) {
-            // 处理_id为空对象的情况
-            logger.warn('帖子ID为空对象:', post);
-            post._id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           }
-          return post;
+          
+          // 格式化显示需要的其他字段
+          const processedPost = {
+            _id: post._id || post.id,
+            id: post.id || post._id,
+            title: post.title || '',
+            content: post.content || '',
+            displayContent: post.content 
+              ? (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content) 
+              : '',
+            hasMore: post.content && post.content.length > 100,
+            authorName: post.nick_name || post.author_name || '南开大学用户',
+            authorAvatar: post.avatar || post.author_avatar || '/assets/icons/default-avatar.png',
+            images: post.images || [],
+            likes: post.like_count || post.likes || 0,
+            favoriteCounts: post.favorite_count || post.favoriteCounts || 0,
+            commentCount: post.comment_count || post.commentCount || 0,
+            relativeTime: this.formatTimeDisplay(post.create_time || post.createTime || Date.now()),
+            tags: post.tags || []
+          };
+          
+          return processedPost;
         });
+        
+        logger.debug('处理后第一条帖子数据:', newPosts.length > 0 ? JSON.stringify(newPosts[0]) : '无数据');
         
         // 如果是重置，直接替换帖子列表
         const posts = reset ? newPosts : [...this.data.posts, ...newPosts];
@@ -317,7 +340,8 @@ Page({
           }
           
           // 获取处理后的头像URL
-          let avatarUrl = post.user_avatar || post.author_avatar || (post.author ? post.author.avatar_url : null);
+          let avatarUrl = post.avatar || post.user_avatar || post.author_avatar || 
+              (post.author ? post.author.avatar_url : null);
           if (avatarUrl) {
             avatarUrl = await processAvatarUrl(avatarUrl);
           }
@@ -335,7 +359,8 @@ Page({
             content: post.content || '',
             displayContent: displayContent,
             hasMore: post.content && post.content.length > 100,
-            authorName: post.user_name || post.author_name || (post.author ? post.author.name : '南开大学用户'),
+            authorName: post.nick_name || post.user_name || post.author_name || 
+                (post.author ? post.author.name : '南开大学用户'),
             authorAvatar: avatarUrl || '/assets/icons/default-avatar.png',
             images: post.images || [],
             likes: post.likes || 0,

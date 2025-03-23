@@ -604,7 +604,7 @@ Page({
     }
     
     // 验证内容
-    if (!content && this.data.commentImages.length === 0) {
+    if (!content) {
       wx.showToast({
         title: '评论内容不能为空',
         icon: 'none'
@@ -612,51 +612,65 @@ Page({
       return;
     }
     
-    wx.showLoading({ title: '发送中...' });
+    // 检查用户是否登录
+    const userManager = require('../../../utils/user_manager');
+    if (!userManager.isLoggedIn()) {
+      wx.showToast({
+        title: '请先登录后再评论',
+        icon: 'none'
+      });
+      
+      // 跳转到登录页面
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pages/login/login'
+        });
+      }, 1500);
+      return;
+    }
+    
+    // 获取用户信息
+    const userInfo = userManager.getUserInfoForAPI();
+    if (!userInfo || !userInfo.openid) {
+      wx.showToast({
+        title: '用户信息不完整，请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 显示提交中...
     this.setData({ isSubmitting: true });
+    wx.showLoading({ title: '提交中...' });
     
     try {
-      // 图片上传逻辑优化
+      // 上传图片（如果有）
       let uploadedImageUrls = [];
-      
       if (this.data.commentImages && this.data.commentImages.length > 0) {
-        const uploadTasks = this.data.commentImages.map(async (img) => {
-          // 确保使用临时文件路径而非预览路径
-          const filePath = img.tempFilePath || img.tempUrl;
-          
-          // 上传到云存储
-          try {
-            console.log('开始上传图片:', filePath);
-            return await this.uploadImage(filePath);
-          } catch (uploadErr) {
-            console.error('图片上传失败:', uploadErr);
-            wx.showToast({
-              title: '图片上传失败',
-              icon: 'none'
-            });
-            throw uploadErr; // 抛出错误中断评论提交
+        for (const image of this.data.commentImages) {
+          const fileID = await this.uploadImage(image);
+          if (fileID) {
+            uploadedImageUrls.push(fileID);
           }
-        });
-        
-        // 等待所有图片上传完成
-        uploadedImageUrls = await Promise.all(uploadTasks);
-        console.log('所有图片上传完成:', uploadedImageUrls);
+        }
       }
       
-      // 使用新的API接口提交评论
-      const { commentAPI } = require('../../../utils/api/index');
-      
-      // 准备评论数据
       const params = {
         post_id: postId,
         content: content,
-        images: uploadedImageUrls || []
+        images: uploadedImageUrls || [],
+        openid: userInfo.openid,
+        nick_name: userInfo.nick_name,
+        avatar: userInfo.avatar
       };
       
       // 如果是回复评论，添加parent_id
       if (this.data.replyToComment) {
         params.parent_id = this.data.replyToComment.id;
       }
+      
+      // 使用新的API接口提交评论
+      const { commentAPI } = require('../../../utils/api/index');
       
       console.debug('提交评论数据:', params);
       

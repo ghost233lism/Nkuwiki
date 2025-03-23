@@ -126,75 +126,38 @@ const userManager = {
    */
   getCurrentUser() {
     try {
-      // 尝试从主存储获取
-      let userInfo = null;
-      try {
-        userInfo = wx.getStorageSync(STORAGE_KEYS.USER_INFO) || {};
-        console.debug('从主存储获取的用户信息:', JSON.stringify(userInfo));
-      } catch (storageError) {
-        console.debug('从主存储获取用户信息失败:', storageError.message);
-        userInfo = {};
-      }
+      // 尝试从存储获取用户信息
+      let userInfo = wx.getStorageSync(STORAGE_KEYS.USER_INFO) || {};
+      let latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
       
-      // 尝试获取最新存储的用户信息
-      let latestUserInfo = {};
-      try {
-        latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
-        console.debug('从最新存储获取的用户信息:', JSON.stringify(latestUserInfo));
-      } catch (latestError) {
-        console.debug('从最新存储获取用户信息失败:', latestError.message);
-      }
-      
-      // 尝试从全局状态获取
+      // 获取全局用户信息
       const app = getApp();
       let globalUserInfo = {};
       if (app && app.globalData) {
         globalUserInfo = app.globalData.userInfo || {};
-        console.debug('从全局状态获取的用户信息:', JSON.stringify(globalUserInfo));
-      } else {
-        console.debug('全局状态不可用或无用户信息');
       }
       
-      // 合并信息，优先使用最新存储，然后是主存储，最后是全局状态
-      // 修改合并优先级：最新存储 > 主存储 > 全局状态
+      // 合并信息，优先使用最新存储的数据
       const mergedUserInfo = {
         ...globalUserInfo,
         ...userInfo,
         ...latestUserInfo
       };
       
-      // 设置必要的默认值并更新
+      // 确保基本字段存在
       userInfo = {
         ...mergedUserInfo,
-        avatar: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || mergedUserInfo.avatar_url || DEFAULT_AVATAR,
-        avatar_url: mergedUserInfo.avatar_url || mergedUserInfo.avatarUrl || mergedUserInfo.avatar || DEFAULT_AVATAR,
-        nickname: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
-        // 兼容字段
-        nickName: mergedUserInfo.nickname || mergedUserInfo.nickName || DEFAULT_NAME,
-        avatarUrl: mergedUserInfo.avatar || mergedUserInfo.avatarUrl || mergedUserInfo.avatar_url || DEFAULT_AVATAR
+        avatar: mergedUserInfo.avatar || DEFAULT_AVATAR,
+        nickname: mergedUserInfo.nickname || DEFAULT_NAME,
+        bio: mergedUserInfo.bio || '这个人很懒，什么都没留下'
       };
-      
-      // 确保openid被格式化
-      if (userInfo.openid) {
-        // 如果有原始openid但没有格式化openid，添加格式化的版本
-        if (!userInfo.formatted_openid) {
-          userInfo.formatted_openid = this.formatOpenid(userInfo.openid);
-        }
-        
-        // 总是确保返回的openid是格式化的
-        userInfo.openid = this.formatOpenid(userInfo.openid);
-      }
       
       return userInfo;
     } catch (error) {
       console.error('获取当前用户信息失败:', error);
-      // 返回最小可用的用户信息
       return {
         avatar: DEFAULT_AVATAR,
-        avatar_url: DEFAULT_AVATAR,
-        nickname: DEFAULT_NAME,
-        nickName: DEFAULT_NAME,
-        avatarUrl: DEFAULT_AVATAR
+        nickname: DEFAULT_NAME
       };
     }
   },
@@ -208,8 +171,10 @@ const userManager = {
     // getCurrentUser方法已确保返回格式化的openid
     return {
       openid: userInfo.openid,
-      nick_name: userInfo.nick_name || userInfo.nickName || DEFAULT_NAME,
-      avatar: userInfo.avatar || userInfo.avatarUrl || DEFAULT_AVATAR
+      nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
+      nick_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,  // 为了兼容性同时提供两种格式
+      avatar: userInfo.avatar || userInfo.avatarUrl || DEFAULT_AVATAR,
+      bio: userInfo.bio || ''  // 添加个人简介字段
     };
   },
   
@@ -341,7 +306,7 @@ const userManager = {
    * @returns {Boolean} 是否更新成功
    */
   updateUserInfo(newInfo) {
-    console.info('更新用户信息:', JSON.stringify(newInfo));
+    console.debug('更新用户信息:', JSON.stringify(newInfo));
     
     try {
       if (!newInfo) {
@@ -366,45 +331,48 @@ const userManager = {
         }
       });
       
-      // 特殊处理头像字段，确保avatar、avatarUrl和avatar_url保持一致
-      if (newInfo.avatar) {
-        updatedUserInfo.avatar_url = newInfo.avatar;
-        updatedUserInfo.avatarUrl = newInfo.avatar;
-      } else if (newInfo.avatarUrl) {
-        updatedUserInfo.avatar = newInfo.avatarUrl;
-        updatedUserInfo.avatar_url = newInfo.avatarUrl;
-      } else if (newInfo.avatar_url) {
-        updatedUserInfo.avatar = newInfo.avatar_url;
-        updatedUserInfo.avatarUrl = newInfo.avatar_url;
-      }
+      // 简化字段处理，统一处理常用字段别名
+      const fieldMappings = {
+        // 头像字段别名
+        'avatar': ['avatar_url', 'avatarUrl'],
+        // 昵称字段别名
+        'nickname': ['nickName', 'nick_name'],
+        // 个人简介字段别名
+        'bio': ['personal_bio', 'biography']
+      };
       
-      // 特殊处理昵称字段，确保nickname、nickName和nick_name保持一致
-      if (newInfo.nickname) {
-        updatedUserInfo.nickName = newInfo.nickname;
-        updatedUserInfo.nick_name = newInfo.nickname;
-      } else if (newInfo.nickName) {
-        updatedUserInfo.nickname = newInfo.nickName;
-        updatedUserInfo.nick_name = newInfo.nickName;
-      } else if (newInfo.nick_name) {
-        updatedUserInfo.nickname = newInfo.nick_name;
-        updatedUserInfo.nickName = newInfo.nick_name;
-      }
+      // 处理字段别名
+      Object.entries(fieldMappings).forEach(([mainField, aliases]) => {
+        if (newInfo[mainField]) {
+          // 将主字段值同步到所有别名
+          aliases.forEach(alias => {
+            updatedUserInfo[alias] = newInfo[mainField];
+          });
+        } else {
+          // 检查是否有别名字段更新
+          for (const alias of aliases) {
+            if (newInfo[alias]) {
+              updatedUserInfo[mainField] = newInfo[alias];
+              // 同步到其他别名
+              aliases.forEach(otherAlias => {
+                if (otherAlias !== alias) {
+                  updatedUserInfo[otherAlias] = newInfo[alias];
+                }
+              });
+              break;
+            }
+          }
+        }
+      });
       
       // 确保昵称和个性签名有默认值
       updatedUserInfo.nickname = updatedUserInfo.nickname || '南开大学用户';
-      updatedUserInfo.nickName = updatedUserInfo.nickname;
-      updatedUserInfo.nick_name = updatedUserInfo.nickname;
       updatedUserInfo.bio = updatedUserInfo.bio || '这个人很懒，什么都没留下';
       
       // 更新时间戳
       updatedUserInfo.update_time = new Date().toISOString();
       
       // 保存更新后的用户信息
-      console.info('保存更新后的用户信息:', JSON.stringify({
-        nickname: updatedUserInfo.nickname,
-        bio: updatedUserInfo.bio
-      }));
-      
       wx.setStorageSync(STORAGE_KEYS.USER_INFO, updatedUserInfo);
       wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, updatedUserInfo);
       
@@ -421,7 +389,7 @@ const userManager = {
       wx.removeStorageSync('_cached_user_info');
       wx.setStorageSync('needRefreshUserInfo', true);
       
-      console.info('用户信息已成功更新');
+      console.debug('用户信息已成功更新');
       return true;
     } catch (error) {
       console.error('更新用户信息失败:', error);

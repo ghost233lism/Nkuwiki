@@ -314,153 +314,83 @@ Page({
       const updateData = {};
       
       // 添加所有修改过的字段
-      if (modified.nickname) {
-        updateData.nickname = inputData.nickname;
-        updateData.nickName = inputData.nickname; // 兼容微信字段
-        updateData.nick_name = inputData.nickname; // 兼容后端字段
-      }
+      if (modified.nickname) updateData.nickname = inputData.nickname;
       if (modified.birthday) updateData.birthday = inputData.birthday;
       if (modified.wechatId) updateData.wechatId = inputData.wechatId;
       if (modified.qqId) updateData.qqId = inputData.qqId;
       if (modified.bio) updateData.bio = inputData.bio;
       
       // 获取用户openid
-      const openid = this.data.user.openid || this.data.user._id || this.data.user.wxapp_id;
+      const openid = this.data.user.openid || this.data.user._id;
       if (!openid) {
         logger.error('未找到有效的用户标识符');
         throw new Error('未找到有效的用户ID，请重新登录');
       }
       
-      logger.info('准备更新用户信息，openid:', openid, '数据:', JSON.stringify(updateData));
+      // 调用API更新用户信息
+      const result = await userAPI.updateUser(openid, updateData, true);
       
-      // 确保更新对象中有昵称和个性签名的debug日志
-      logger.info('更新对象包含昵称:', !!updateData.nickname, '包含个性签名:', !!updateData.bio);
-      
-      try {
-        // 调用API更新用户信息
-        const result = await userAPI.updateUser(openid, updateData, true); // 添加showError=true参数
+      // 检查API调用结果 - 修改判断条件以兼容不同的响应格式
+      if (result && (result.code === 0 || result.success === true || result.statusCode === 200 || result.data)) {
+        // 更新本地用户数据
+        const updatedUser = {
+          ...this.data.user,
+          ...updateData,
+          update_time: new Date().toISOString()
+        };
         
-        // 检查API调用结果
-        if (result && result.code === 0) {
-          logger.info('用户信息更新成功:', JSON.stringify(result));
-          
-          // 更新本地用户数据 - 合并旧数据和新数据
-          const updatedUser = {
-            ...this.data.user,
-            ...updateData,
-            update_time: new Date().toISOString()
-          };
-          
-          // 1. 更新用户数据到user_manager中
-          const updateResult = userManager.updateUserInfo(updatedUser);
-          logger.info('更新user_manager中的用户信息:', updateResult ? '成功' : '失败');
-          
-          // 2. 强制清理用户数据缓存
-          wx.removeStorageSync('_cached_user_info');
-          
-          // 3. 更新全局用户数据
-          const app = getApp();
-          if (app && app.globalData) {
-            app.globalData.userInfo = updatedUser;
-            // 触发全局更新事件
-            if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
-              app.globalDataChanged('userInfo', updatedUser);
-            }
+        // 更新用户管理器中的数据
+        userManager.updateUserInfo(updatedUser);
+        
+        // 清理缓存并设置刷新标记
+        wx.removeStorageSync('_cached_user_info');
+        wx.setStorageSync('needRefreshUserInfo', true);
+        
+        // 显示成功提示
+        wx.showToast({
+          title: '保存成功',
+          icon: 'success'
+        });
+        
+        // 重置修改状态
+        this.setData({
+          user: updatedUser,
+          modified: {
+            nickname: false,
+            birthday: false,
+            wechatId: false,
+            qqId: false,
+            bio: false,
+            avatar: false
           }
-          
-          // 4. 重置应用程序状态 - 设置刷新标记
-          wx.setStorageSync('needRefreshUserInfo', true);
-          
-          // 5. 强制所有页面刷新用户信息 
-          try {
-            const pages = getCurrentPages();
-            logger.debug('当前页面栈:', pages.length);
-            pages.forEach((page, index) => {
-              if (page && typeof page.fetchUserInfo === 'function') {
-                logger.debug(`尝试刷新页面[${index}].${page.route}的用户信息`);
-                try {
-                  page.fetchUserInfo();
-                } catch (err) {
-                  logger.error(`页面[${index}].${page.route}刷新用户信息失败:`, err);
-                }
-              } else if (page) {
-                logger.debug(`页面[${index}].${page.route}没有fetchUserInfo方法`);
-              }
-            });
-          } catch (pagesError) {
-            logger.error('刷新页面栈失败:', pagesError);
-          }
-          
-          // 显示成功提示
-          wx.showToast({
-            title: '保存成功',
-            icon: 'success'
-          });
-          
-          // 重置修改状态
-          this.setData({
-            user: updatedUser,
-            modified: {
-              nickname: false,
-              birthday: false,
-              wechatId: false,
-              qqId: false,
-              bio: false,
-              avatar: false
-            }
-          });
-          
-          // 延迟返回
-          setTimeout(() => {
-            // 打印最终保存的用户信息，确认fields都存在
-            logger.info('最终保存的用户信息:', JSON.stringify({
-              nickname: updatedUser.nickname,
-              nickName: updatedUser.nickName,
-              nick_name: updatedUser.nick_name,
-              bio: updatedUser.bio,
-              openid: updatedUser.openid,
-              wxapp_id: updatedUser.wxapp_id
-            }));
-            
-            wx.navigateBack({
-              success: () => {
-                // 通知上一页需要刷新
-                try {
-                  const pages = getCurrentPages();
-                  // 检查是否有上一页
-                  if (pages.length > 0) {
-                    const prevPage = pages[pages.length - 1]; // 返回后的当前页
-                    if (prevPage) {
-                      // 通过直接修改页面数据确保刷新
-                      prevPage.setData({
-                        forceRefresh: true
-                      });
-                      
-                      // 如果存在专门的刷新方法，调用它
-                      if (typeof prevPage.onShow === 'function') {
-                        prevPage.onShow();
-                      }
-                      if (typeof prevPage.fetchUserInfo === 'function') {
-                        prevPage.fetchUserInfo();
-                      }
+        });
+        
+        // 延迟返回
+        setTimeout(() => {
+          wx.navigateBack({
+            success: () => {
+              // 尝试刷新上一页
+              try {
+                const pages = getCurrentPages();
+                if (pages.length > 0) {
+                  const prevPage = pages[pages.length - 1];
+                  if (prevPage) {
+                    prevPage.setData({ forceRefresh: true });
+                    if (typeof prevPage.fetchUserInfo === 'function') {
+                      prevPage.fetchUserInfo();
                     }
                   }
-                } catch (navError) {
-                  logger.error('通知上一页刷新失败:', navError);
                 }
+              } catch (navError) {
+                logger.error('通知上一页刷新失败:', navError);
               }
-            });
-          }, 1500);
-        } else {
-          // 后端响应但结果为失败
-          const errorMsg = (result && result.message) || '服务器响应错误';
-          logger.error('更新用户信息响应失败:', errorMsg);
-          throw new Error(`保存失败: ${errorMsg}`);
-        }
-      } catch (apiError) {
-        // API调用过程出错
-        logger.error('API调用失败:', apiError);
-        throw apiError;
+            }
+          });
+        }, 1000);
+      } else {
+        // 后端响应但结果为失败
+        const errorMsg = (result && result.message) || '服务器响应错误';
+        throw new Error(`保存失败: ${errorMsg}`);
       }
     } catch (error) {
       logger.error('保存个人信息失败:', error);
@@ -468,15 +398,6 @@ Page({
         title: '保存失败，请重试',
         icon: 'none'
       });
-      
-      // 显示详细错误信息
-      setTimeout(() => {
-        wx.showModal({
-          title: '保存用户信息失败',
-          content: error.message || '未知错误，请检查网络后重试',
-          showCancel: false
-        });
-      }, 1000);
     } finally {
       this.setData({ isUpdating: false });
     }

@@ -155,7 +155,7 @@ Page({
         author: {
           id: post.openid,
           name: post.user_name || '用户',
-          avatar: post.user_avatar || '/assets/icons/default_avatar.png'
+          avatar: post.user_avatar || '/assets/icons/default-avatar.png'
         },
         stats: {
           views: post.view_count || 0,

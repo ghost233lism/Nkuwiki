@@ -12,7 +12,11 @@ Page({
     pageSize: 20,
     selectedType: '', // 筛选类型：'' - 全部, 'system' - 系统通知, 'like' - 点赞, 'comment' - 评论, 'follow' - 关注
     isLoggedIn: false,
-    userId: ''
+    userId: '',
+    activeTab: 'all',
+    offset: 0,
+    needLogin: false,
+    isLoading: true
   },
 
   onLoad: function (options) {
@@ -55,29 +59,70 @@ Page({
     }
   },
 
-  // 加载通知列表
-  loadNotifications: function (reset = false) {
-    // 如果是重置，则重置页码
-    if (reset) {
+  /**
+   * 手动刷新通知列表
+   */
+  manualRefresh: function() {
+    wx.showToast({
+      title: '正在刷新...',
+      icon: 'loading',
+      duration: 1000
+    });
+    
+    // 清空当前列表并重新加载
+    this.setData({
+      notifications: [],
+      offset: 0
+    }, () => {
+      this.loadNotifications(true);
+    });
+  },
+
+  /**
+   * 加载通知列表
+   * @param {boolean} showLoading 是否显示加载动画
+   */
+  loadNotifications: function(showLoading = false) {
+    const userId = userManager.getOpenid();
+    if (!userId) {
+      logger.error('loadNotifications: 用户未登录');
       this.setData({
-        currentPage: 0,
-        notifications: [],
-        lastPage: false
+        needLogin: true,
+        isLoading: false
+      });
+      return;
+    }
+
+    logger.debug('开始加载通知列表, userId:', userId, 'activeTab:', this.data.activeTab);
+    
+    const params = {
+      limit: 20,
+      offset: this.data.offset
+    };
+
+    // 根据当前标签筛选通知类型
+    if (this.data.activeTab !== 'all') {
+      params.type = this.data.activeTab;
+    }
+
+    logger.debug('请求参数:', JSON.stringify(params));
+
+    // 调用API获取通知
+    if (showLoading) {
+      wx.showLoading({
+        title: '加载中',
       });
     }
     
-    // 如果已到最后一页，不再加载
-    if (this.data.lastPage && !reset) {
-      return;
-    }
-    
-    this.setData({ loading: true });
+    this.setData({
+      isLoading: true
+    });
     
     // 再次检查确保有用户ID
     const userInfo = userManager.getCurrentUser();
-    const userId = this.data.userId || userInfo.id || userInfo._id;
+    const userIdFromInfo = this.data.userId || userInfo.id || userInfo._id;
     
-    if (!userId) {
+    if (!userIdFromInfo) {
       logger.warn('无法加载通知：用户ID不存在');
       this.setData({ loading: false });
       wx.showToast({
@@ -87,20 +132,20 @@ Page({
       return;
     }
     
-    logger.debug(`准备加载用户[${userId}]的通知列表`);
+    logger.debug(`准备加载用户[${userIdFromInfo}]的通知列表`);
     
     const offset = this.data.currentPage * this.data.pageSize;
     const limit = this.data.pageSize;
     
     // 构建请求参数
-    const params = {
+    const queryParams = {
       limit: limit,
       offset: offset
     };
     
     // 如果有类型筛选
     if (this.data.selectedType) {
-      params.type = this.data.selectedType;
+      queryParams.type = this.data.selectedType;
     }
     
     wx.showLoading({
@@ -109,13 +154,25 @@ Page({
     });
     
     // 调用API获取通知
-    notificationAPI.getUserNotifications(userId, params)
+    notificationAPI.getUserNotifications(userIdFromInfo, queryParams)
       .then(res => {
         wx.hideLoading();
-        logger.debug('获取用户通知成功:', res);
+        logger.debug('获取用户通知成功, 完整响应:', JSON.stringify(res));
         
-        // 处理返回数据
+        // 检查响应格式
+        if (!res.notifications && res.data && res.data.notifications) {
+          logger.debug('使用res.data中的通知数据');
+          res = res.data;
+        }
+        
         const newNotifications = res.notifications || [];
+        // 记录更详细的通知信息
+        if (newNotifications.length > 0) {
+          logger.debug(`获取到${newNotifications.length}条通知，第一条:`, JSON.stringify(newNotifications[0]));
+        } else {
+          logger.debug('未获取到任何通知');
+        }
+        
         const unreadCount = res.unread_count || 0;
         const totalCount = res.total || 0;
         
@@ -124,7 +181,7 @@ Page({
         
         // 更新数据
         this.setData({
-          notifications: reset ? newNotifications : [...this.data.notifications, ...newNotifications],
+          notifications: newNotifications,
           unreadCount: unreadCount,
           totalCount: totalCount,
           loading: false,
