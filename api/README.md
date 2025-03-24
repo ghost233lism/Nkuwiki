@@ -10,7 +10,6 @@
 2. **帖子 API** - 帖子发布、查询、点赞等接口
 3. **评论 API** - 评论管理相关接口
 4. **智能体 API** - AI智能体对话和知识搜索接口
-5. **MySQL API** - 数据库直接操作接口
 
 ## 使用方法
 
@@ -18,7 +17,7 @@
 
 ```javascript
 // 引入API工具
-const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api/index');
+const { userAPI, postAPI, commentAPI, agentAPI } = require('../../utils/api/index');
 
 // 示例：获取帖子列表
 async function fetchPosts() {
@@ -41,7 +40,6 @@ async function fetchPosts() {
 
 - [用户/帖子/评论 API](./wxapp_api.md) - 微信小程序主要数据交互接口
 - [智能体 API](./agent_api.md) - AI智能体对话和知识搜索接口
-- [MySQL API](./mysql_api.md) - 数据库操作接口
 
 ## 错误处理
 

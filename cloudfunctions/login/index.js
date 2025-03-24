@@ -6,13 +6,16 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 cloud.init({
-  env: 'nkuwiki-0g6bkdy9e8455d93'
+  env: cloud.DYNAMIC_CURRENT_ENV
 })
 
-// 设置更长的超时时间
-cloud.timeout = 15000; // 15秒超时
+// 设置超时时间，单位为毫秒
+const TIMEOUT = 10000
 
+// 数据库引用
 const db = cloud.database()
+const userCollection = db.collection('users')
+const _ = db.command
 
 // 主服务器API地址
 const API_BASE_URL = 'https://nkuwiki.com'
@@ -22,247 +25,187 @@ const API_BASE_URL = 'https://nkuwiki.com'
  * @param {string} openid - 微信原始openid
  * @returns {string} - 转换后的十六进制字符串
  */
-function formatOpenid(openid) {
-  if (!openid) return '';
-  
-  // 使用md5将openid转换为一致的十六进制字符串
-  return crypto.createHash('md5').update(openid).digest('hex');
-}
-
-// 将用户信息同步到主服务器
-async function syncUserToMainServer(userData) {
-  console.log('====== 开始同步用户到主服务器 ======')
-  console.log('输入用户数据:', JSON.stringify(userData))
-  
-  if (!userData || !userData._id || !userData.openid) {
-    console.error('用户数据不完整，无法同步')
-    return {
-      success: false,
-      error: '用户数据不完整，无法同步'
-    }
+function formatOpenid(wxOpenid) {
+  // 如果wxOpenid包含特殊字符，或长度不正确，则需要特殊处理
+  if (!wxOpenid || typeof wxOpenid !== 'string') {
+    console.error('Invalid wxOpenid format:', wxOpenid)
+    return null
   }
   
+  return wxOpenid.trim()
+}
+
+// 异步函数：同步用户数据到主服务器
+async function syncUserToServer(userData) {
   try {
-    // 使用userData._id作为格式化后的openid
-    const formattedOpenid = userData._id;
-    console.log('原始openid:', userData.openid);
-    console.log('使用_id作为格式化openid:', formattedOpenid);
+    // 服务器地址从环境变量获取，如果没有设置则使用默认值
+    const serverUrl = process.env.SERVER_URL || 'https://nkuwiki.com'
     
-    // 严格按照API文档中的UserSyncRequest模型构造数据
-    const syncRequest = {
-      // 必填字段
-      "openid": formattedOpenid,
-      "unionid": userData.unionid || "",
-      "nick_name": userData.nickName || ('用户' + formattedOpenid.slice(-4)),
-      "avatar": userData.avatarUrl || "/assets/icons/default-avatar.png",
-      "gender": userData.gender || 0,
-      "country": userData.country || "",
-      "province": userData.province || "",
-      "city": userData.city || "",
-      "language": userData.language || "",
-      "university": userData.university || "南开大学",
-      "login_type": "wechat"
-    };
+    // 构建同步请求数据
+    const syncData = {
+      openid: userData.openid,
+      nickname: userData.nickName || userData.nickname || '',
+      avatar_url: userData.avatarUrl || userData.avatar_url || '',
+      gender: userData.gender || 0,
+      country: userData.country || '',
+      province: userData.province || '',
+      city: userData.city || '',
+      language: userData.language || 'zh_CN',
+      last_login: new Date().toISOString()
+    }
     
-    // 打印请求信息（减少日志量）
-    console.log('请求URL:', `${API_BASE_URL}/wxapp/users/sync`)
-    console.log('请求方法: POST')
+    console.log('Syncing user data to server:', JSON.stringify(syncData))
     
-    // 发送到主服务器
-    console.log('开始发送请求...')
-    
+    // 发送同步请求到主服务器，使用更新的API路径
     const response = await axios({
-      method: 'POST',
-      url: `${API_BASE_URL}/wxapp/users/sync`,
-      data: syncRequest,
-      timeout: 10000, // 10秒超时
+      method: 'post',
+      url: `${serverUrl}/api/wxapp/users/sync`,
+      data: syncData,
+      timeout: TIMEOUT,
       headers: {
-        'Content-Type': 'application/json',
-        'X-Cloud-Source': 'wxapp',
-        'X-Prefer-Cloud-ID': 'false'
+        'Content-Type': 'application/json'
       }
     })
     
-    // 简化日志输出
-    console.log('同步请求完成，状态码:', response.status)
+    console.log('Server sync response:', JSON.stringify(response.data))
     
-    if (response.status >= 200 && response.status < 300) {
-      console.log('用户同步到主服务器成功')
-      
-      // 返回主服务器的用户信息
+    if (response.data && response.data.code === 0) {
+      // 成功同步
       return {
         success: true,
-        status: response.status,
-        data: response.data.data || response.data,
-        message: '用户同步成功'
+        data: response.data.data || {},
+        message: '用户数据同步成功'
       }
     } else {
-      console.error(`同步用户到主服务器返回非成功状态码: ${response.status}`)
+      // 同步失败，但是API访问成功，返回服务器的错误信息
+      console.error('Server sync failed with response:', response.data)
       return {
         success: false,
-        status: response.status,
-        error: '服务器返回错误状态码'
+        message: response.data.message || '用户数据同步失败',
+        error: response.data
       }
     }
   } catch (error) {
-    // 简化错误日志
-    console.error('同步用户到主服务器失败:', error.message)
-    
+    // 异常情况，比如网络错误、超时等
+    console.error('Error syncing user to server:', error)
     return {
       success: false,
-      error: error.message,
-      details: error.response ? error.response.data : null
+      message: '同步用户数据时发生错误',
+      error: error.message || error
     }
   }
 }
 
 // 云函数入口函数
 exports.main = async (event, context) => {
-  console.log('======= 云函数开始执行 =======')
-  
   const wxContext = cloud.getWXContext()
+  const openid = formatOpenid(wxContext.OPENID)
   
-  try {
-    const now = db.serverDate()
-
-    // 微信登录 - 快速路径：先尝试只获取必要字段
-    const userResult = await db.collection('users')
-      .where({ openid: wxContext.OPENID })
-      .field({ _id: true, openid: true, loginType: true, nickName: true, avatarUrl: true })
-      .get();
-
-    let userData = null
-    let isNewUser = false
-
-    if (userResult.data.length === 0) {
-      // 用户不存在，创建新用户（使用最小化数据）
-      const newUser = {
-        openid: wxContext.OPENID,
-        loginType: 'wechat',
-        nickName: '用户' + wxContext.OPENID.slice(-4),
-        avatarUrl: '/assets/icons/default-avatar.png',
-        gender: 0,
-        university: '南开大学',
-        createTime: now,
-        updateTime: now
-      }
-
-      const addResult = await db.collection('users').add({
-        data: newUser
-      })
-
-      userData = {
-        ...newUser,
-        _id: addResult._id
-      }
-      isNewUser = true
-    } else {
-      // 用户存在，获取基本信息
-      userData = userResult.data[0]
-
-      // 如果需要，异步更新loginType（不等待结果）
-      if (!userData.loginType) {
-        db.collection('users').doc(userData._id).update({
-          data: {
-            loginType: 'wechat',
-            updateTime: now
-          }
-        }).catch(err => {
-          console.error('更新loginType失败:', err.message)
-        });
-        userData.loginType = 'wechat'
-      }
-    }
-
-    // 同步用户到主服务器 (精简版本)
-    const formattedOpenid = userData._id;
-    
-    // 构造最小化请求数据
-    const syncRequest = {
-      "openid": formattedOpenid,
-      "nick_name": userData.nickName || ('用户' + formattedOpenid.slice(-4)),
-      "avatar": userData.avatarUrl || "/assets/icons/default-avatar.png",
-      "gender": 0,
-      "university": userData.university || "南开大学",
-      "login_type": "wechat"
-    };
-    
-    // 发送到主服务器 (使用Promise.race添加额外超时保护)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('同步请求超时')), 2000)
-    );
-    
-    const syncPromise = axios({
-      method: 'POST',
-      url: `${API_BASE_URL}/wxapp/users/sync`,
-      data: syncRequest,
-      timeout: 2000, // 降低到2秒
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Cloud-Source': 'wxapp'
-      }
-    });
-    
-    // 首先准备返回对象（默认不同步）
-    const resultData = {
-      // 用户基本信息
-      _id: userData._id,
-      openid: userData._id,
-      wx_openid: userData.openid,
-      nick_name: userData.nickName || ('用户' + userData._id.slice(-4)),
-      avatar: userData.avatarUrl || '/assets/icons/default-avatar.png',
-      gender: userData.gender || 0,
-      university: userData.university || '南开大学',
-      
-      // 额外信息
-      login_type: 'wechat',
-      cloud_id: userData._id,
-      server_synced: false
-    };
-    
-    // 尝试同步，但不让它阻止返回
-    Promise.race([syncPromise, timeoutPromise])
-      .then(response => {
-        if (response.status >= 200 && response.status < 300) {
-          console.log('用户同步成功');
-          
-          // 异步更新云数据库
-          const resultUserData = response.data.data || response.data;
-          db.collection('users').doc(userData._id).update({
-            data: {
-              server_synced: true,
-              server_sync_time: db.serverDate(),
-              formatted_openid: userData._id,
-              nickName: resultUserData.nick_name || userData.nickName,
-              avatarUrl: resultUserData.avatar || userData.avatarUrl,
-              gender: resultUserData.gender || 0,
-              university: resultUserData.university || '南开大学',
-              updateTime: db.serverDate()
-            }
-          }).catch(err => {
-            console.error('用户数据异步更新失败:', err.message);
-          });
-        }
-      })
-      .catch(err => {
-        console.error('同步用户失败:', err.message);
-      });
-    
-    // 直接返回结果，不等待同步完成
-    return {
-      code: 0,
-      data: resultData,
-      message: isNewUser ? '新用户创建成功' : '登录成功',
-      syncResult: '异步同步中' // 同步结果将异步处理
-    };
-
-  } catch (err) {
-    console.error('登录失败：', err.message)
+  if (!openid) {
     return {
       code: -1,
-      message: '登录失败：' + err.message
+      message: '获取用户标识失败',
+      data: null
     }
-  } finally {
-    console.log('======= 云函数执行结束 =======')
+  }
+  
+  try {
+    // 查询是否已存在该用户
+    const userResult = await userCollection.where({
+      openid: openid
+    }).get()
+    
+    const now = new Date()
+    let userData = null
+    let isNewUser = false
+    
+    if (userResult.data.length === 0) {
+      // 新用户，创建记录
+      isNewUser = true
+      userData = {
+        openid: openid,
+        unionid: wxContext.UNIONID || '',
+        appid: wxContext.APPID || '',
+        nickName: event.nickName || '',
+        avatarUrl: event.avatarUrl || '',
+        gender: event.gender || 0,
+        country: event.country || '',
+        province: event.province || '',
+        city: event.city || '',
+        language: event.language || 'zh_CN',
+        created_at: now,
+        last_login: now,
+        // 更多用户字段可以在这里添加
+        visit_count: 1
+      }
+      
+      // 创建新用户
+      await userCollection.add({
+        data: userData
+      })
+      
+      console.log('Created new user:', openid)
+    } else {
+      // 已存在的用户，更新数据
+      userData = userResult.data[0]
+      isNewUser = false
+      
+      // 更新登录信息
+      await userCollection.where({
+        openid: openid
+      }).update({
+        data: {
+          last_login: now,
+          visit_count: _.inc(1)
+        }
+      })
+      
+      console.log('Updated existing user:', openid)
+    }
+    
+    // 异步同步到主服务器，不阻塞响应
+    let syncPromise = syncUserToServer({
+      openid: openid,
+      nickName: userData.nickName || event.nickName || '',
+      avatarUrl: userData.avatarUrl || event.avatarUrl || '',
+      gender: userData.gender || event.gender || 0,
+      country: userData.country || event.country || '',
+      province: userData.province || event.province || '',
+      city: userData.city || event.city || '',
+      language: userData.language || event.language || 'zh_CN'
+    })
+    
+    // 设置超时
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Sync timeout')), TIMEOUT)
+    )
+    
+    // 不等待同步完成，只记录日志
+    Promise.race([syncPromise, timeoutPromise])
+      .then(result => {
+        console.log('User sync completed:', JSON.stringify(result))
+      })
+      .catch(error => {
+        console.error('User sync failed:', error)
+        // 同步失败不影响登录流程
+      })
+    
+    // 立即返回登录成功
+    return {
+      code: 0,
+      message: isNewUser ? '新用户创建成功' : '用户登录成功',
+      data: {
+        openid: openid,
+        isNewUser: isNewUser,
+        userData: userData
+      }
+    }
+  } catch (error) {
+    console.error('Login error:', error)
+    return {
+      code: -1,
+      message: '用户登录失败：' + (error.message || error),
+      data: null
+    }
   }
 }

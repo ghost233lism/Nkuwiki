@@ -14,112 +14,302 @@ Page({
     isLoggedIn: false,
     tokenCount: 0, // 用户token数量
     isLogin: false,
-    forceRefresh: false
+    forceRefresh: false,
+    hasUserInfo: false,
+    canIUseGetUserProfile: false,
+    loading: true,
+    stats: {
+      posts: 0,
+      comments: 0,
+      likes: 0,
+      favorites: 0,
+      follows: 0,
+      followers: 0
+    }
   },
 
   onLoad(options) {
-    // 使用userManager获取用户信息
-    const userInfo = userManager.getCurrentUser();
-    const isLoggedIn = userManager.isLoggedIn();
-    
     this.setData({
-      userInfo,
-      loginType: userInfo?.loginType || '',
-      isLoggedIn
+      canIUseGetUserProfile: typeof wx.getUserProfile === 'function'
     });
-
+    
     // 检查登录状态
-    if (userInfo && userInfo.id) {
+    const isLoggedIn = userManager.isLoggedIn();
+    const userInfo = userManager.getCurrentUser();
+    
+    logger.debug('个人页面加载，登录状态:', isLoggedIn);
+    
+    if (isLoggedIn && userInfo) {
       this.setData({
+        userInfo: userInfo,
+        hasUserInfo: true,
         isLogin: true,
-        userInfo: userInfo
+        isLoggedIn: true,
+        loading: false
       });
       
-      // 获取用户数据
-      this.refreshUserData();
-      
-      // 添加这一行：尝试手动获取用户信息
-      this.fetchUserInfo();
+      // 获取用户统计数据
+      this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
     } else {
       this.setData({
-        isLogin: false
+        isLoggedIn: false,
+        loading: false
       });
     }
   },
 
   onShow() {
-    // 添加用户ID调试信息
-    const idDebugInfo = userManager.debugUserId();
-    console.debug('用户ID调试信息:', idDebugInfo);
-    
-    // 检查是否需要强制刷新
-    const needRefresh = this.data.forceRefresh || wx.getStorageSync('needRefreshUserInfo');
-    if (needRefresh) {
-      console.info('检测到强制刷新标记，清除缓存并刷新用户数据');
-      // 清除刷新标记
-      this.setData({ forceRefresh: false });
-      wx.removeStorageSync('needRefreshUserInfo');
-      // 清除所有用户数据缓存
-      wx.removeStorageSync('_cached_user_info');
-      
-      // 立即重新获取用户信息 
-      this.fetchUserInfo();
-    }
-    
-    // 每次页面显示时都强制从storage获取最新用户信息
-    // 注意：不要使用缓存，确保每次都获取最新数据
-    wx.removeStorageSync('_cached_user_info');
-    
-    // 从存储获取最新用户信息
-    const userInfo = userManager.getCurrentUser();
+    // 每次显示页面时重新检查登录状态
     const isLoggedIn = userManager.isLoggedIn();
+    const userInfo = userManager.getCurrentUser();
     
-    console.debug('当前用户信息:', userInfo);
-    console.debug('登录状态:', isLoggedIn);
+    logger.debug('个人页面显示，登录状态:', isLoggedIn);
     
-    // 检查用户信息是否有更新
-    const hasUserInfoChanged = JSON.stringify(userInfo) !== JSON.stringify(this.data.userInfo);
-    if (hasUserInfoChanged) {
-      console.info('用户信息已更新，刷新界面');
-    }
-    
-    this.setData({
-      userInfo,
-      loginType: userInfo?.loginType || '',
-      isLoggedIn
-    });
-    
-    // 检查登录状态是否变化
-    if (isLoggedIn && (!this.data.isLogin || !this.data.isLoggedIn || hasUserInfoChanged || needRefresh)) {
-      // 登录状态变化或用户信息变化，更新登录状态并刷新数据
-      console.debug('登录状态或用户信息发生变化，刷新数据');
+    if (isLoggedIn && userInfo) {
+      // 用户已登录，更新信息
       this.setData({
-        isLogin: true
+        userInfo: userInfo,
+        hasUserInfo: true,
+        isLogin: true,
+        isLoggedIn: true
       });
       
-      // 立即执行数据获取
-      this.refreshUserData();
-      
-      // 异步获取完整用户信息
-      wx.nextTick(() => {
-        this.fetchUserInfo();
-      });
-    } else if (!isLoggedIn && (this.data.isLogin || this.data.isLoggedIn)) {
-      // 退出登录
-      console.debug('登录状态发生变化：从已登录变为未登录');
+      // 更新用户统计数据
+      this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+    } else if (!isLoggedIn && this.data.isLoggedIn) {
+      // 用户已登出，更新状态
       this.setData({
+        userInfo: null,
+        hasUserInfo: false,
         isLogin: false,
-        likeCount: 0,
-        postCount: 0,
-        followedCount: 0,
-        followerCount: 0,
-        tokenCount: 0
+        isLoggedIn: false
       });
-    } else if (isLoggedIn) {
-      // 已登录，强制刷新用户统计数据
-      console.debug('已处于登录状态，刷新用户数据');
-      this.refreshUserData();
     }
+  },
+
+  // 获取用户统计数据
+  getUserStats(userId) {
+    if (!userId) {
+      logger.error('获取用户统计数据失败：缺少用户ID');
+      return;
+    }
+    
+    // 调用API获取用户统计信息
+    userAPI.getUserStats(userId)
+      .then(res => {
+        logger.debug('获取到用户统计信息:', res);
+        
+        // 更新数据，兼容不同API返回格式
+        this.setData({
+          postCount: res.posts_count || 0,
+          likeCount: res.likes_received || 0,
+          followedCount: res.following_count || 0,
+          followerCount: res.followers_count || 0,
+          
+          // 同时更新stats对象以兼容旧代码
+          stats: {
+            posts: res.posts_count || 0,
+            comments: res.comments_count || 0,
+            likes: res.likes_received || 0,
+            favorites: res.favorites_count || 0,
+            follows: res.following_count || 0,
+            followers: res.followers_count || 0
+          }
+        });
+      })
+      .catch(err => {
+        logger.error('获取用户统计失败:', err);
+        
+        // 出错时设置默认值，避免显示NaN
+        this.setData({
+          postCount: 0,
+          likeCount: 0,
+          followedCount: 0,
+          followerCount: 0
+        });
+      });
+  },
+
+  getUserProfile(e) {
+    // 推荐使用wx.getUserProfile获取用户信息，开发者每次通过该接口获取用户个人信息均需用户确认
+    wx.getUserProfile({
+      desc: '用于完善用户资料',
+      success: (res) => {
+        this.setData({
+          loading: true
+        });
+        
+        userManager.login(res.userInfo)
+          .then(userInfo => {
+            this.setData({
+              userInfo: userInfo,
+              hasUserInfo: true,
+              isLogin: true,
+              loading: false
+            });
+            
+            // 获取用户统计数据
+            this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+          })
+          .catch(err => {
+            logger.error('用户登录失败:', err);
+            this.setData({
+              loading: false
+            });
+            
+            wx.showToast({
+              title: '登录失败',
+              icon: 'none'
+            });
+          });
+      },
+      fail: (err) => {
+        logger.error('获取用户信息失败:', err);
+        wx.showToast({
+          title: '获取用户信息失败',
+          icon: 'none'
+        });
+      }
+    });
+  },
+
+  // 常规登录（不使用getUserProfile）
+  getUserInfo(e) {
+    if (e.detail.userInfo) {
+      this.setData({
+        loading: true
+      });
+      
+      userManager.login(e.detail.userInfo)
+        .then(userInfo => {
+          this.setData({
+            userInfo: userInfo,
+            hasUserInfo: true,
+            isLogin: true,
+            loading: false
+          });
+          
+          // 获取用户统计数据
+          this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+        })
+        .catch(err => {
+          logger.error('用户登录失败:', err);
+          this.setData({
+            loading: false
+          });
+          
+          wx.showToast({
+            title: '登录失败',
+            icon: 'none'
+          });
+        });
+    }
+  },
+
+  // 跳转到我的发布
+  navigateToMyPosts() {
+    if (!this.data.isLogin) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: '/pages/myPosts/myPosts'
+    });
+  },
+
+  // 跳转到我的评论
+  navigateToMyComments() {
+    if (!this.data.isLogin) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: '/pages/myComments/myComments'
+    });
+  },
+
+  // 跳转到我的收藏
+  navigateToMyFavorites() {
+    if (!this.data.isLogin) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: '/pages/myFavorites/myFavorites'
+    });
+  },
+
+  // 跳转到通知页面
+  navigateToNotifications() {
+    if (!this.data.isLogin) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: '/pages/notifications/notifications'
+    });
+  },
+
+  // 跳转到设置页面
+  navigateToSettings() {
+    if (!this.data.isLogin) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: '/pages/settings/settings'
+    });
+  },
+
+  // 登出
+  logout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '确定要退出登录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          userManager.logout();
+          this.setData({
+            userInfo: null,
+            hasUserInfo: false,
+            isLogin: false,
+            stats: {
+              posts: 0,
+              comments: 0,
+              likes: 0,
+              favorites: 0,
+              follows: 0,
+              followers: 0
+            }
+          });
+          
+          wx.showToast({
+            title: '已退出登录',
+            icon: 'success'
+          });
+        }
+      }
+    });
   },
 
   // 获取用户发帖数量
@@ -407,35 +597,6 @@ Page({
     return true;
   },
 
-  // 退出登录
-  logout() {
-    wx.showModal({
-      title: '退出登录',
-      content: '确定要退出登录吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // 调用userManager的登出方法
-          userManager.logout();
-          
-          this.setData({
-            userInfo: null,
-            loginType: '',
-            isLoggedIn: false,
-            likeCount: 0,
-            postCount: 0,
-            followedCount: 0,
-            followerCount: 0
-          });
-          
-          wx.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          });
-        }
-      }
-    });
-  },
-
   // 跳转到登录页
   goToLogin() {
     wx.navigateTo({
@@ -459,48 +620,6 @@ Page({
     wx.navigateTo({
       url: '/pages/profile/feedback/feedback',
     });
-  },
-  
-  // 跳转到消息通知页面
-  async goToNotifications() {
-    if (!this.checkLogin()) return;
-    
-    try {
-      // 先尝试刷新用户信息
-      await this.fetchUserInfo();
-      
-      // 获取最新用户信息
-      const userInfo = userManager.getCurrentUser();
-      const userId = userInfo?.id || userInfo?._id;
-      
-      // 检查用户ID是否存在
-      if (!userId) {
-        console.warn('无法跳转到通知页面：用户ID不存在');
-        wx.showToast({
-          title: '获取用户信息失败',
-          icon: 'none'
-        });
-        return;
-      }
-      
-      console.debug('跳转到通知页面，用户ID:', userId);
-      wx.navigateTo({
-        url: '/pages/notifications/notifications',
-        fail: (err) => {
-          console.error('跳转到通知页面失败:', err);
-          wx.showToast({
-            title: '页面跳转失败',
-            icon: 'none'
-          });
-        }
-      });
-    } catch (error) {
-      console.error('准备跳转到通知页面时发生错误:', error);
-      wx.showToast({
-        title: '获取用户信息失败',
-        icon: 'none'
-      });
-    }
   },
   
   // 跳转到关于我们页面

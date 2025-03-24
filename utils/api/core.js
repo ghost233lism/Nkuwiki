@@ -64,9 +64,8 @@ const API = {
   
   // 各模块前缀
   PREFIX: {
-    WXAPP: '/wxapp',
-    AGENT: '/agent',
-    MYSQL: '/mysql'
+    WXAPP: '/api/wxapp',
+    AGENT: '/api/agent'
   },
 
   // HTTP状态码
@@ -464,10 +463,17 @@ const request = (options = {}) => {
  * @returns {string} 处理后的头像URL
  */
 function processAvatarUrl(avatarUrl) {
-  // 默认头像路径，使用本地资源
-  const DEFAULT_AVATAR = '/assets/icons/default-avatar.png';
+  // 默认头像路径，优先使用云端默认图
+  const DEFAULT_AVATAR = 'cloud://nkuwiki-0g6bkdy9e8455d93.6e6b-nkuwiki-0g6bkdy9e8455d93-1319858646/static/default-avatar.png';
+  // 备用头像路径，使用配置中的base_url
+  const FALLBACK_AVATAR = API.BASE_URL + '/static/default-avatar.png';
   
   if (!avatarUrl) {
+    return DEFAULT_AVATAR;
+  }
+  
+  // 如果URL包含default.png，使用云端默认头像
+  if (avatarUrl.includes('default.png')) {
     return DEFAULT_AVATAR;
   }
   

@@ -376,14 +376,16 @@ Page({
     
     // 尝试API方式发帖
     const tryApiPost = async () => {
+      const { postAPI, logger } = require('../../utils/api/index');
+      
       try {
-        console.debug('开始API方式发帖');
+        logger.debug('开始API方式发帖');
         
         // 上传图片到云存储
         const cloudImages = await uploadImages(processedImages);
         
         if (cloudImages.length !== processedImages.length) {
-          console.debug('有图片上传失败，API方式可能无法继续');
+          logger.warn('有图片上传失败，可能无法继续发帖');
           wx.hideLoading();
           wx.showToast({
             title: '图片上传失败，请重试',
@@ -392,61 +394,91 @@ Page({
           return false;
         }
         
-        // 获取用户头像URL，支持微信云存储fileID
-        const avatarUrl = userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png';
-        console.debug('用户头像URL:', avatarUrl);
+        // 获取用户信息
+        const avatarUrl = userInfo.avatar_url || userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png';
+        const nickName = userInfo.nickname || userInfo.nick_name || userInfo.nickName || '南开大学用户';
         
-        // 准备要发送到API的数据
+        logger.debug('用户昵称和头像:', nickName, avatarUrl);
+        
+        // 准备要发送到API的数据 - 适配新API格式
         const postData = {
-          openid: userInfo.openid,
-          title: title,
-          content: content,
+          title: title.trim(),
+          content: content.trim(),
           images: cloudImages,
           tags: [],
+          is_public: this.data.isPublic,
+          allow_comment: this.data.allowComment,
+          // 兼容字段
+          openid: userInfo.openid,
           category_id: null,
           location: '',
-          nick_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
+          nick_name: nickName,
           avatar: avatarUrl
         };
         
-        console.debug('API数据准备完成，准备发送请求');
+        logger.debug('帖子数据准备完成');
         
         // 调用API发布帖子
-        const { postAPI } = require('../../utils/api/index');
-        const res = await postAPI.createPost(postData);
+        const result = await postAPI.createPost(postData);
+        logger.debug('发帖API调用结果:', JSON.stringify(result).substring(0, 200) + '...');
         
-        console.debug('API调用结果:', res);
-        
-        // 检查返回结果是否包含错误信息
-        if (res && res.success === false) {
-          console.error('发帖API返回错误:', res.error);
+        // 检查标准API响应格式
+        if (result && result.code === 200 && result.data) {
+          // 成功发帖 - 新API格式
+          wx.hideLoading();
+          
+          // 设置首页需要刷新
+          app.globalData.needRefreshIndexPosts = true;
+          
+          // 显示成功提示并返回
+          wx.showToast({
+            title: '发布成功',
+            icon: 'success',
+            duration: 1500,
+            success: function() {
+              setTimeout(() => {
+                wx.navigateBack();
+              }, 1500);
+            }
+          });
+          return true;
+        } else if (result && result.success === true) {
+          // 兼容旧格式
+          wx.hideLoading();
+          app.globalData.needRefreshIndexPosts = true;
+          wx.showToast({
+            title: '发布成功',
+            icon: 'success',
+            duration: 1500,
+            success: function() {
+              setTimeout(() => {
+                wx.navigateBack();
+              }, 1500);
+            }
+          });
+          return true;
+        } else {
+          // 有错误信息
+          const errorMsg = (result && result.message) || 
+                        (result && result.error) || 
+                        '发布失败，请稍后重试';
+          
+          logger.error('发帖API返回错误:', errorMsg);
           wx.hideLoading();
           wx.showToast({
-            title: res.error || '发布失败',
-            icon: 'none'
+            title: errorMsg,
+            icon: 'none',
+            duration: 2000
           });
           return false;
         }
-        
-        wx.hideLoading();
-        // 设置首页需要刷新
-        app.globalData.needRefreshIndexPosts = true;
-        wx.showToast({
-          title: '发布成功',
-          icon: 'success',
-          success: function() {
-            setTimeout(() => {
-              wx.navigateBack();
-            }, 1500);
-          }
-        });
-        return true;
       } catch (err) {
-        console.debug('API发帖失败:', err);
+        logger.error('API发帖过程出错:', err);
         wx.hideLoading();
         wx.showToast({
-          title: '发布失败，请稍后重试',
-          icon: 'none'
+          title: err.message || '发布失败，请稍后重试',
+          icon: 'none',
+          duration: 2000
         });
         return false;
       }
@@ -519,6 +551,8 @@ Page({
   },
 
   onLoad: function() {
+    const { logger } = require('../../utils/api/index');
+    
     this.setData({
       title: '',
       content: '',
@@ -531,7 +565,8 @@ Page({
       allowComment: true,
       wikiKnowledge: false,
       currentStyle: 'formal',
-      isEditingMode: false
+      isEditingMode: false,
+      canSubmit: false
     });
     
     // 检查登录状态
@@ -539,23 +574,47 @@ Page({
     const isLoggedIn = userManager.isLoggedIn();
     const userInfo = userManager.getCurrentUser();
     
-    console.debug('页面加载时登录状态:', isLoggedIn);
-    console.debug('当前用户信息:', userInfo);
+    logger.debug('帖子发布页加载，登录状态:', isLoggedIn);
+    
+    // 如果未登录，跳转到登录页
+    if (!isLoggedIn) {
+      logger.debug('用户未登录，跳转到登录页');
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000
+      });
+      
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pages/login/login'
+        });
+      }, 1000);
+    }
   },
   
   // 页面显示时再次检查登录状态
   onShow: function() {
+    const { logger } = require('../../utils/api/index');
     const userManager = require('../../utils/user_manager');
     const isLoggedIn = userManager.isLoggedIn();
     
-    console.debug('页面显示时登录状态:', isLoggedIn);
+    logger.debug('帖子发布页显示，登录状态:', isLoggedIn);
     
+    // 如果未登录，跳转到登录页
     if (!isLoggedIn) {
-      console.debug('检测到未登录状态，尝试查看原因');
-      const token = wx.getStorageSync('token');
-      const userInfo = userManager.getCurrentUser();
-      console.debug('Token存在:', !!token);
-      console.debug('用户ID存在:', !!(userInfo && userInfo.id));
+      logger.debug('用户未登录，跳转到登录页');
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none',
+        duration: 2000
+      });
+      
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pages/login/login'
+        });
+      }, 1000);
     }
   }
 }) 

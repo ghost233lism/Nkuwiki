@@ -3,7 +3,27 @@
 
 const { API, logger, request } = require('./core');
 const userManager = require('../../utils/user_manager');
+const postAPI = require('./post');
 
+/**
+ * 当本地/远程获取用户信息失败时的fallback处理
+ * @param {string} openid - 用户openid
+ * @returns {Object} 本地用户信息
+ */
+function getLocalFallbackUserInfo(openid) {
+  logger.warn(`无法从服务器获取用户信息，尝试使用本地缓存, openid=${openid}`);
+  const localUser = userManager.getCurrentUser();
+  
+  if (localUser && localUser.openid === openid) {
+    return Promise.resolve(localUser);
+  }
+  
+  return Promise.reject(new Error('无法获取用户信息'));
+}
+
+/**
+ * 用户API模块
+ */
 const userAPI = {
   /**
    * 微信登录 - 由云函数处理，此函数仅作为API接口的占位
@@ -21,13 +41,51 @@ const userAPI = {
   /**
    * 同步微信用户信息
    * @param {Object} userData - 用户数据
+   * @param {string} userData.openid - 微信openid
+   * @param {string} userData.nick_name - 用户昵称
+   * @param {string} userData.avatar - 用户头像URL
+   * @param {number} userData.gender - 性别 0-未知 1-男 2-女
+   * @param {Object} userData.location - 位置信息
+   * @param {string} userData.language - 语言
    * @returns {Promise} - 请求Promise 
    */
   syncUser: (userData) => {
+    // 检查必要字段
+    if (!userData.openid) {
+      logger.error('同步用户信息失败: 缺少openid');
+      return Promise.reject(new Error('缺少必要参数: openid'));
+    }
+    
+    // 准备请求数据
+    const requestData = {
+      openid: userData.openid,
+      nick_name: userData.nick_name || userData.nickName || '',
+      avatar: userData.avatar || userData.avatarUrl || '',
+      gender: userData.gender || 0
+    };
+    
+    // 位置信息
+    if (userData.location || (userData.province && userData.city)) {
+      requestData.location = userData.location || {
+        province: userData.province || '',
+        city: userData.city || '',
+        country: userData.country || ''
+      };
+    }
+    
+    // 语言
+    if (userData.language) {
+      requestData.language = userData.language;
+    }
+    
+    logger.debug('同步用户信息:', JSON.stringify(requestData));
+    
     return request({
       url: `${API.PREFIX.WXAPP}/users/sync`,
       method: 'POST',
-      data: userData
+      data: requestData,
+      showLoading: true,
+      loadingText: '同步用户信息...'
     });
   },
 
@@ -49,7 +107,7 @@ const userAPI = {
       retryCount: 3,
       statusCodeCallback: {
         404: () => {
-          logger.warn(`用户openid ${openid} 不存在，尝试获取当前用户信息`);
+          logger.debug(`用户openid ${openid} 不存在，尝试获取当前用户信息`);
           return request({
             url: `${API.PREFIX.WXAPP}/users/me`,
             method: 'GET',
@@ -86,6 +144,10 @@ const userAPI = {
   /**
    * 获取用户列表
    * @param {Object} params - 查询参数
+   * @param {number} params.limit - 返回记录数量限制，默认20，最大100
+   * @param {number} params.offset - 分页偏移量，默认0
+   * @param {number} params.status - 用户状态：1-正常，0-禁用，可选
+   * @param {string} params.order_by - 排序方式，默认"create_time DESC"
    * @returns {Promise} - 请求Promise
    */
   getUsers: (params = {}) => {
@@ -114,7 +176,7 @@ const userAPI = {
       return Promise.reject(new Error('更新数据无效'));
     }
     
-    logger.info(`更新用户信息, openid=${openid}, 数据:`, JSON.stringify(userData));
+    logger.debug(`更新用户信息, openid=${openid}, 数据:`, JSON.stringify(userData));
     
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}`,
@@ -123,7 +185,7 @@ const userAPI = {
       showError: showError,
       retryCount: 2,
       success: (res) => {
-        logger.info('用户信息更新成功:', JSON.stringify(res));
+        logger.debug('用户信息更新成功:', JSON.stringify(res));
         return res;
       },
       fail: (error) => {
@@ -152,7 +214,7 @@ const userAPI = {
    */
   getUserFollowStats: (openid) => {
     if (!openid) {
-      logger.warn('获取关注统计失败: 没有提供openid');
+      logger.debug('获取关注统计失败: 没有提供openid');
       return Promise.resolve({ followedCount: 0, followerCount: 0 });
     }
     
@@ -173,7 +235,7 @@ const userAPI = {
    */
   getUserToken: (openid) => {
     if (!openid) {
-      logger.warn('获取Token失败: 没有提供openid');
+      logger.debug('获取Token失败: 没有提供openid');
       return Promise.resolve({ token: 0 });
     }
     
@@ -233,7 +295,7 @@ const userAPI = {
    */
   getUserPosts: (openid, params = {}) => {
     if (!openid) {
-      logger.warn('获取用户帖子失败: openid为空');
+      logger.debug('获取用户帖子失败: openid为空');
       return Promise.resolve([]);
     }
     
@@ -246,45 +308,187 @@ const userAPI = {
       logger.error('获取用户帖子失败:', error);
       return [];
     });
-  }
-};
+  },
 
-/**
- * 获取本地备用用户信息，在API请求失败时使用
- * @param {string} openid - 用户openid
- * @returns {Object} - 本地备用用户信息
- */
-function getLocalFallbackUserInfo(openid) {
-  try {
-    // 尝试从本地存储获取
-    const localUserInfo = wx.getStorageSync('userInfo') || {};
-    
-    // 如果本地存储有匹配ID的用户信息，直接返回
-    if (localUserInfo && (localUserInfo.id == openid || localUserInfo.openid == openid)) {
-      logger.debug('使用本地存储的用户信息作为备用');
-      return localUserInfo;
+  /**
+   * 关注用户
+   * @param {string} targetOpenid - 目标用户openid
+   * @returns {Promise} - 请求Promise
+   */
+  followUser: (targetOpenid) => {
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      return Promise.reject(new Error('未登录用户无法执行此操作'));
     }
     
-    // 构建基础用户信息
-    return {
-      id: openid,
-      openid: openid,
-      nick_name: '未知用户',
-      avatar: '/assets/icons/default-avatar.png',
-      status: 1,
-      is_local: true
-    };
-  } catch (error) {
-    logger.error('获取本地备用用户信息失败:', error);
-    return {
-      id: openid,
-      openid: openid,
-      nick_name: '未知用户',
-      avatar: '/assets/icons/default-avatar.png',
-      status: 1,
-      is_local: true
-    };
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userInfo.openid}/follow`,
+      method: 'POST',
+      data: { 
+        target_openid: targetOpenid 
+      }
+    });
+  },
+
+  /**
+   * 取消关注用户
+   * @param {string} targetOpenid - 目标用户openid
+   * @returns {Promise} - 请求Promise
+   */
+  unfollowUser: (targetOpenid) => {
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      return Promise.reject(new Error('未登录用户无法执行此操作'));
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userInfo.openid}/unfollow`,
+      method: 'POST',
+      data: { 
+        target_openid: targetOpenid 
+      }
+    });
+  },
+
+  /**
+   * 获取用户关注列表
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserFollowing: (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}/following`,
+      method: 'GET',
+      params: params
+    });
+  },
+
+  /**
+   * 获取用户粉丝列表
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserFollowers: (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo.openid;
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}/followers`,
+      method: 'GET',
+      params: params
+    });
+  },
+
+  /**
+   * 检查是否已关注用户
+   * @param {string} targetOpenid - 目标用户openid
+   * @returns {Promise<boolean>} - 是否已关注
+   */
+  checkFollowing: (targetOpenid) => {
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      return Promise.resolve(false);
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${userInfo.openid}/check-following`,
+      method: 'GET',
+      params: { target_openid: targetOpenid },
+      showError: false
+    }).then(res => {
+      return res && res.is_following === true;
+    }).catch(() => {
+      return false;
+    });
+  },
+
+  /**
+   * 获取用户统计信息
+   * @param {string} openid - 用户openid，不传则使用当前登录用户
+   * @returns {Promise} - 请求Promise，返回用户统计信息(发帖数、获赞数、关注数、粉丝数)
+   */
+  getUserStats: (openid) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo?.openid;
+      
+      if (!openid) {
+        logger.debug('获取用户统计信息失败: 未登录且未提供openid');
+        return Promise.resolve({
+          posts_count: 0,
+          likes_received: 0,
+          following_count: 0,
+          followers_count: 0
+        });
+      }
+    }
+    
+    logger.debug(`获取用户${openid}统计信息`);
+    
+    // 由于/users/{openid}/stats接口不存在，使用组合API调用代替
+    return Promise.all([
+      // 获取用户帖子列表 - 使用getPosts函数并传入openid参数
+      postAPI.getPosts({ openid: openid }),
+      // 获取用户关注和粉丝统计
+      userAPI.getUserFollowStats(openid)
+    ])
+    .then(([postsResult, followStats]) => {
+      // 从帖子结果中提取实际的帖子数组
+      let posts = [];
+      if (Array.isArray(postsResult)) {
+        // 旧版格式
+        posts = postsResult;
+      } else if (postsResult && postsResult.posts && Array.isArray(postsResult.posts)) {
+        // 新版格式
+        posts = postsResult.posts;
+      } else if (postsResult && Array.isArray(postsResult.data)) {
+        // 另一种可能的格式
+        posts = postsResult.data;
+      }
+      
+      // 计算帖子数量
+      const postsCount = posts.length;
+      
+      // 计算获赞总数
+      let likesReceived = 0;
+      posts.forEach(post => {
+        likesReceived += parseInt(post.like_count || post.likes || 0);
+      });
+      
+      // 获取关注和粉丝数量
+      const followingCount = followStats?.followedCount || 0;
+      const followersCount = followStats?.followerCount || 0;
+      
+      // 返回统计数据
+      const stats = {
+        posts_count: postsCount,
+        likes_received: likesReceived,
+        following_count: followingCount,
+        followers_count: followersCount
+      };
+      
+      logger.debug(`用户统计数据组合结果:`, stats);
+      return stats;
+    })
+    .catch(err => {
+      logger.error('获取用户统计信息失败:', err);
+      return {
+        posts_count: 0,
+        likes_received: 0,
+        following_count: 0,
+        followers_count: 0
+      };
+    });
   }
-}
+};
 
 module.exports = userAPI; 

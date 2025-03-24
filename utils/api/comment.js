@@ -4,6 +4,9 @@
 const { API, logger, request } = require('./core');
 const userManager = require('../../utils/user_manager');
 
+/**
+ * 评论API模块
+ */
 const commentAPI = {
   /**
    * 创建评论
@@ -44,14 +47,19 @@ const commentAPI = {
   /**
    * 获取评论列表
    * @param {number|Object} postIdOrParams - 帖子ID或查询参数
+   * @param {Object} [params] - 查询参数（当第一个参数为帖子ID时使用）
+   * @param {number} [params.limit=20] - 返回记录数量限制
+   * @param {number} [params.offset=0] - 分页偏移量
+   * @param {string} [params.order_by="create_time DESC"] - 排序方式
    * @returns {Promise} - 请求Promise
    */
-  getComments: (postIdOrParams = {}) => {
+  getComments: (postIdOrParams = {}, params = {}) => {
     // 判断是否直接传入了帖子ID
     if (typeof postIdOrParams === 'string' || typeof postIdOrParams === 'number') {
       return request({
         url: `${API.PREFIX.WXAPP}/posts/${postIdOrParams}/comments`,
-        method: 'GET'
+        method: 'GET',
+        params: params
       });
     }
     
@@ -71,7 +79,7 @@ const commentAPI = {
    */
   updateComment: (commentId, commentData) => {
     // 确保只更新允许的字段
-    const allowedFields = ['content', 'images', 'status'];
+    const allowedFields = ['content', 'images', 'status', 'extra'];
     const updateData = {};
     
     allowedFields.forEach(field => {
@@ -102,30 +110,44 @@ const commentAPI = {
   /**
    * 点赞评论
    * @param {number} commentId - 评论ID
-   * @param {string} openid - 用户openid
    * @param {boolean} isLike - 是否点赞，true为点赞，false为取消点赞
    * @returns {Promise} - 请求Promise
    */
-  likeComment: (commentId, openid, isLike = true) => {
-    if (!openid) {
-      const userInfo = userManager.getCurrentUser();
-      openid = userInfo.openid;
+  likeComment: (commentId, isLike = true) => {
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('likeComment: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
     }
     
+    // 根据isLike确定请求URL和方法
+    const url = isLike 
+      ? `${API.PREFIX.WXAPP}/comments/${commentId}/like` 
+      : `${API.PREFIX.WXAPP}/comments/${commentId}/unlike`;
+    
+    const method = isLike ? 'PUT' : 'POST';
+    
     return request({
-      url: `${API.PREFIX.WXAPP}/comments/${commentId}/like`,
-      method: 'POST',
-      params: { openid, is_like: isLike }
+      url: url,
+      method: method,
+      data: { openid: userInfo.openid }
+    }).then(res => {
+      logger.debug(`${isLike ? '点赞' : '取消点赞'}评论结果:`, JSON.stringify(res));
+      return res;
+    }).catch(err => {
+      logger.error(`${isLike ? '点赞' : '取消点赞'}评论失败:`, err);
+      throw err;
     });
   },
 
   /**
-   * 添加评论
+   * 添加评论（别名方法，内部调用createComment）
    * @param {Object} params - 评论参数
    * @param {string} params.post_id - 帖子ID
    * @param {string} params.content - 评论内容
    * @param {string} [params.parent_id] - 父评论ID（回复时使用）
    * @param {string} [params.openid] - 用户openid，不传则使用当前用户
+   * @param {Array} [params.images] - 图片列表
    * @returns {Promise} - 请求Promise
    */
   addComment: (params) => {
@@ -160,7 +182,7 @@ const commentAPI = {
       content,
       openid,
       // 添加用户昵称和头像，后端要求这些字段
-      nick_name: userInfo.nickname || userInfo.nickName || '用户',
+      nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '用户',
       avatar: userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
     };
     
@@ -182,41 +204,15 @@ const commentAPI = {
       data,
       showError: true
     }).then(res => {
-      logger.info('评论API响应成功:', JSON.stringify(res));
+      logger.debug('评论API响应成功:', JSON.stringify(res));
       
       // 操作完成后，通知全局数据需要更新
       const app = getApp();
       if (app && app.globalData) {
-        // 存储最新操作结果
-        if (!app.globalData.postUpdates) {
-          app.globalData.postUpdates = {};
+        // 如果有帖子ID，更新该帖子的评论计数
+        if (post_id) {
+          notifyPostCommentUpdate(post_id);
         }
-        
-        // 如果之前已经有对这个帖子的更新，合并数据
-        const existingUpdate = app.globalData.postUpdates[post_id] || {};
-        const newCommentCount = (existingUpdate.comment_count || 0) + 1;
-        
-        logger.info('更新全局评论数据，帖子ID:', post_id, '新评论数:', newCommentCount);
-        
-        app.globalData.postUpdates[post_id] = {
-          ...existingUpdate,
-          id: post_id,
-          comment_count: newCommentCount,
-          updateTime: Date.now()
-        };
-        
-        // 设置需要更新的标志
-        app.globalData.needUpdatePosts = true;
-        
-        // 立即通知页面更新，不等待下一次同步
-        if (typeof app.notifyPagesUpdate === 'function') {
-          logger.info('调用notifyPagesUpdate通知页面更新评论状态');
-          app.notifyPagesUpdate();
-        } else {
-          logger.error('notifyPagesUpdate方法不存在或不可用');
-        }
-      } else {
-        logger.error('获取app实例或globalData失败');
       }
       
       return res;
@@ -224,7 +220,125 @@ const commentAPI = {
       logger.error('评论API请求失败:', error);
       throw error;
     });
+  },
+
+  /**
+   * 获取用户评论列表
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 查询参数
+   * @returns {Promise} - 请求Promise
+   */
+  getUserComments: (openid, params = {}) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo ? userInfo.openid : '';
+    }
+    
+    if (!openid) {
+      return Promise.reject(new Error('缺少用户openid'));
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/users/${openid}/comments`,
+      method: 'GET',
+      params: params
+    });
+  },
+
+  /**
+   * 举报评论
+   * @param {number} commentId - 评论ID
+   * @param {Object} reportData - 举报数据
+   * @param {string} reportData.reason - 举报原因
+   * @param {string} [reportData.description] - 详细描述
+   * @returns {Promise} - 请求Promise
+   */
+  reportComment: (commentId, reportData) => {
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      return Promise.reject(new Error('用户未登录，无法举报'));
+    }
+    
+    if (!reportData || !reportData.reason) {
+      return Promise.reject(new Error('缺少举报原因'));
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/comments/${commentId}/report`,
+      method: 'POST',
+      data: {
+        ...reportData,
+        openid: userInfo.openid
+      }
+    });
+  },
+  
+  /**
+   * 搜索评论
+   * @param {Object} params - 搜索参数
+   * @param {string} params.keyword - 搜索关键词
+   * @param {number} [params.page=1] - 页码
+   * @param {number} [params.page_size=10] - 每页结果数
+   * @returns {Promise} - 请求Promise
+   */
+  searchComments: (params) => {
+    if (!params || !params.keyword) {
+      return Promise.reject(new Error('缺少搜索关键词'));
+    }
+    
+    return request({
+      url: `${API.PREFIX.WXAPP}/search/comments`,
+      method: 'GET',
+      params: params
+    }).catch(err => {
+      logger.error('搜索评论失败:', err);
+      return {
+        comments: [],
+        total: 0,
+        page: params.page || 1,
+        page_size: params.page_size || 10
+      };
+    });
   }
 };
+
+/**
+ * 通知帖子评论数更新
+ * @param {string|number} postId - 帖子ID
+ */
+function notifyPostCommentUpdate(postId) {
+  try {
+    const app = getApp();
+    if (app && app.globalData) {
+      // 存储最新操作结果
+      if (!app.globalData.postUpdates) {
+        app.globalData.postUpdates = {};
+      }
+      
+      // 如果之前已经有对这个帖子的更新，合并数据
+      const existingUpdate = app.globalData.postUpdates[postId] || {};
+      const newCommentCount = (existingUpdate.comment_count || 0) + 1;
+      
+      logger.debug('更新全局评论数据，帖子ID:', postId, '新评论数:', newCommentCount);
+      
+      app.globalData.postUpdates[postId] = {
+        ...existingUpdate,
+        id: postId,
+        comment_count: newCommentCount,
+        updateTime: Date.now()
+      };
+      
+      // 设置需要更新的标志
+      app.globalData.needUpdatePosts = true;
+      
+      // 通知页面需要刷新
+      if (typeof app.notifyPagesUpdate === 'function') {
+        app.notifyPagesUpdate();
+      }
+    }
+  } catch (error) {
+    logger.error('通知帖子评论更新失败:', error);
+  }
+}
 
 module.exports = commentAPI; 

@@ -40,7 +40,7 @@
 
 ```javascript
 // 引入API模块
-const { userAPI, postAPI, commentAPI, agentAPI, mysqlAPI } = require('../../utils/api/index');
+const { userAPI, postAPI, commentAPI, agentAPI } = require('../../utils/api/index');
 ```
 
 ### 示例：加载帖子列表

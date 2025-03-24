@@ -2,6 +2,7 @@ const app = getApp()
 const config = app.globalData.config || {};
 const API_BASE_URL = config.services?.app?.base_url || 'https://nkuwiki.com';
 const towxml = require('../../wxcomponents/towxml/index');
+const { userAPI, postAPI, commentAPI, searchAPI, logger } = require('../../utils/api/index');
 
 // 简单的Markdown解析函数
 function parseMarkdown(markdown) {
@@ -18,11 +19,11 @@ function parseMarkdown(markdown) {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     
-    // 处理链接和图片，提升优先级
+    // 处理链接和图片
     .replace(/!\[(.*?)\]\((.*?)\)/g, '<navigator url="/pages/webview/webview?url=$2" class="md-link">$1</navigator>')
     .replace(/\[(.*?)\]\((.*?)\)/g, '<navigator url="/pages/webview/webview?url=$2" class="md-link">$1</navigator>')
     
-    // 处理数字编号列表，改进匹配方式
+    // 处理数字编号列表
     .replace(/^(\d+)[.、：:]\s*(.*?)$/gm, '<view class="md-li"><text class="md-li-num">$1.</text> $2</view>')
     
     // 无序列表
@@ -57,7 +58,7 @@ Page({
     markdownHtml: '',
     loading: false,
     currentPage: 1,
-    pageSize: 10,
+    pageSize: 20,
     hasMore: true,
     baseUrl: app.globalData.config.services.app.base_url,
     isStreaming: false,
@@ -70,7 +71,12 @@ Page({
     _lastMarkdownHtml: '',
     usePlainText: false,  // 是否使用纯文本模式（不使用富文本渲染）
     textContent: '',  // 存储纯文本内容
-    richTextContent: null  // 存储美化后的文本内容
+    richTextContent: null,  // 存储美化后的文本内容
+    activeTab: 'all', // 当前活跃的标签：all-全部，post-帖子，comment-评论，user-用户
+    isLoading: false, // 加载状态
+    searchDone: false, // 搜索是否完成
+    loadingText: '搜索中...',
+    totalFound: 0 // 搜索结果总数
   },
 
   // 简单高效的Markdown转HTML函数
@@ -210,9 +216,9 @@ Page({
   },
 
   // 处理搜索事件
-  handleSearch() {
-    const { searchValue } = this.data;
-    if (!searchValue.trim()) {
+  handleSearch(e) {
+    const keyword = e.detail.value || this.data.searchValue;
+    if (!keyword.trim()) {
       wx.showToast({
         title: '请输入搜索内容',
         icon: 'none'
@@ -220,17 +226,106 @@ Page({
       return;
     }
 
+    // 清除上一次的搜索结果
     this.setData({
-      textContent: '',  // 清空之前的内容
-      richTextContent: null, // 清空富文本内容
+      searchValue: keyword,
+      searchResults: [],
       loading: true,
-      isStreaming: false // 不立即显示流式状态，避免出现"正在生成"
+      searchDone: false,
+      currentPage: 1,
+      hasMore: true,
+      totalFound: 0
     });
 
-    console.log(`开始搜索: ${searchValue}`);
+    // 记录搜索历史
+    this.recordSearchHistory(keyword);
+
+    // 根据当前活跃的标签执行不同的搜索
+    switch(this.data.activeTab) {
+      case 'post':
+        this.searchPosts(keyword);
+        break;
+      case 'comment':
+        this.searchComments(keyword);
+        break;
+      case 'user':
+        this.searchUsers(keyword);
+        break;
+      case 'all':
+      default:
+        this.searchAll(keyword);
+        break;
+    }
+
+    logger.debug('执行搜索:', keyword, '类型:', this.data.activeTab);
+  },
+
+  // 切换标签
+  switchTab(e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (tab === this.data.activeTab) return;
+
+    this.setData({
+      activeTab: tab,
+      searchResults: [],
+      currentPage: 1,
+      hasMore: true,
+      totalFound: 0,
+      searchDone: false
+    });
+
+    // 如果有搜索关键词，切换标签后自动搜索
+    if (this.data.searchValue) {
+      this.handleSearch({ detail: { value: this.data.searchValue } });
+    }
+  },
+
+  // 记录搜索历史
+  recordSearchHistory(keyword) {
+    let history = this.data.searchHistory || [];
     
-    // 发起流式搜索请求
-    this.startSimpleStream(searchValue);
+    // 如果已存在相同的关键词，移除它
+    history = history.filter(item => item !== keyword);
+    
+    // 将新关键词添加到开头
+    history.unshift(keyword);
+    
+    // 限制历史记录数量为50条
+    if (history.length > 50) {
+      history = history.slice(0, 50);
+    }
+    
+    // 记录搜索行为
+    logger.debug('用户搜索:', searchText, '类型:', this.data.activeTab);
+  },
+
+  // 清除搜索历史
+  clearSearchHistory() {
+    wx.showModal({
+      title: '确认清除',
+      content: '确定要清除所有搜索历史吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({ searchHistory: [] });
+          try {
+            wx.removeStorageSync('searchHistory');
+          } catch (e) {
+            logger.error('清除搜索历史失败:', e);
+          }
+          wx.showToast({
+            title: '已清除历史记录',
+            icon: 'success'
+          });
+        }
+      }
+    });
+  },
+
+  // 使用历史记录进行搜索
+  useHistoryItem(e) {
+    const keyword = e.currentTarget.dataset.keyword;
+    this.setData({ searchValue: keyword });
+    this.handleSearch({ detail: { value: keyword } });
   },
 
   // 实时美化文本内容，识别链接、Email等
@@ -766,6 +861,16 @@ Page({
     
     // 初始化会话历史
     this.loadChatHistory();
+
+    // 从本地存储加载搜索历史
+    try {
+      const history = wx.getStorageSync('searchHistory');
+      if (history) {
+        this.setData({ searchHistory: JSON.parse(history) });
+      }
+    } catch (e) {
+      logger.error('加载搜索历史失败:', e);
+    }
   },
   
   onUnload: function() {
@@ -1085,5 +1190,253 @@ Page({
       recorderManager.stop();
       wx.hideToast();
     }, 3000);
+  },
+
+  // 添加新的分类搜索函数
+  searchPosts: function(keyword) {
+    this.setData({
+      isLoading: true,
+      loadingText: '搜索帖子中...'
+    });
+
+    const params = {
+      keyword: keyword,
+      type: 'post',
+      limit: this.data.pageSize,
+      offset: (this.data.currentPage - 1) * this.data.pageSize
+    };
+
+    searchAPI.search(params)
+      .then(res => {
+        logger.debug('搜索帖子结果:', res);
+        this.handleSearchResults(res);
+      })
+      .catch(err => {
+        logger.error('搜索帖子失败:', err);
+        this.handleSearchError(err);
+      });
+  },
+
+  searchComments: function(keyword) {
+    this.setData({
+      isLoading: true,
+      loadingText: '搜索评论中...'
+    });
+
+    const params = {
+      keyword: keyword,
+      type: 'comment',
+      limit: this.data.pageSize,
+      offset: (this.data.currentPage - 1) * this.data.pageSize
+    };
+
+    searchAPI.search(params)
+      .then(res => {
+        logger.debug('搜索评论结果:', res);
+        this.handleSearchResults(res);
+      })
+      .catch(err => {
+        logger.error('搜索评论失败:', err);
+        this.handleSearchError(err);
+      });
+  },
+
+  searchUsers: function(keyword) {
+    this.setData({
+      isLoading: true,
+      loadingText: '搜索用户中...'
+    });
+
+    const params = {
+      keyword: keyword,
+      type: 'user',
+      limit: this.data.pageSize,
+      offset: (this.data.currentPage - 1) * this.data.pageSize
+    };
+
+    searchAPI.search(params)
+      .then(res => {
+        logger.debug('搜索用户结果:', res);
+        this.handleSearchResults(res);
+      })
+      .catch(err => {
+        logger.error('搜索用户失败:', err);
+        this.handleSearchError(err);
+      });
+  },
+
+  searchAll: function(keyword) {
+    this.setData({
+      isLoading: true,
+      loadingText: '搜索中...'
+    });
+
+    const params = {
+      keyword: keyword,
+      type: 'all',
+      limit: this.data.pageSize,
+      offset: (this.data.currentPage - 1) * this.data.pageSize
+    };
+
+    searchAPI.search(params)
+      .then(res => {
+        logger.debug('搜索所有结果:', res);
+        this.handleSearchResults(res);
+      })
+      .catch(err => {
+        logger.error('搜索失败:', err);
+        this.handleSearchError(err);
+      });
+  },
+
+  // 处理搜索结果
+  handleSearchResults(res) {
+    // 检查响应格式
+    let results = [];
+    let total = 0;
+
+    if (res.data && res.data.results) {
+      results = res.data.results;
+      total = res.data.total || results.length;
+    } else if (res.results) {
+      results = res.results;
+      total = res.total || results.length;
+    }
+
+    // 如果是加载更多，则追加结果
+    if (this.data.currentPage > 1) {
+      results = [...this.data.searchResults, ...results];
+    }
+
+    // 检查是否还有更多结果
+    const hasMore = results.length < total;
+
+    this.setData({
+      searchResults: results,
+      isLoading: false,
+      searchDone: true,
+      hasMore: hasMore,
+      totalFound: total,
+      loading: false
+    });
+  },
+
+  // 处理搜索错误
+  handleSearchError(err) {
+    this.setData({
+      isLoading: false,
+      searchDone: true,
+      loading: false
+    });
+
+    wx.showToast({
+      title: '搜索失败，请重试',
+      icon: 'none'
+    });
+  },
+
+  // 加载更多结果
+  loadMore() {
+    if (!this.data.hasMore || this.data.isLoading) return;
+
+    this.setData({
+      currentPage: this.data.currentPage + 1,
+      isLoading: true,
+      loadingText: '加载更多...'
+    });
+
+    // 执行当前类型的搜索加载更多
+    switch(this.data.activeTab) {
+      case 'post':
+        this.searchPosts(this.data.searchValue);
+        break;
+      case 'comment':
+        this.searchComments(this.data.searchValue);
+        break;
+      case 'user':
+        this.searchUsers(this.data.searchValue);
+        break;
+      case 'all':
+      default:
+        this.searchAll(this.data.searchValue);
+        break;
+    }
+  },
+
+  // 查看搜索结果详情
+  viewResultDetail(e) {
+    const item = e.currentTarget.dataset.item;
+    
+    if (!item || !item.type) {
+      logger.error('查看结果详情失败: 无效的项目数据', item);
+      return;
+    }
+
+    switch(item.type) {
+      case 'post':
+        wx.navigateTo({
+          url: `/pages/postDetail/postDetail?id=${item.id}`
+        });
+        break;
+      case 'comment':
+        // 跳转到评论所在的帖子
+        wx.navigateTo({
+          url: `/pages/postDetail/postDetail?id=${item.post_id}&comment_id=${item.id}`
+        });
+        break;
+      case 'user':
+        // 跳转到用户资料页
+        wx.navigateTo({
+          url: `/pages/userProfile/userProfile?userId=${item.id}`
+        });
+        break;
+      default:
+        logger.warn('未知的搜索结果类型:', item.type);
+        break;
+    }
+  },
+
+  // 复制搜索结果内容
+  copyContent(e) {
+    const content = e.currentTarget.dataset.content;
+    if (!content) return;
+
+    wx.setClipboardData({
+      data: content,
+      success: () => {
+        wx.showToast({
+          title: '已复制内容',
+          icon: 'success'
+        });
+      }
+    });
+  },
+
+  // 清除搜索框和结果
+  clearSearch() {
+    this.setData({
+      searchValue: '',
+      searchResults: [],
+      searchDone: false,
+      totalFound: 0
+    });
+  },
+
+  // 下拉刷新
+  onPullDownRefresh() {
+    if (this.data.searchValue) {
+      this.setData({
+        currentPage: 1
+      });
+      this.handleSearch({ detail: { value: this.data.searchValue } });
+    }
+    wx.stopPullDownRefresh();
+  },
+
+  // 触底加载更多
+  onReachBottom() {
+    if (this.data.hasMore && this.data.searchValue) {
+      this.loadMore();
+    }
   }
-}) 
+}); 

@@ -2,48 +2,126 @@
 // 搜索相关API
 
 const { API, logger, request } = require('./core');
+const userManager = require('../../utils/user_manager');
 
 const searchAPI = {
   /**
-   * 搜索文档
+   * 通用搜索
    * @param {Object} params - 搜索参数
-   * @param {string} params.query - 搜索关键词
-   * @param {number} [params.limit=10] - 返回结果数量限制
+   * @param {string} params.keyword - 搜索关键词
+   * @param {string} [params.type='all'] - 搜索类型：all-全部, post-帖子, comment-评论, user-用户
+   * @param {number} [params.limit=20] - 返回结果数量限制
    * @param {number} [params.offset=0] - 结果偏移量
-   * @param {Object} [params.filters] - 搜索过滤条件
    * @returns {Promise<Object>} - 搜索结果
    */
   search: (params = {}) => {
     // 确保必要参数存在
     if (typeof params === 'string') {
-      params = { query: params };
+      params = { keyword: params };
     }
     
-    if (!params.query) {
-      logger.error('搜索文档缺少必要参数: query');
-      return Promise.reject(new Error('缺少必要参数: query'));
+    // 兼容query和keyword参数
+    const keyword = params.keyword || params.query;
+    if (!keyword) {
+      logger.error('搜索缺少必要参数: keyword');
+      return Promise.reject(new Error('缺少必要参数: keyword'));
     }
     
-    // 准备请求数据
-    const requestData = {
-      query: params.query,
-      limit: params.limit || 10,
+    // 准备请求参数
+    const requestParams = {
+      keyword: keyword,
+      limit: params.limit || 20,
       offset: params.offset || 0
     };
     
-    // 如果有过滤条件，添加到请求中
-    if (params.filters) {
-      requestData.filters = params.filters;
+    // 如果有类型参数，添加到请求中
+    if (params.type && params.type !== 'all') {
+      requestParams.type = params.type;
     }
     
-    logger.debug('开始搜索文档:', requestData);
+    logger.debug('开始搜索:', requestParams);
     
     // 发送搜索请求
     return request({
       url: `${API.PREFIX.WXAPP}/search`,
-      method: 'POST',
-      data: requestData
+      method: 'GET',
+      data: requestParams
+    }).then(res => {
+      logger.debug('搜索结果:', res);
+      
+      // 标准化响应格式
+      if (res.code === 200 && res.data) {
+        return res;
+      } else if (res.results) {
+        // 旧版API兼容
+        return {
+          code: 200,
+          message: 'success',
+          data: {
+            results: res.results,
+            keyword: keyword,
+            total: res.total || res.results.length,
+            type: params.type || 'all'
+          }
+        };
+      } else {
+        return res;
+      }
+    }).catch(err => {
+      logger.error('搜索失败:', err);
+      return {
+        code: err.code || 500,
+        message: err.message || '搜索失败',
+        data: {
+          results: [],
+          keyword: keyword,
+          total: 0,
+          type: params.type || 'all'
+        }
+      };
     });
+  },
+  
+  /**
+   * 搜索帖子
+   * @param {string|Object} keyword - 搜索关键词或参数对象
+   * @param {Object} [options] - 可选参数
+   * @returns {Promise<Object>} - 搜索结果
+   */
+  searchPosts: (keyword, options = {}) => {
+    // 处理参数格式
+    let params = typeof keyword === 'string' ? { keyword } : keyword;
+    params = { ...params, ...options, type: 'post' };
+    
+    return searchAPI.search(params);
+  },
+  
+  /**
+   * 搜索评论
+   * @param {string|Object} keyword - 搜索关键词或参数对象
+   * @param {Object} [options] - 可选参数
+   * @returns {Promise<Object>} - 搜索结果
+   */
+  searchComments: (keyword, options = {}) => {
+    // 处理参数格式
+    let params = typeof keyword === 'string' ? { keyword } : keyword;
+    params = { ...params, ...options, type: 'comment' };
+    
+    return searchAPI.search(params);
+  },
+  
+  /**
+   * 搜索用户
+   * @param {string|Object} keyword - 搜索关键词或参数对象
+   * @param {Object} [options] - 可选参数
+   * @returns {Promise<Object>} - 搜索结果
+   */
+  searchUsers: (keyword, options = {}) => {
+    // 处理参数格式
+    let params = typeof keyword === 'string' ? { keyword } : keyword;
+    params = { ...params, ...options, type: 'user' };
+    
+    return searchAPI.search(params);
   },
   
   /**

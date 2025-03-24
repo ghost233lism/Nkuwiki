@@ -63,23 +63,35 @@ const notificationAPI = {
     return request({
       url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
       method: 'PUT',
-      data: { is_read: true }
+      data: { is_read: 1 }
     });
   },
   
   /**
-   * 标记所有通知为已读
+   * 批量标记通知为已读
    * @param {string} openid 用户openid
+   * @param {Array|null} notificationIds 要标记为已读的通知ID数组，不传则标记所有通知
    * @param {string} type 可选，通知类型
    * @returns {Promise<Object>} 操作结果
    */
-  markAllAsRead: async (openid, type = null) => {
+  markAllAsRead: async (openid, notificationIds = null, type = null) => {
     if (!openid) {
       const userInfo = userManager.getCurrentUser();
       openid = userInfo.openid;
     }
     
-    const data = type ? { type } : {};
+    const data = {};
+    
+    // 如果传入了通知ID数组
+    if (Array.isArray(notificationIds) && notificationIds.length > 0) {
+      data.notification_ids = notificationIds;
+    }
+    
+    // 如果传入了通知类型
+    if (type) {
+      data.type = type;
+    }
+    
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}/notifications/read`,
       method: 'PUT',

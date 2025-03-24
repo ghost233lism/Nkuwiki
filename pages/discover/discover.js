@@ -120,81 +120,209 @@ Page({
 
   // 处理下拉刷新
   onPullDownRefresh() {
-    // 下拉刷新，重置为第一页
+    logger.debug('发现页触发下拉刷新');
+    
     this.setData({
-      posts: [],
-      page: 1,
-      hasMore: true
-    })
-    this.loadPosts(true).then(() => {
-      wx.stopPullDownRefresh()
-    }).catch(() => {
-      wx.stopPullDownRefresh()
-    })
+      refreshing: true
+    });
+    
+    // 重置为第一页并刷新数据
+    this.loadPosts(true)
+      .then(() => {
+        wx.showToast({
+          title: '刷新成功',
+          icon: 'success',
+          duration: 1000
+        });
+      })
+      .catch((err) => {
+        logger.error('发现页下拉刷新失败:', err);
+        wx.showToast({
+          title: '刷新失败',
+          icon: 'none',
+          duration: 1000
+        });
+      })
+      .finally(() => {
+        wx.stopPullDownRefresh();
+        this.setData({
+          refreshing: false
+        });
+      });
+  },
+
+  // 处理上拉加载更多
+  onReachBottom() {
+    if (this.data.loading) {
+      return;
+    }
+    
+    if (!this.data.hasMore) {
+      wx.showToast({
+        title: '没有更多内容了',
+        icon: 'none',
+        duration: 1000
+      });
+      return;
+    }
+    
+    logger.debug('发现页触发上拉加载更多');
+    this.loadPosts(false);
   },
 
   // 加载帖子列表
   async loadPosts(refresh = false) {
-    if (this.data.loading) return
+    if (this.data.loading && !refresh) return;
     
-    this.setData({ loading: true })
+    this.setData({ loading: true });
     
     try {
-      const result = await postAPI.getPosts({
+      const params = {
         limit: this.data.pageSize,
-        offset: (this.data.page - 1) * this.data.pageSize,
-        order_by: 'update_time DESC'
+        offset: refresh ? 0 : this.data.posts.length,
+        sort_by: 'update_time'  // 按更新时间排序
+      };
+      
+      logger.debug('发现页加载帖子，参数：', params);
+      
+      const result = await postAPI.getPosts(params);
+      logger.debug('发现页帖子加载成功, 响应类型:', typeof result);
+      
+      let newPosts = [];
+      let total = 0;
+      
+      // 处理返回数据，适配新API标准响应格式
+      if (result && result.code === 200 && result.data) {
+        // 新API标准响应格式
+        if (Array.isArray(result.data.posts)) {
+          newPosts = result.data.posts;
+          total = result.data.total || newPosts.length;
+        } else if (Array.isArray(result.data)) {
+          newPosts = result.data;
+          total = result.data.length;
+        }
+      } 
+      // 兼容旧版格式
+      else if (Array.isArray(result)) {
+        newPosts = result;
+        total = result.length;
+      } else if (result && result.posts && Array.isArray(result.posts)) {
+        newPosts = result.posts;
+        total = result.total || newPosts.length;
+      } else {
+        logger.warn('无法解析帖子数据格式:', typeof result);
+        newPosts = [];
+        total = 0;
+      }
+      
+      if (newPosts.length > 0) {
+        logger.debug('发现页加载到帖子数量:', newPosts.length);
+      } else {
+        logger.debug('发现页未加载到帖子数据');
+      }
+      
+      // 处理帖子数据，统一格式化为前端展示所需的格式
+      const processedPosts = newPosts.map(post => {
+        // 从标准格式中提取实际的帖子数据
+        const postData = post.post || post;
+        
+        // 确保帖子有ID字段
+        const postId = postData.id || postData._id || `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        
+        // 处理图片数组，确保每个URL都是有效的字符串
+        let images = [];
+        if (postData.images) {
+          // 如果images是字符串，尝试解析JSON
+          if (typeof postData.images === 'string') {
+            try {
+              const parsedImages = JSON.parse(postData.images);
+              if (Array.isArray(parsedImages)) {
+                images = parsedImages;
+              } else {
+                images = [];
+              }
+            } catch (e) {
+              // 如果解析失败，假设它是单个URL
+              images = [postData.images];
+            }
+          } 
+          // 如果已经是数组，直接使用
+          else if (Array.isArray(postData.images)) {
+            images = postData.images;
+          }
+          
+          // 过滤并验证每个图片URL
+          images = images.filter(url => {
+            // 必须是字符串
+            if (typeof url !== 'string') {
+              return false;
+            }
+            
+            // 必须是有效URL格式（简单验证）
+            if (!url.startsWith('http') && !url.startsWith('/') && !url.startsWith('cloud://')) {
+              return false;
+            }
+            
+            return true;
+          });
+          
+          // 处理微信云存储图片，获取临时访问链接
+          const cloudImages = images.filter(url => url.startsWith('cloud://'));
+          if (cloudImages.length > 0) {
+            // 异步获取云存储临时链接（不阻塞UI渲染）
+            this.getCloudFileUrls(cloudImages, postId, index);
+          }
+        }
+        
+        // 构建统一格式的帖子数据
+        return {
+          id: postId,
+          title: postData.title || '',
+          content: postData.content || '',
+          images: images,
+          author: {
+            id: postData.openid || postData.author_id,
+            name: postData.nick_name || postData.author_name || '南开大学用户',
+            avatar: postData.avatar || postData.author_avatar || '/assets/icons/default-avatar.png'
+          },
+          stats: {
+            views: postData.view_count || 0,
+            likes: postData.like_count || postData.likes || 0,
+            comments: postData.comment_count || postData.comments || 0,
+            favoriteCount: postData.favorite_count || postData.favorites || 0
+          },
+          createTime: postData.create_time || postData.createTime || postData.create_at,
+          updateTime: postData.update_time || postData.updateTime || postData.update_at,
+          userInteraction: {
+            isLiked: postData.is_liked || postData.isLiked || false,
+            isFavorited: postData.is_favorited || postData.isFavorited || false
+          },
+          tags: postData.tags || []
+        };
       });
       
-      // 转换数据格式以兼容原有结构
-      const posts = Array.isArray(result) ? result.map(post => ({
-        id: post.id,
-        title: post.title,
-        content: post.content,
-        images: post.images || [],
-        author: {
-          id: post.openid,
-          name: post.user_name || '用户',
-          avatar: post.user_avatar || '/assets/icons/default-avatar.png'
-        },
-        stats: {
-          views: post.view_count || 0,
-          likes: post.like_count || 0,
-          comments: post.comment_count || 0
-        },
-        createTime: post.create_time,
-        userInteraction: {
-          isLiked: false // 默认未点赞
-        }
-      })) : [];
+      // 判断是否有更多数据
+      const hasMore = newPosts.length >= params.limit;
       
-      // 安全获取当前用户ID并设置点赞状态
-      try {
-        const currentUser = userManager.getCurrentUser();
-        const userId = currentUser && currentUser.openid;
-        
-        if (userId) {
-          // 设置点赞状态
-          posts.forEach(post => {
-            if (Array.isArray(post.liked_users)) {
-              post.userInteraction.isLiked = post.liked_users.includes(userId);
-            }
-          });
-        }
-      } catch (userErr) {
-        console.error('获取用户信息失败:', userErr);
-      }
-
       // 更新数据
       this.setData({
-        posts: refresh ? posts : [...this.data.posts, ...posts],
+        posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
         loading: false,
-        page: this.data.page + 1,
-        hasMore: posts.length === this.data.pageSize
+        hasMore: hasMore,
+        page: refresh ? 2 : this.data.page + 1
       });
+      
+      return processedPosts;
     } catch (error) {
-      console.error('加载帖子失败:', error);
+      logger.error('发现页加载帖子失败:', error);
       this.setData({ loading: false });
+      
+      wx.showToast({
+        title: '加载失败，请重试',
+        icon: 'none'
+      });
+      
+      return Promise.reject(error);
     }
   },
 
@@ -274,10 +402,60 @@ Page({
     })
   },
 
-  // 上拉加载更多
-  onReachBottom() {
-    if (this.data.hasMore && !this.data.loading) {
-      this.loadPosts()
+  // 获取云存储文件的临时访问链接
+  getCloudFileUrls(cloudFileIDs, postId, postIndex) {
+    if (!cloudFileIDs || cloudFileIDs.length === 0) return;
+    
+    logger.debug('正在获取云存储文件的临时链接，文件数:', cloudFileIDs.length);
+    
+    // 确保wx.cloud已初始化
+    if (!wx.cloud) {
+      logger.error('wx.cloud未初始化，无法获取临时链接');
+      return;
     }
-  }
+    
+    wx.cloud.getTempFileURL({
+      fileList: cloudFileIDs,
+      success: res => {
+        logger.debug('获取临时链接成功');
+        
+        if (!res.fileList || res.fileList.length === 0) return;
+        
+        // 获取当前posts
+        const posts = this.data.posts;
+        if (!posts || !posts[postIndex]) return;
+        
+        // 创建图片URL映射
+        const urlMap = {};
+        res.fileList.forEach(file => {
+          if (file.fileID && file.tempFileURL) {
+            urlMap[file.fileID] = file.tempFileURL;
+          }
+        });
+        
+        // 更新图片URL
+        const newImages = [...posts[postIndex].images];
+        let hasUpdates = false;
+        
+        newImages.forEach((url, i) => {
+          if (url.startsWith('cloud://') && urlMap[url]) {
+            newImages[i] = urlMap[url];
+            hasUpdates = true;
+          }
+        });
+        
+        // 只有当有更新时才调用setData
+        if (hasUpdates) {
+          const key = `posts[${postIndex}].images`;
+          this.setData({
+            [key]: newImages
+          });
+          logger.debug('已更新帖子云存储图片链接');
+        }
+      },
+      fail: err => {
+        logger.error('获取云存储临时链接失败:', err);
+      }
+    });
+  },
 }) 

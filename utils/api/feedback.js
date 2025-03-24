@@ -22,9 +22,40 @@ const feedbackAPI = {
       content: feedbackData.content,
       type: feedbackData.type || 'suggestion',
       contact: feedbackData.contact || '',
-      images: feedbackData.images || [],
-      device_info: feedbackData.device_info || ''
+      images: feedbackData.images || []
     };
+    
+    // 设备信息，可以是字符串或对象
+    if (feedbackData.device_info) {
+      if (typeof feedbackData.device_info === 'string') {
+        safeFeedbackData.device_info = feedbackData.device_info;
+      } else if (typeof feedbackData.device_info === 'object') {
+        // 确保设备信息包含必要字段
+        safeFeedbackData.device_info = {
+          model: feedbackData.device_info.model || '',
+          system: feedbackData.device_info.system || '',
+          platform: feedbackData.device_info.platform || ''
+        };
+      }
+    } else {
+      // 如果未提供，尝试获取当前设备信息
+      try {
+        const systemInfo = wx.getSystemInfoSync();
+        safeFeedbackData.device_info = {
+          model: systemInfo.model || '',
+          system: systemInfo.system || '',
+          platform: systemInfo.platform || ''
+        };
+      } catch (error) {
+        logger.error('获取设备信息失败:', error);
+        safeFeedbackData.device_info = {};
+      }
+    }
+    
+    // 额外信息
+    if (feedbackData.extra) {
+      safeFeedbackData.extra = feedbackData.extra;
+    }
     
     return request({
       url: `${API.PREFIX.WXAPP}/feedback`,
@@ -72,7 +103,7 @@ const feedbackAPI = {
    */
   updateFeedback: (feedbackId, feedbackData) => {
     // 确保只更新允许的字段
-    const allowedFields = ['content', 'status', 'reply', 'reply_time'];
+    const allowedFields = ['content', 'status', 'admin_reply', 'extra'];
     const updateData = {};
     
     allowedFields.forEach(field => {

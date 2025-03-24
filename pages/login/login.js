@@ -43,82 +43,82 @@ Page({
           }
         });
         
-        logger.debug('云函数登录结果:', res);
+        logger.debug('云函数登录结果:', JSON.stringify(res).substring(0, 200) + '...');
         
         if (res && res.result && res.result.code === 0) {
           // 处理云函数登录成功结果
-          const userInfo = res.result.data;
+          const userData = res.result.data;
           
           // 记录同步结果日志
           logger.debug('用户同步结果:', res.result.syncResult || '未同步');
           
-          // 标准格式化用户数据 - 使用云数据库ID
+          // 标准格式化用户数据
           const formattedUserInfo = {
-            // 优先使用云ID - 不再使用main_server_id
-            id: userInfo._id,
-            _id: userInfo._id,
-            // 记录同步状态
-            server_synced: userInfo.server_synced || false,
-            wxapp_id: userInfo.openid,
-            openid: userInfo.openid,
-            unionid: userInfo.unionid || '',
-            nickname: userInfo.nickName || '',
-            avatar_url: userInfo.avatarUrl || '',
-            gender: userInfo.gender || 0,
-            // 兼容字段
-            nickName: userInfo.nickName || '',
-            avatarUrl: userInfo.avatarUrl || ''
+            // 主ID字段
+            id: userData.id || userData._id || userData.openid,
+            _id: userData._id || userData.id || userData.openid,
+            // OpenID
+            openid: userData.openid,
+            wxapp_id: userData.openid,
+            // 用户基本信息
+            nickname: userData.nickName || userData.nick_name || '',
+            nick_name: userData.nickName || userData.nick_name || '',
+            avatar_url: userData.avatarUrl || userData.avatar || '',
+            avatar: userData.avatarUrl || userData.avatar || '',
+            gender: userData.gender || 0,
+            // 兼容字段 - 提供微信小程序常用格式
+            nickName: userData.nickName || userData.nick_name || '',
+            avatarUrl: userData.avatarUrl || userData.avatar || '',
+            // 同步状态
+            server_synced: true
           };
           
           // 保存标准化的用户信息
           userManager.saveUserInfo(formattedUserInfo);
           
-          // 确保服务器已同步用户信息，等待一定时间并添加重试机制
-          if (formattedUserInfo.id) {
-            logger.debug('等待服务器同步用户数据...');
-            // 添加延迟和重试，等待同步完成
-            const verifyUserSync = async (retryCount = 5, delay = 1500) => {
-              try {
-                // 首次尝试前先等待一段时间，让服务器有时间完成同步
-                await new Promise(resolve => setTimeout(resolve, delay));
-                
-                logger.debug(`尝试验证用户同步状态(剩余${retryCount}次): ${formattedUserInfo.id}`);
-                // 附加随机参数避免缓存
-                const timestamp = new Date().getTime();
-                const userData = await userAPI.getUserInfo(`${formattedUserInfo.id}?t=${timestamp}`);
-                
-                if (userData) {
-                  logger.debug('成功获取服务器用户信息:', userData);
-                  // 合并服务器数据，但保留云ID作为主ID
-                  const mergedData = {
-                    ...userData,
-                    id: formattedUserInfo.id,    // 保持云ID
-                    _id: formattedUserInfo._id   // 保持云ID
-                  };
-                  
-                  // 更新本地用户信息
-                  userManager.saveUserInfo(mergedData);
-                  return true;
-                } else {
-                  throw new Error('服务器返回空数据');
-                }
-              } catch (verifyError) {
-                logger.warn(`验证用户同步状态失败(剩余${retryCount}次):`, verifyError);
-                if (retryCount > 0) {
-                  // 增加延迟时间，指数退避
-                  const nextDelay = delay * 1.5;
-                  return verifyUserSync(retryCount - 1, nextDelay);
-                } else {
-                  logger.error('用户同步验证重试次数已用完，使用本地数据继续');
-                  return false;
-                }
-              }
+          // 使用新API同步用户信息到主服务器
+          try {
+            logger.debug('开始同步用户到主服务器...');
+            
+            const syncData = {
+              openid: formattedUserInfo.openid,
+              nick_name: formattedUserInfo.nickname,
+              avatar: formattedUserInfo.avatar_url,
+              gender: formattedUserInfo.gender
             };
             
-            // 执行验证但不阻塞登录流程
-            verifyUserSync().catch(err => {
-              logger.error('用户同步验证过程出错:', err);
-            });
+            // 调用API同步用户数据
+            const syncResult = await userAPI.syncUser(syncData);
+            logger.debug('用户同步到服务器结果:', JSON.stringify(syncResult));
+            
+            // 检查同步是否成功
+            if (syncResult && syncResult.code === 200 && syncResult.data) {
+              // 合并服务器返回的用户数据
+              const serverUserData = syncResult.data;
+              
+              // 创建合并后的用户数据
+              const mergedUserInfo = {
+                ...formattedUserInfo,
+                // 服务器返回的字段
+                id: serverUserData.id || formattedUserInfo.id,
+                token_count: serverUserData.token_count || 0,
+                likes_count: serverUserData.likes_count || 0,
+                favorites_count: serverUserData.favorites_count || 0,
+                followers_count: serverUserData.followers_count || 0,
+                following_count: serverUserData.following_count || 0,
+                create_time: serverUserData.create_time || new Date().toISOString(),
+                update_time: serverUserData.update_time || new Date().toISOString(),
+                last_login: serverUserData.last_login || new Date().toISOString(),
+                server_synced: true
+              };
+              
+              // 更新本地用户信息
+              userManager.saveUserInfo(mergedUserInfo);
+              logger.debug('用户数据同步成功，已合并服务器信息');
+            }
+          } catch (syncError) {
+            logger.error('同步用户到主服务器失败:', syncError);
+            // 同步失败不影响登录流程
           }
           
           // 登录成功跳转

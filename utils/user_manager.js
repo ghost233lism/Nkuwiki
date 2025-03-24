@@ -2,16 +2,55 @@
  * 用户管理模块 - 统一管理用户信息获取和存储
  */
 
+const { userAPI, logger } = require('./api/index')
+
 // 存储位置枚举
 const STORAGE_KEYS = {
-  USER_INFO: 'userInfo',
-  LATEST_USER_INFO: 'latestUserInfo',
-  TOKEN: 'token'
+  USER_INFO: '_cached_user_info',
+  LATEST_USER_INFO: '_latest_user_info',
+  TOKEN: '_auth_token'
 };
 
+// 获取app全局配置的base_url
+function getBaseUrl() {
+  try {
+    const app = getApp();
+    return (app && app.globalData && app.globalData.config && app.globalData.config.services && app.globalData.config.services.app) 
+      ? app.globalData.config.services.app.base_url 
+      : 'https://nkuwiki.com';
+  } catch (e) {
+    return 'https://nkuwiki.com';
+  }
+}
+
 // 默认值
-const DEFAULT_AVATAR = '/assets/icons/default-avatar.png';
-const DEFAULT_NAME = '南开大学用户';
+const DEFAULT_NAME = '游客';
+// 获取动态默认头像URL
+function getDefaultAvatar() {
+  return getBaseUrl() + '/static/default-avatar.png';
+}
+
+// 存储用户信息的键名
+const USER_INFO_KEY = 'userInfo'
+const LOGIN_STATE_KEY = 'loginState'
+
+// 缓存的用户信息
+let cachedUserInfo = null
+let loginState = false
+
+// 初始化时尝试从缓存中加载用户信息
+try {
+  const userInfo = wx.getStorageSync(USER_INFO_KEY)
+  const state = wx.getStorageSync(LOGIN_STATE_KEY)
+  
+  if (userInfo) {
+    cachedUserInfo = userInfo
+    loginState = state || false
+    logger.debug('从缓存加载用户信息成功')
+  }
+} catch (error) {
+  logger.error('从缓存加载用户信息失败:', error)
+}
 
 /**
  * 用户管理器
@@ -125,41 +164,7 @@ const userManager = {
    * @returns {Object} 用户信息
    */
   getCurrentUser() {
-    try {
-      // 尝试从存储获取用户信息
-      let userInfo = wx.getStorageSync(STORAGE_KEYS.USER_INFO) || {};
-      let latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO) || {};
-      
-      // 获取全局用户信息
-      const app = getApp();
-      let globalUserInfo = {};
-      if (app && app.globalData) {
-        globalUserInfo = app.globalData.userInfo || {};
-      }
-      
-      // 合并信息，优先使用最新存储的数据
-      const mergedUserInfo = {
-        ...globalUserInfo,
-        ...userInfo,
-        ...latestUserInfo
-      };
-      
-      // 确保基本字段存在
-      userInfo = {
-        ...mergedUserInfo,
-        avatar: mergedUserInfo.avatar || DEFAULT_AVATAR,
-        nickname: mergedUserInfo.nickname || DEFAULT_NAME,
-        bio: mergedUserInfo.bio || '这个人很懒，什么都没留下'
-      };
-      
-      return userInfo;
-    } catch (error) {
-      console.error('获取当前用户信息失败:', error);
-      return {
-        avatar: DEFAULT_AVATAR,
-        nickname: DEFAULT_NAME
-      };
-    }
+    return cachedUserInfo
   },
   
   /**
@@ -173,7 +178,7 @@ const userManager = {
       openid: userInfo.openid,
       nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
       nick_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,  // 为了兼容性同时提供两种格式
-      avatar: userInfo.avatar || userInfo.avatarUrl || DEFAULT_AVATAR,
+      avatar: userInfo.avatar || userInfo.avatarUrl || getDefaultAvatar(),
       bio: userInfo.bio || ''  // 添加个人简介字段
     };
   },
@@ -247,6 +252,7 @@ const userManager = {
   saveUserInfo(userInfo) {
     if (!userInfo) {
       console.error('保存的用户信息为空');
+      
       return false;
     }
     
@@ -267,15 +273,20 @@ const userManager = {
         nickName: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
         nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
         bio: userInfo.bio || userInfo.signature || userInfo.description || userInfo.status || '这个人很懒，什么都没留下',
-        avatar: userInfo.avatar || userInfo.avatarUrl || userInfo.avatar_url || 'https://nkuwiki.com/static/avatar/default.png',
-        avatar_url: userInfo.avatar_url || userInfo.avatarUrl || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
-        avatarUrl: userInfo.avatarUrl || userInfo.avatar_url || userInfo.avatar || 'https://nkuwiki.com/static/avatar/default.png',
+        avatar: userInfo.avatar || userInfo.avatarUrl || userInfo.avatar_url || getDefaultAvatar(),
+        avatar_url: userInfo.avatar_url || userInfo.avatarUrl || userInfo.avatar || getDefaultAvatar(),
+        avatarUrl: userInfo.avatarUrl || userInfo.avatar_url || userInfo.avatar || getDefaultAvatar(),
         school: userInfo.school || userInfo.university || '南开大学',
         update_time: new Date().toISOString()
       };
       
+      // 更新内存中的用户信息和登录状态
+      cachedUserInfo = finalUserInfo;
+      loginState = true;
+      
       // 保存到本地存储
       wx.setStorageSync(STORAGE_KEYS.USER_INFO, finalUserInfo);
+      wx.setStorageSync(LOGIN_STATE_KEY, true);
       wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, finalUserInfo);
       
       // 更新全局状态
@@ -292,7 +303,7 @@ const userManager = {
       wx.removeStorageSync('_cached_user_info');
       wx.setStorageSync('needRefreshUserInfo', true);
       
-      console.info('用户信息已成功保存');
+      console.info('用户信息和登录状态已成功保存');
       return true;
     } catch (error) {
       console.error('保存用户信息失败:', error);
@@ -406,7 +417,7 @@ const userManager = {
       id: '0',
       wxapp_id: 'guest',
       nickname: DEFAULT_NAME,
-      avatar_url: DEFAULT_AVATAR,
+      avatar_url: getDefaultAvatar(),
     };
   },
   
@@ -415,69 +426,27 @@ const userManager = {
    * @returns {boolean} 是否已登录
    */
   isLoggedIn() {
-    try {
-      const userInfo = this.getCurrentUser();
-      const token = wx.getStorageSync(STORAGE_KEYS.TOKEN);
-      
-      // 详细日志记录
-      console.debug('登录检查 - 用户信息:', userInfo ? JSON.stringify(userInfo) : '不存在');
-      console.debug('登录检查 - Token:', token ? '存在' : '不存在');
-      
-      // 检查用户ID (可能存在于多个字段)
-      const openid = userInfo?.openid || userInfo?.id || userInfo?._id;
-      console.debug('登录检查 - 解析后的用户openid:', openid || '无ID');
-      
-      // 验证token
-      let tokenValid = false;
-      if (token) {
-        try {
-          // 检查token是否包含有效结构
-          const tokenParts = token.split('.');
-          if (tokenParts.length === 3) {
-            // 简单检查token是否包含有效payload
-            const payload = JSON.parse(atob(tokenParts[1]));
-            const currentTime = Math.floor(Date.now() / 1000);
-            
-            // 检查是否过期
-            tokenValid = payload.exp ? (payload.exp > currentTime) : true;
-            console.debug('Token验证 - 结构有效, 过期状态:', tokenValid ? '未过期' : '已过期');
-          } else {
-            console.debug('Token验证 - 结构无效');
-          }
-        } catch (e) {
-          console.debug('Token验证失败，可能是非JWT格式:', e.message);
-          // 非标准JWT格式，但仍然有token
-          tokenValid = true;
-        }
-      }
-      console.debug('Token有效性验证结果:', tokenValid);
-      
-      // 登录判断逻辑
-      // 1. 必须有用户信息
-      // 2. 用户ID必须存在且不为'0'
-      // 3. 最佳情况有token且有效，但临时允许无token也算登录
-      const isLoggedIn = !!(userInfo && openid && openid !== '0');
-      
-      console.debug('登录状态判断最终结果:', isLoggedIn);
-      return isLoggedIn;
-    } catch (error) {
-      console.error('登录状态检查出错:', error);
-      return false;
-    }
+    return !!cachedUserInfo && loginState
   },
   
   /**
    * 清除用户登录状态
    */
   logout() {
-    wx.removeStorageSync(STORAGE_KEYS.USER_INFO);
-    wx.removeStorageSync(STORAGE_KEYS.LATEST_USER_INFO);
-    wx.removeStorageSync(STORAGE_KEYS.TOKEN);
+    // 清除缓存的用户信息
+    cachedUserInfo = null
+    loginState = false
     
-    const app = getApp();
-    if (app && app.globalData) {
-      app.globalData.userInfo = null;
+    // 清除本地存储
+    try {
+      wx.removeStorageSync(USER_INFO_KEY)
+      wx.removeStorageSync(LOGIN_STATE_KEY)
+    } catch (error) {
+      logger.error('清除用户信息缓存失败:', error)
     }
+    
+    logger.debug('用户已登出')
+    return true
   },
   
   /**
@@ -525,7 +494,233 @@ const userManager = {
       console.error('保存临时用户信息失败', e);
       return null;
     }
-  }
+  },
+
+  // 获取用户openid
+  getOpenid: function() {
+    return cachedUserInfo ? (cachedUserInfo.openid || cachedUserInfo._id || cachedUserInfo.id) : null
+  },
+  
+  // 获取用户ID
+  getUserId: function() {
+    return cachedUserInfo ? (cachedUserInfo.id || cachedUserInfo._id || cachedUserInfo.openid) : null
+  },
+  
+  // 登录
+  login: function(wxUserInfo) {
+    logger.debug('开始登录流程:', wxUserInfo)
+    
+    // 保证传入了用户信息
+    if (!wxUserInfo) {
+      return Promise.reject(new Error('未提供用户信息'))
+    }
+    
+    return new Promise((resolve, reject) => {
+      // 调用云函数进行登录
+      wx.cloud.callFunction({
+        name: 'login',
+        data: {
+          nickName: wxUserInfo.nickName,
+          avatarUrl: wxUserInfo.avatarUrl,
+          gender: wxUserInfo.gender,
+          country: wxUserInfo.country,
+          province: wxUserInfo.province,
+          city: wxUserInfo.city,
+          language: wxUserInfo.language
+        }
+      })
+      .then(res => {
+        // 检查云函数返回结果
+        if (res.result && res.result.code === 0 && res.result.data) {
+          // 获取用户信息
+          const userData = res.result.data.userData || {}
+          
+          // 记录用户信息
+          cachedUserInfo = {
+            openid: userData.openid,
+            _id: userData._id || userData.openid,
+            id: userData.id || userData._id || userData.openid,
+            nickName: userData.nickName || userData.nick_name || wxUserInfo.nickName,
+            avatarUrl: userData.avatarUrl || userData.avatar_url || wxUserInfo.avatarUrl,
+            gender: userData.gender || wxUserInfo.gender || 0,
+            country: userData.country || wxUserInfo.country || '',
+            province: userData.province || wxUserInfo.province || '',
+            city: userData.city || wxUserInfo.city || '',
+            language: userData.language || wxUserInfo.language || 'zh_CN',
+            isNewUser: res.result.data.isNewUser || false
+          }
+          
+          // 保存登录状态
+          loginState = true
+          
+          // 保存到本地存储
+          try {
+            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
+            wx.setStorageSync(LOGIN_STATE_KEY, true)
+            logger.debug('保存用户信息到缓存成功')
+          } catch (error) {
+            logger.error('保存用户信息到缓存失败:', error)
+          }
+          
+          logger.debug('登录成功:', cachedUserInfo)
+          resolve(cachedUserInfo)
+        } else {
+          const errorMsg = res.result.message || '登录失败，未知错误'
+          logger.error('登录失败:', errorMsg)
+          reject(new Error(errorMsg))
+        }
+      })
+      .catch(error => {
+        logger.error('调用登录云函数失败:', error)
+        reject(error)
+      })
+    })
+  },
+  
+  // 使用openid直接登录（无需用户授权）
+  loginWithOpenid: function() {
+    return new Promise((resolve, reject) => {
+      // 调用云函数获取openid
+      wx.cloud.callFunction({
+        name: 'login',
+        data: {}
+      })
+      .then(res => {
+        if (res.result && res.result.code === 0 && res.result.data) {
+          // 获取用户信息
+          const userData = res.result.data.userData || {}
+          
+          // 记录用户信息
+          cachedUserInfo = {
+            openid: userData.openid,
+            _id: userData._id || userData.openid,
+            id: userData.id || userData._id || userData.openid,
+            nickName: userData.nickName || userData.nick_name || '用户' + userData.openid.substr(-4),
+            avatarUrl: userData.avatarUrl || userData.avatar_url || getDefaultAvatar(),
+            gender: userData.gender || 0,
+            isNewUser: res.result.data.isNewUser || false
+          }
+          
+          // 保存登录状态
+          loginState = true
+          
+          // 保存到本地存储
+          try {
+            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
+            wx.setStorageSync(LOGIN_STATE_KEY, true)
+          } catch (error) {
+            logger.error('保存用户信息到缓存失败:', error)
+          }
+          
+          logger.debug('使用Openid登录成功:', cachedUserInfo)
+          resolve(cachedUserInfo)
+        } else {
+          const errorMsg = res.result ? res.result.message : '登录失败'
+          logger.error('使用Openid登录失败:', errorMsg)
+          reject(new Error(errorMsg))
+        }
+      })
+      .catch(error => {
+        logger.error('调用登录云函数失败:', error)
+        reject(error)
+      })
+    })
+  },
+  
+  // 更新用户信息
+  updateUserInfo: function(userData) {
+    // 确保有用户ID
+    const userId = this.getUserId()
+    if (!userId) {
+      return Promise.reject(new Error('用户未登录或无法获取用户ID'))
+    }
+    
+    // 准备更新数据
+    const updateData = {
+      nickname: userData.nickName || userData.nickname,
+      avatar_url: userData.avatarUrl || userData.avatar_url,
+      gender: userData.gender,
+      country: userData.country,
+      province: userData.province,
+      city: userData.city,
+      language: userData.language
+    }
+    
+    // 移除空值
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === null) {
+        delete updateData[key]
+      }
+    })
+    
+    // 调用API更新用户信息
+    return userAPI.updateUser(userId, updateData)
+      .then(result => {
+        if (result && result.success) {
+          // 更新缓存的用户信息
+          cachedUserInfo = {
+            ...cachedUserInfo,
+            ...result.user
+          }
+          
+          // 更新本地存储
+          try {
+            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
+          } catch (error) {
+            logger.error('更新用户信息到缓存失败:', error)
+          }
+          
+          return cachedUserInfo
+        } else {
+          throw new Error('更新用户信息失败')
+        }
+      })
+  },
+  
+  // 获取最新的用户信息
+  refreshUserInfo: function() {
+    const userId = this.getUserId()
+    if (!userId) {
+      return Promise.reject(new Error('用户未登录或无法获取用户ID'))
+    }
+    
+    // 调用API获取用户信息
+    return userAPI.getUser(userId)
+      .then(result => {
+        if (result && result.user) {
+          // 更新缓存的用户信息
+          cachedUserInfo = {
+            ...cachedUserInfo,
+            ...result.user
+          }
+          
+          // 更新本地存储
+          try {
+            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
+          } catch (error) {
+            logger.error('保存用户信息到缓存失败:', error)
+          }
+          
+          return cachedUserInfo
+        } else {
+          throw new Error('获取用户信息失败')
+        }
+      })
+  },
+
+  // 格式化用户数据，兼容老版本
+  formatUserData(userData) {
+    if (!userData) return null;
+    
+    return {
+      id: userData.id || userData._id,
+      openid: userData.openid || userData._openid,
+      nickname: userData.nickname || userData.nick_name || DEFAULT_NAME,
+      avatar_url: userData.avatar_url || userData.avatar || userData.avatarUrl || getDefaultAvatar(),
+      avatarUrl: userData.avatarUrl || userData.avatar_url || getDefaultAvatar(),
+      gender: userData.gender || 0,
+    };
+  },
 };
 
 module.exports = userManager; 
