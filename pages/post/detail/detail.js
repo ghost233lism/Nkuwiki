@@ -30,18 +30,36 @@ Page({
       // 判断是否有有效的帖子ID
       if (options.id) {
         // 去除可能的空格和引号
-        const postId = options.id.toString().trim().replace(/['"]/g, '');
-        console.log('处理后的帖子ID:', postId);
+        const postIdStr = options.id.toString().trim().replace(/['"]/g, '');
+        console.log('原始帖子ID字符串:', postIdStr);
         
-        if (!postId) {
+        if (!postIdStr) {
           throw new Error('帖子ID无效');
         }
         
-        // 保存帖子ID
-        this.postId = postId;
+        // 将帖子ID转换为整数
+        try {
+          // 提取数字部分并转换为整数
+          const numericPart = postIdStr.replace(/[^0-9]/g, '');
+          if (!numericPart) {
+            throw new Error('帖子ID不包含有效数字');
+          }
+          
+          const postIdInt = parseInt(numericPart, 10);
+          if (isNaN(postIdInt) || postIdInt <= 0) {
+            throw new Error('帖子ID必须是正整数');
+          }
+          
+          // 保存处理后的整数ID
+          this.postId = postIdInt;
+          console.log('处理后的帖子ID(整数):', this.postId);
+        } catch (parseError) {
+          console.error('帖子ID解析失败:', parseError);
+          throw new Error('无法解析帖子ID: ' + parseError.message);
+        }
         
         // 加载帖子详情
-        this.loadPostDetail(postId);
+        this.loadPostDetail(this.postId);
         
       } else {
         throw new Error('缺少ID参数');
@@ -383,107 +401,200 @@ Page({
 
   // 处理点赞，增加安全检查
   async handleLike() {
-    const { postAPI, logger, userManager } = require('../../../utils/api/index');
-    
-    // 获取帖子ID
-    const postId = this.data.post?.id || this.data.post?._id;
-    if (!postId) {
-      logger.warn('点赞失败：帖子ID不存在');
-      return;
-    }
-    
-    // 检查用户登录状态
-    if (!userManager.isLoggedIn()) {
-      logger.debug('用户未登录，跳转到登录页');
-      wx.navigateTo({
-        url: '/pages/login/login'
-      });
-      return;
-    }
-    
-    // 添加重复点击保护
-    if (this.data.isLiking) return;
-    this.setData({ isLiking: true });
+    console.log('点赞按钮被点击');
     
     try {
-      // 立即更新UI，给用户即时反馈
-      const newIsLiked = !this.data.post.isLiked;
-      const newLikes = this.data.post.likes + (newIsLiked ? 1 : -1);
+      const { postAPI, logger, userManager } = require('../../../utils/api/index');
+      console.log('加载API模块完成');
       
-      this.setData({
-        'post.isLiked': newIsLiked,
-        'post.likes': newLikes >= 0 ? newLikes : 0
-      });
+      // 优先使用页面初始化保存的整数ID
+      let postId = this.postId;
       
-      // 立即更新本地存储的点赞状态 - 确保刷新页面后依然记住
-      const likedPosts = wx.getStorageSync('likedPosts') || {};
-      
-      if (newIsLiked) {
-        likedPosts[postId] = true;
+      // 如果没有初始化ID，尝试从当前数据中获取
+      if (!postId) {
+        console.log('未找到初始化的帖子ID，尝试从当前数据获取');
+        
+        // 从当前数据中获取ID
+        const dataPostId = this.data.post?.id || this.data.post?._id;
+        console.log('从数据中获取的帖子ID:', dataPostId, '类型:', typeof dataPostId);
+        
+        // 尝试转换为整数
+        if (dataPostId) {
+          try {
+            // 如果是字符串，尝试提取数字部分
+            if (typeof dataPostId === 'string') {
+              // 移除所有非数字字符
+              const numericPart = dataPostId.replace(/[^0-9]/g, '');
+              if (numericPart) {
+                postId = parseInt(numericPart, 10);
+                console.log('字符串转换为整数:', postId);
+              }
+            } 
+            // 如果是数字类型，直接使用
+            else if (typeof dataPostId === 'number') {
+              postId = dataPostId;
+              console.log('直接使用数字类型ID:', postId);
+            }
+            
+            // 最终检查是否为有效整数
+            if (isNaN(postId) || postId <= 0) {
+              postId = null;
+              console.error('转换后的帖子ID无效');
+            }
+          } catch (parseError) {
+            console.error('帖子ID解析错误:', parseError);
+            postId = null;
+          }
+        }
       } else {
-        delete likedPosts[postId];
+        console.log('使用初始化保存的帖子ID:', postId);
       }
       
-      wx.setStorageSync('likedPosts', likedPosts);
-      logger.debug("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", postId);
+      // 最终检查ID是否有效
+      if (!postId) {
+        console.error('点赞失败：无法获取有效的帖子ID');
+        wx.showToast({
+          title: '无法获取帖子ID',
+          icon: 'none'
+        });
+        return;
+      }
       
-      // 调用API
-      const result = await postAPI.likePost(postId, newIsLiked);
+      // 确保postId是整数类型
+      postId = Number(postId);
+      console.log('最终使用的帖子ID:', postId, '类型:', typeof postId);
       
-      // 处理API响应
-      if (!result || (result.code !== 200 && result.error)) {
-        // 操作失败，回滚UI状态
-        this.setData({
-          'post.isLiked': !newIsLiked,
-          'post.likes': this.data.post.likes + (newIsLiked ? -1 : 1)
+      // 调试用户信息
+      const currentUser = userManager.getCurrentUser();
+      console.log('当前用户信息:', currentUser ? JSON.stringify(currentUser) : '未登录');
+      
+      // 检查用户登录状态
+      if (!userManager.isLoggedIn()) {
+        console.log('用户未登录，跳转到登录页');
+        wx.showToast({
+          title: '请先登录',
+          icon: 'none',
+          duration: 2000
         });
         
-        // 回滚本地存储
-        if (!newIsLiked) {
+        setTimeout(() => {
+          wx.navigateTo({
+            url: '/pages/login/login'
+          });
+        }, 1500);
+        return;
+      }
+      
+      // 添加重复点击保护
+      if (this.data.isLiking) {
+        console.log('点赞操作正在进行中，阻止重复点击');
+        return;
+      }
+      this.setData({ isLiking: true });
+      console.log('设置点赞状态为进行中');
+      
+      try {
+        // 立即更新UI，给用户即时反馈
+        const newIsLiked = !this.data.post.isLiked;
+        const newLikes = this.data.post.likes + (newIsLiked ? 1 : -1);
+        
+        console.log(`更新UI，isLiked: ${this.data.post.isLiked} -> ${newIsLiked}, likes: ${this.data.post.likes} -> ${newLikes >= 0 ? newLikes : 0}`);
+        
+        this.setData({
+          'post.isLiked': newIsLiked,
+          'post.likes': newLikes >= 0 ? newLikes : 0
+        });
+        
+        // 立即更新本地存储的点赞状态 - 确保刷新页面后依然记住
+        const likedPosts = wx.getStorageSync('likedPosts') || {};
+        
+        if (newIsLiked) {
           likedPosts[postId] = true;
         } else {
           delete likedPosts[postId];
         }
-        wx.setStorageSync('likedPosts', likedPosts);
         
-        // 抛出错误
-        throw new Error(result?.message || result?.error || '操作失败');
-      }
-      
-      // 如果服务器返回最新点赞数，使用服务器返回的数据更新UI
-      if (result.data && result.data.likes_count !== undefined) {
-        // 新API格式
-        this.setData({
-          'post.likes': result.data.likes_count
+        wx.setStorageSync('likedPosts', likedPosts);
+        console.log("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", postId);
+        
+        // 调用API前打印日志
+        console.log(`准备调用likePost API: postId=${postId}, isLike=${newIsLiked}`);
+        console.log('当前用户openid:', userManager.getOpenid());
+        
+        // 调用API
+        const result = await postAPI.likePost(postId, newIsLiked);
+        
+        console.log('API调用成功，返回结果:', result);
+        
+        // 处理API响应
+        if (!result || (result.code !== 200 && result.error)) {
+          // 操作失败，回滚UI状态
+          console.error('API返回错误:', result);
+          
+          this.setData({
+            'post.isLiked': !newIsLiked,
+            'post.likes': this.data.post.likes + (newIsLiked ? -1 : 1)
+          });
+          
+          // 回滚本地存储
+          if (!newIsLiked) {
+            likedPosts[postId] = true;
+          } else {
+            delete likedPosts[postId];
+          }
+          wx.setStorageSync('likedPosts', likedPosts);
+          
+          // 抛出错误
+          throw new Error(result?.message || result?.error || '操作失败');
+        }
+        
+        // 如果服务器返回最新点赞数，使用服务器返回的数据更新UI
+        if (result.data && result.data.likes_count !== undefined) {
+          // 新API格式
+          console.log('使用API返回的点赞数更新UI:', result.data.likes_count);
+          this.setData({
+            'post.likes': result.data.likes_count
+          });
+        } else if (result.likes !== undefined) {
+          // 旧API格式
+          console.log('使用API返回的点赞数更新UI (旧格式):', result.likes);
+          this.setData({
+            'post.likes': result.likes
+          });
+        }
+        
+        // 成功时显示轻量级提示
+        wx.showToast({
+          title: newIsLiked ? '已点赞' : '已取消',
+          icon: 'none',
+          duration: 1000
         });
-      } else if (result.likes !== undefined) {
-        // 旧API格式
-        this.setData({
-          'post.likes': result.likes
+        
+        // 更新全局状态，确保列表页状态一致
+        const app = getApp();
+        app.updatePostStatus(postId, {
+          isLiked: newIsLiked,
+          likes: this.data.post.likes
+        });
+        
+        console.log('点赞操作全部完成');
+      } catch (apiError) {
+        console.error('调用点赞API过程中出错:', apiError);
+        logger.error('点赞操作失败:', apiError);
+        wx.showToast({
+          title: '操作失败: ' + (apiError.message || '未知错误'),
+          icon: 'none'
         });
       }
-      
-      // 成功时显示轻量级提示
+    } catch (outerError) {
+      console.error('点赞函数外层错误:', outerError);
       wx.showToast({
-        title: newIsLiked ? '已点赞' : '已取消',
-        icon: 'none',
-        duration: 1000
-      });
-      
-      // 更新全局状态，确保列表页状态一致
-      const app = getApp();
-      app.updatePostStatus(postId, {
-        isLiked: newIsLiked,
-        likes: this.data.post.likes
-      });
-    } catch (err) {
-      logger.error('点赞操作失败:', err);
-      wx.showToast({
-        title: '操作失败',
+        title: '操作异常: ' + (outerError.message || '未知错误'),
         icon: 'none'
       });
     } finally {
       this.setData({ isLiking: false });
+      console.log('点赞状态重置');
     }
   },
 
@@ -491,12 +602,64 @@ Page({
   async handleFavorite() {
     const { postAPI, logger, userManager } = require('../../../utils/api/index');
     
-    // 获取帖子ID
-    const postId = this.data.post?.id || this.data.post?._id;
+    console.log('收藏按钮被点击');
+    
+    // 优先使用页面初始化保存的整数ID
+    let postId = this.postId;
+    
+    // 如果没有初始化ID，尝试从当前数据中获取
     if (!postId) {
-      logger.warn('收藏失败：帖子ID不存在');
+      console.log('未找到初始化的帖子ID，尝试从当前数据获取');
+      
+      // 从当前数据中获取ID
+      const dataPostId = this.data.post?.id || this.data.post?._id;
+      console.log('从数据中获取的帖子ID:', dataPostId, '类型:', typeof dataPostId);
+      
+      // 尝试转换为整数
+      if (dataPostId) {
+        try {
+          // 如果是字符串，尝试提取数字部分
+          if (typeof dataPostId === 'string') {
+            // 移除所有非数字字符
+            const numericPart = dataPostId.replace(/[^0-9]/g, '');
+            if (numericPart) {
+              postId = parseInt(numericPart, 10);
+              console.log('字符串转换为整数:', postId);
+            }
+          } 
+          // 如果是数字类型，直接使用
+          else if (typeof dataPostId === 'number') {
+            postId = dataPostId;
+            console.log('直接使用数字类型ID:', postId);
+          }
+          
+          // 最终检查是否为有效整数
+          if (isNaN(postId) || postId <= 0) {
+            postId = null;
+            console.error('转换后的帖子ID无效');
+          }
+        } catch (parseError) {
+          console.error('帖子ID解析错误:', parseError);
+          postId = null;
+        }
+      }
+    } else {
+      console.log('使用初始化保存的帖子ID:', postId);
+    }
+    
+    // 最终检查ID是否有效
+    if (!postId) {
+      logger.error('收藏失败：无法获取有效的帖子ID');
+      wx.showToast({
+        title: '无法获取帖子ID',
+        icon: 'none'
+      });
       return;
     }
+    
+    // 确保postId是整数类型
+    postId = Number(postId);
+    console.log('最终使用的帖子ID:', postId, '类型:', typeof postId);
     
     // 检查用户登录状态
     if (!userManager.isLoggedIn()) {
@@ -530,6 +693,10 @@ Page({
       
       wx.setStorageSync('favoritePosts', favoritePosts);
       logger.debug("更新本地收藏状态:", newIsFavorited ? "已收藏" : "取消收藏", postId);
+      
+      // 调用API前打印日志
+      console.log(`准备调用favoritePost API: postId=${postId}, isFavorite=${newIsFavorited}`);
+      console.log('当前用户openid:', userManager.getOpenid());
       
       // 调用API
       const result = await postAPI.favoritePost(postId, newIsFavorited);

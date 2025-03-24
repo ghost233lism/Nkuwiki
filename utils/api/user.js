@@ -166,7 +166,12 @@ const userAPI = {
    * @returns {Promise} - 请求Promise
    */
   updateUser: (openid, userData, showError = false) => {
-    logger.debug('进入updateUser方法:', { openid: openid.substring(0, 8) + '...', userData });
+    // 确保openid是字符串类型
+    openid = String(openid || '');
+    
+    // 安全地获取openid的前几个字符用于日志记录
+    const truncatedOpenid = openid.length > 8 ? openid.substring(0, 8) + '...' : openid;
+    logger.debug('进入updateUser方法:', { openid: truncatedOpenid, userData });
     
     if (!openid) {
       logger.error('更新用户信息失败: openid为空');
@@ -200,7 +205,7 @@ const userAPI = {
       logger.error('清理用户数据失败:', err);
     }
     
-    logger.debug(`准备发送更新用户请求, openid=${openid.substring(0, 8)}..., 清理后数据:`, cleanUserData);
+    logger.debug(`准备发送更新用户请求, openid=${truncatedOpenid}, 清理后数据:`, cleanUserData);
     
     // 使用简化的方法直接调用请求
     return request({
@@ -273,14 +278,19 @@ const userAPI = {
       return Promise.resolve({ token: 0 });
     }
     
-    return request({
-      url: `${API.PREFIX.WXAPP}/users/${openid}/token`,
-      method: 'GET',
-      showError: false
-    }).catch(error => {
-      logger.error('获取用户Token失败:', error);
-      return { token: 0 };
-    });
+    logger.debug(`通过用户信息接口获取代币数量, openid: ${openid}`);
+    
+    // 使用getUserInfo接口获取用户完整信息，从中提取token数量
+    return userAPI.getUserInfo(openid)
+      .then(userData => {
+        const tokenCount = userData?.token || 0;
+        logger.debug(`用户代币数量: ${tokenCount}`);
+        return { token: tokenCount };
+      })
+      .catch(error => {
+        logger.error('获取用户代币数量失败:', error);
+        return { token: 0 };
+      });
   },
 
   /**

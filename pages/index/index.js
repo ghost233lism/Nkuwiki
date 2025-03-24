@@ -266,10 +266,56 @@ Page({
   // 查看帖子详情
   goToDetail(e) {
     const { id } = e.currentTarget.dataset;
+    console.log('原始详情页跳转帖子ID:', id, '类型:', typeof id, '值:', JSON.stringify(id));
     
-    // 增强ID验证
-    if (!id) {
-      console.error('帖子ID不存在:', e.currentTarget.dataset);
+    // 确保帖子ID是整数
+    let postId;
+    try {
+      // 处理边界情况
+      if (id === undefined || id === null) {
+        throw new Error('帖子ID为空');
+      }
+      
+      // 提取数字部分并转换为整数
+      if (typeof id === 'string') {
+        const numericPart = id.replace(/[^0-9]/g, '');
+        if (!numericPart) {
+          throw new Error('帖子ID不包含有效数字');
+        }
+        postId = parseInt(numericPart, 10);
+      } else if (typeof id === 'number') {
+        postId = id;
+      } else if (typeof id === 'object') {
+        // 尝试从对象中提取ID
+        if (id.id || id._id) {
+          const objId = id.id || id._id;
+          if (typeof objId === 'number') {
+            postId = objId;
+          } else if (typeof objId === 'string') {
+            const numericPart = objId.replace(/[^0-9]/g, '');
+            if (!numericPart) {
+              throw new Error('对象中的帖子ID不包含有效数字');
+            }
+            postId = parseInt(numericPart, 10);
+          } else {
+            throw new Error('对象中的帖子ID类型无效');
+          }
+        } else {
+          // 如果是一个对象但没有id字段
+          throw new Error('对象中未找到有效的帖子ID');
+        }
+      } else {
+        throw new Error('帖子ID类型无效');
+      }
+      
+      // 验证是否是有效整数
+      if (isNaN(postId) || postId <= 0) {
+        throw new Error('无效的帖子ID值');
+      }
+      
+      console.log('处理后的详情页跳转帖子ID(整数):', postId);
+    } catch (parseError) {
+      console.error('帖子ID解析失败:', parseError);
       wx.showToast({
         title: '无法查看帖子详情',
         icon: 'none'
@@ -277,19 +323,11 @@ Page({
       return;
     }
     
-    // 检查ID是否为对象
-    if (typeof id === 'object') {
-      console.error('帖子ID格式错误 (对象类型):', id);
-      wx.showToast({
-        title: '帖子数据格式错误',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    console.debug('跳转到帖子详情页, ID:', id);
+    console.debug('跳转到帖子详情页, ID:', postId);
+    // 确保传递整数ID，并将其转换为Number类型
+    const numericPostId = Number(postId);
     wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${id}`
+      url: `/pages/post/detail/detail?id=${numericPostId}`
     });
   },
 
@@ -299,6 +337,64 @@ Page({
     isLiking = true;
     
     const { id, index } = e.currentTarget.dataset;
+    console.log('原始点赞帖子ID:', id, '类型:', typeof id, '值:', JSON.stringify(id));
+    
+    // 确保帖子ID是整数
+    let postId;
+    try {
+      // 处理边界情况
+      if (id === undefined || id === null) {
+        throw new Error('帖子ID为空');
+      }
+      
+      // 提取数字部分并转换为整数
+      if (typeof id === 'string') {
+        const numericPart = id.replace(/[^0-9]/g, '');
+        if (!numericPart) {
+          throw new Error('帖子ID不包含有效数字');
+        }
+        postId = parseInt(numericPart, 10);
+      } else if (typeof id === 'number') {
+        postId = id;
+      } else if (typeof id === 'object') {
+        // 尝试从对象中提取ID
+        if (id.id || id._id) {
+          const objId = id.id || id._id;
+          if (typeof objId === 'number') {
+            postId = objId;
+          } else if (typeof objId === 'string') {
+            const numericPart = objId.replace(/[^0-9]/g, '');
+            if (!numericPart) {
+              throw new Error('对象中的帖子ID不包含有效数字');
+            }
+            postId = parseInt(numericPart, 10);
+          } else {
+            throw new Error('对象中的帖子ID类型无效');
+          }
+        } else {
+          // 如果是一个对象但没有id字段
+          throw new Error('对象中未找到有效的帖子ID');
+        }
+      } else {
+        throw new Error('帖子ID类型无效');
+      }
+      
+      // 验证是否是有效整数
+      if (isNaN(postId) || postId <= 0) {
+        throw new Error('无效的帖子ID值');
+      }
+      
+      console.log('处理后的点赞帖子ID(整数):', postId);
+    } catch (parseError) {
+      console.error('帖子ID解析失败:', parseError);
+      wx.showToast({
+        title: '无效的帖子ID',
+        icon: 'none'
+      });
+      isLiking = false;
+      return;
+    }
+    
     const posts = this.data.posts;
     const currentPost = posts[index];
     
@@ -318,9 +414,9 @@ Page({
       const likedPosts = wx.getStorageSync('likedPosts') || {};
       
       if (isLiked) {
-        delete likedPosts[id];
+        delete likedPosts[postId];
       } else {
-        likedPosts[id] = true;
+        likedPosts[postId] = true;
       }
       
       wx.setStorageSync('likedPosts', likedPosts);
@@ -342,9 +438,11 @@ Page({
       
       // 调用后端API
       try {
+        console.log(`准备调用likePost API: postId=${postId}, isLike=${!isLiked}`);
+        
         const res = isLiked 
-          ? await postAPI.likePost(id, false)
-          : await postAPI.likePost(id, true);
+          ? await postAPI.likePost(postId, false)
+          : await postAPI.likePost(postId, true);
           
         logger.debug('点赞/取消点赞响应:', JSON.stringify(res));
         
@@ -405,6 +503,18 @@ Page({
   // 显示评论输入框
   showCommentInput(e) {
     const { id, index } = e.currentTarget.dataset;
+    console.log('评论按钮原始帖子ID:', id, '类型:', typeof id);
+    
+    // 确保帖子ID是有效的
+    if (!id) {
+      console.error('评论按钮点击：帖子ID为空');
+      wx.showToast({
+        title: '操作失败，请重试',
+        icon: 'none'
+      });
+      return;
+    }
+    
     this.setData({
       currentCommentPostId: id,
       currentCommentPostIndex: index,
@@ -574,6 +684,63 @@ Page({
     isFavoriting = true;
     
     const { id, index } = e.currentTarget.dataset;
+    console.log('原始收藏帖子ID:', id, '类型:', typeof id, '值:', JSON.stringify(id));
+    
+    // 确保帖子ID是整数
+    let postId;
+    try {
+      // 处理边界情况
+      if (id === undefined || id === null) {
+        throw new Error('帖子ID为空');
+      }
+      
+      // 提取数字部分并转换为整数
+      if (typeof id === 'string') {
+        const numericPart = id.replace(/[^0-9]/g, '');
+        if (!numericPart) {
+          throw new Error('帖子ID不包含有效数字');
+        }
+        postId = parseInt(numericPart, 10);
+      } else if (typeof id === 'number') {
+        postId = id;
+      } else if (typeof id === 'object') {
+        // 尝试从对象中提取ID
+        if (id.id || id._id) {
+          const objId = id.id || id._id;
+          if (typeof objId === 'number') {
+            postId = objId;
+          } else if (typeof objId === 'string') {
+            const numericPart = objId.replace(/[^0-9]/g, '');
+            if (!numericPart) {
+              throw new Error('对象中的帖子ID不包含有效数字');
+            }
+            postId = parseInt(numericPart, 10);
+          } else {
+            throw new Error('对象中的帖子ID类型无效');
+          }
+        } else {
+          // 如果是一个对象但没有id字段
+          throw new Error('对象中未找到有效的帖子ID');
+        }
+      } else {
+        throw new Error('帖子ID类型无效');
+      }
+      
+      // 验证是否是有效整数
+      if (isNaN(postId) || postId <= 0) {
+        throw new Error('无效的帖子ID值');
+      }
+      
+      console.log('处理后的收藏帖子ID(整数):', postId);
+    } catch (parseError) {
+      console.error('帖子ID解析失败:', parseError);
+      wx.showToast({
+        title: '无效的帖子ID',
+        icon: 'none'
+      });
+      isFavoriting = false;
+      return;
+    }
     
     try {
       // 确保用户已登录
@@ -604,7 +771,8 @@ Page({
       });
       
       // 调用API
-      const res = await postAPI.favoritePost(id, !isFavorited);
+      console.log(`准备调用favoritePost API: postId=${postId}, isFavorite=${!isFavorited}`);
+      const res = await postAPI.favoritePost(postId, !isFavorited);
       logger.debug('收藏/取消收藏响应:', JSON.stringify(res));
       
       // 处理返回结果
@@ -704,42 +872,105 @@ Page({
       
       if (newPosts.length > 0) {
         logger.debug('首页加载到帖子数量:', newPosts.length);
+        // 输出原始帖子数据结构，用于诊断
+        logger.debug('首页第一条帖子原始数据:', JSON.stringify(newPosts[0]));
       } else {
         logger.debug('首页未加载到帖子数据');
       }
       
       // 处理帖子数据，统一格式
-      const processedPosts = newPosts.map(post => {
+      const processedPosts = newPosts.map((post, postIndex) => {
         // 从标准格式中提取实际的帖子数据
         const postData = post.post || post;
         
-        // 确保帖子有ID字段
-        const postId = postData.id || postData._id || `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        // 输出原始ID信息，用于诊断
+        const rawId = postData.id || postData._id;
+        logger.debug(`帖子[${postIndex}]原始ID:`, rawId, '类型:', typeof rawId);
+        
+        // 确保帖子有ID字段，并转换为整数
+        let postId;
+        try {
+          // 尝试获取ID
+          
+          if (!rawId) {
+            // 如果没有ID，生成一个临时ID
+            console.warn('帖子缺少ID字段，生成临时ID');
+            postId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          } else if (typeof rawId === 'number') {
+            // 如果已经是数字，直接使用
+            postId = rawId;
+          } else if (typeof rawId === 'string') {
+            // 尝试提取数字部分并转换为整数
+            const numericPart = rawId.replace(/[^0-9]/g, '');
+            if (numericPart) {
+              postId = parseInt(numericPart, 10);
+            } else {
+              // 如果没有数字部分，使用原始ID
+              postId = rawId;
+            }
+          } else {
+            // 如果是其他类型，转为字符串
+            postId = String(rawId);
+          }
+          
+          // 验证ID是否为整数
+          if (typeof postId === 'number' && isNaN(postId)) {
+            throw new Error('帖子ID不是有效数字');
+          }
+          
+          logger.debug(`帖子[${postIndex}]处理后ID:`, postId, '类型:', typeof postId);
+        } catch (error) {
+          console.error('帖子ID处理错误:', error, postData);
+          // 出错时使用备用ID
+          postId = `error_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        }
+        
+        // 构建统一格式的帖子数据
+        const processedPost = {
+          id: postId,
+          _id: postId, // 添加_id字段，确保与WXML模板兼容
+          title: postData.title || '',
+          content: postData.content || '',
+          images: [], // 稍后处理
+          author_name: postData.nick_name || postData.author_name || '南开大学用户',
+          author_avatar: postData.avatar || postData.author_avatar || '/assets/icons/default-avatar.png',
+          likes: postData.like_count || postData.likes || 0,
+          comment_count: postData.comment_count || postData.comments || 0,
+          favoriteCounts: postData.favorite_count || postData.favorites || 0,
+          createTime: postData.create_time || postData.createTime || postData.create_at,
+          updateTime: postData.update_time || postData.updateTime || postData.update_at,
+          isLiked: postData.is_liked || postData.isLiked || false,
+          isFavorited: postData.is_favorited || postData.isFavorited || false,
+          tags: postData.tags || [],
+          // 添加WXML模板中使用的字段
+          authorName: postData.nick_name || postData.author_name || '南开大学用户',
+          authorAvatar: postData.avatar || postData.author_avatar || '/assets/icons/default-avatar.png',
+          relativeTime: this.formatTimeDisplay(postData.create_time || postData.createTime || postData.create_at),
+          commentCount: postData.comment_count || postData.comments || 0,
+          displayContent: postData.content || '',
+        };
         
         // 处理图片数组，确保每个URL都是有效的字符串
-        let images = [];
         if (postData.images) {
           // 如果images是字符串，尝试解析JSON
           if (typeof postData.images === 'string') {
             try {
               const parsedImages = JSON.parse(postData.images);
               if (Array.isArray(parsedImages)) {
-                images = parsedImages;
-              } else {
-                images = [];
+                processedPost.images = parsedImages;
               }
             } catch (e) {
               // 如果解析失败，假设它是单个URL
-              images = [postData.images];
+              processedPost.images = [postData.images];
             }
           } 
           // 如果已经是数组，直接使用
           else if (Array.isArray(postData.images)) {
-            images = postData.images;
+            processedPost.images = postData.images;
           }
           
           // 过滤并验证每个图片URL
-          images = images.filter(url => {
+          processedPost.images = processedPost.images.filter(url => {
             // 必须是字符串
             if (typeof url !== 'string') {
               return false;
@@ -752,33 +983,15 @@ Page({
             
             return true;
           });
-          
-          // 处理微信云存储图片，获取临时访问链接
-          const cloudImages = images.filter(url => url.startsWith('cloud://'));
-          if (cloudImages.length > 0) {
-            // 异步获取云存储临时链接（不阻塞UI渲染）
-            this.getCloudFileUrls(cloudImages, postId, index);
-          }
         }
         
-        // 构建统一格式的帖子数据
-        return {
-          id: postId,
-          title: postData.title || '',
-          content: postData.content || '',
-          images: images,
-          author_name: postData.nick_name || postData.author_name || '南开大学用户',
-          author_avatar: postData.avatar || postData.author_avatar || '/assets/icons/default-avatar.png',
-          likes: postData.like_count || postData.likes || 0,
-          comment_count: postData.comment_count || postData.comments || 0,
-          favoriteCounts: postData.favorite_count || postData.favorites || 0,
-          createTime: postData.create_time || postData.createTime || postData.create_at,
-          updateTime: postData.update_time || postData.updateTime || postData.update_at,
-          isLiked: postData.is_liked || postData.isLiked || false,
-          isFavorited: postData.is_favorited || postData.isFavorited || false,
-          tags: postData.tags || []
-        };
+        return processedPost;
       });
+      
+      // 再次验证处理后的帖子数据
+      if (processedPosts.length > 0) {
+        logger.debug('处理后的第一条帖子数据:', JSON.stringify(processedPosts[0]));
+      }
       
       // 判断是否有更多数据
       const hasMore = newPosts.length >= params.limit;

@@ -10,7 +10,7 @@
 
   <!-- 帖子列表 -->
   <view class="posts-list" wx:if="{{posts.length > 0}}">
-    <view class="post-item" wx:for="{{posts}}" wx:key="_id" bindtap="goToPostDetail" data-id="{{item._id}}">
+    <view class="post-item" wx:for="{{posts}}" wx:key="id" bindtap="goToPostDetail" data-id="{{item.id}}">
       <!-- 帖子内容预览 -->
       <view class="post-content">
         <view class="post-title" wx:if="{{item.title}}">{{item.title}}</view>

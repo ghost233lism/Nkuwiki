@@ -254,45 +254,87 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   likePost: (postId, isLike = true) => {
-    const userInfo = userManager.getCurrentUser();
-    if (!userInfo || !userInfo.openid) {
-      logger.error('likePost: 用户未登录');
-      return Promise.reject(new Error('用户未登录'));
-    }
-
-    if (!postId) {
-      logger.error('likePost: 缺少帖子ID');
-      return Promise.reject(new Error('缺少帖子ID'));
-    }
-
-    logger.debug(`用户${userInfo.openid}${isLike ? '点赞' : '取消点赞'}帖子${postId}`);
-
-    // 构建请求URL和方法
-    const action = isLike ? 'like' : 'unlike';
-    const url = `${API.PREFIX.WXAPP}/posts/${postId}/${action}`;
-    const method = isLike ? 'PUT' : 'POST';
+    console.log('进入likePost方法, 参数:', { postId, isLike });
     
-    return request({
-      url,
-      method,
-      params: { openid: userInfo.openid }, // 将openid移到查询参数
-      data: {} // 请求体为空
-    }).then(res => {
-      logger.debug(`${isLike ? '点赞' : '取消点赞'}结果:`, JSON.stringify(res));
+    try {
+      const userInfo = userManager.getCurrentUser();
+      console.log('获取到的用户信息:', userInfo ? JSON.stringify(userInfo) : 'null');
       
-      // 通知全局的帖子更新事件
-      const app = getApp();
-      if (app && app.globalData) {
-        // 更新帖子点赞状态
-        const updatedPost = { id: postId, is_liked: isLike };
-        notifyPostUpdate(updatedPost);
+      if (!userInfo || !userInfo.openid) {
+        const errorMsg = '用户未登录或无法获取openid';
+        console.error('likePost:', errorMsg);
+        return Promise.reject(new Error(errorMsg));
+      }
+
+      if (!postId) {
+        const errorMsg = '缺少帖子ID';
+        console.error('likePost:', errorMsg);
+        return Promise.reject(new Error(errorMsg));
       }
       
-      return res;
-    }).catch(err => {
-      logger.error(`${isLike ? '点赞' : '取消点赞'}失败:`, err);
-      throw err;
-    });
+      // 确保postId是整数 - 处理可能的字符串或非整数值
+      let postIdInt;
+      try {
+        // 移除所有非数字字符并转换为整数
+        postIdInt = parseInt(String(postId).replace(/[^0-9]/g, ''), 10);
+        
+        if (isNaN(postIdInt) || postIdInt <= 0) {
+          const errorMsg = `无效的帖子ID格式: ${postId}`;
+          console.error('likePost:', errorMsg);
+          return Promise.reject(new Error(errorMsg));
+        }
+        
+        console.log(`转换后的帖子ID: ${postIdInt} (原始值: ${postId})`);
+      } catch (parseError) {
+        console.error(`帖子ID解析失败: ${parseError.message}, 原始值: ${postId}`);
+        return Promise.reject(new Error(`无法解析帖子ID: ${postId}`));
+      }
+
+      console.log(`用户${userInfo.openid}准备${isLike ? '点赞' : '取消点赞'}帖子${postIdInt}`);
+
+      // 构建请求URL和方法
+      const action = isLike ? 'like' : 'unlike';
+      const url = `${API.PREFIX.WXAPP}/posts/${postIdInt}/${action}`;
+      const method = 'POST'; // 统一使用POST方法，符合API文档
+      
+      console.log('请求URL:', url);
+      console.log('请求方法:', method);
+      console.log('查询参数:', { openid: userInfo.openid });
+      
+      const requestPromise = request({
+        url,
+        method,
+        params: { openid: userInfo.openid }, // 将openid移到查询参数
+        data: {} // 请求体为空
+      });
+      
+      console.log('请求已发起');
+      
+      return requestPromise.then(res => {
+        console.log(`${isLike ? '点赞' : '取消点赞'}结果:`, JSON.stringify(res));
+        
+        // 通知全局的帖子更新事件
+        try {
+          const app = getApp();
+          if (app && app.globalData) {
+            // 更新帖子点赞状态
+            const updatedPost = { id: postIdInt, is_liked: isLike };
+            notifyPostUpdate(updatedPost);
+            console.log('全局帖子状态已更新');
+          }
+        } catch (updateError) {
+          console.error('更新全局状态失败:', updateError);
+        }
+        
+        return res;
+      }).catch(err => {
+        console.error(`${isLike ? '点赞' : '取消点赞'}失败:`, err);
+        throw err;
+      });
+    } catch (error) {
+      console.error('likePost方法执行异常:', error);
+      return Promise.reject(error);
+    }
   },
 
   /**
@@ -313,7 +355,7 @@ const postAPI = {
       shouldFavorite = isFavoriteOrOpenid;
       // 获取当前用户openid
       const userInfo = userManager.getCurrentUser();
-      openid = userInfo.openid;
+      openid = userInfo?.openid;
     } else if (typeof isFavoriteOrOpenid === 'string') {
       // 旧的调用方式: favoritePost(postId, openid, isFavorite)
       openid = isFavoriteOrOpenid;
@@ -321,7 +363,7 @@ const postAPI = {
     } else {
       // 如果未提供，尝试获取当前用户
       const userInfo = userManager.getCurrentUser();
-      openid = userInfo.openid;
+      openid = userInfo?.openid;
     }
     
     if (!openid) {
@@ -329,20 +371,46 @@ const postAPI = {
       return Promise.reject(new Error('缺少用户openid'));
     }
     
-    logger.debug('收藏操作，帖子ID:', postId, '用户openid:', openid, '操作:', shouldFavorite ? '收藏' : '取消收藏');
+    if (!postId) {
+      logger.error('favoritePost: 缺少帖子ID');
+      return Promise.reject(new Error('缺少帖子ID'));
+    }
+    
+    // 确保postId是整数 - 处理可能的字符串或非整数值
+    let postIdInt;
+    try {
+      // 移除所有非数字字符并转换为整数
+      postIdInt = parseInt(String(postId).replace(/[^0-9]/g, ''), 10);
+      
+      if (isNaN(postIdInt) || postIdInt <= 0) {
+        const errorMsg = `无效的帖子ID格式: ${postId}`;
+        logger.error('favoritePost:', errorMsg);
+        return Promise.reject(new Error(errorMsg));
+      }
+      
+      logger.debug(`收藏操作 - 转换后的帖子ID: ${postIdInt} (原始值: ${postId})`);
+    } catch (parseError) {
+      logger.error(`帖子ID解析失败: ${parseError.message}, 原始值: ${postId}`);
+      return Promise.reject(new Error(`无法解析帖子ID: ${postId}`));
+    }
+    
+    logger.debug('收藏操作，帖子ID:', postIdInt, '用户openid:', openid, '操作:', shouldFavorite ? '收藏' : '取消收藏');
     
     // 根据shouldFavorite确定请求URL和方法
     const url = shouldFavorite 
-      ? `${API.PREFIX.WXAPP}/posts/${postId}/favorite` 
-      : `${API.PREFIX.WXAPP}/posts/${postId}/unfavorite`;
+      ? `${API.PREFIX.WXAPP}/posts/${postIdInt}/favorite` 
+      : `${API.PREFIX.WXAPP}/posts/${postIdInt}/unfavorite`;
     
-    const method = shouldFavorite ? 'PUT' : 'POST';
+    const method = 'POST'; // 统一使用POST方法，符合API文档
+    
+    // 根据API文档，收藏操作需要在请求体中包含is_favorite字段
+    const data = shouldFavorite ? { is_favorite: true } : {};
     
     return request({
       url: url,
       method: method,
       params: { openid }, // 将openid移到查询参数
-      data: {} // 请求体为空
+      data: data
     }).then(res => {
       logger.debug('收藏API响应成功:', JSON.stringify(res));
       
@@ -350,7 +418,7 @@ const postAPI = {
       const app = getApp();
       if (app && app.globalData) {
         // 更新帖子收藏状态
-        const updatedPost = { id: postId, is_favorited: shouldFavorite };
+        const updatedPost = { id: postIdInt, is_favorited: shouldFavorite };
         notifyPostUpdate(updatedPost);
       }
       
@@ -457,6 +525,53 @@ const postAPI = {
       showError: false
     }).catch(err => {
       logger.error('获取热门标签失败:', err);
+      return [];
+    });
+  },
+
+  /**
+   * 获取用户发布的帖子
+   * @param {string} openid - 用户openid
+   * @param {Object} params - 可选的查询参数
+   * @param {number} [params.limit=20] - 返回记录数量限制
+   * @param {number} [params.offset=0] - 分页偏移量
+   * @param {string} [params.order_by='created_at:desc'] - 排序方式
+   * @returns {Promise} - 请求Promise
+   */
+  getUserPosts: (openid, params = {}) => {
+    if (!openid) {
+      logger.error('getUserPosts: 缺少用户openid');
+      return Promise.reject(new Error('缺少用户openid'));
+    }
+
+    logger.debug(`获取用户帖子, openid: ${openid}`);
+    
+    const queryParams = {
+      ...params,
+      openid,
+      limit: params.limit || 20,
+      offset: params.offset || 0,
+      order_by: params.order_by || 'created_at:desc'
+    };
+
+    return request({
+      url: `${API.PREFIX.WXAPP}/posts`,
+      method: 'GET',
+      params: queryParams,
+      showError: false
+    }).then(res => {
+      if (res && res.posts && Array.isArray(res.posts)) {
+        logger.debug(`成功获取用户帖子, 数量: ${res.posts.length}`);
+        return res.posts;
+      } else if (res && Array.isArray(res)) {
+        logger.debug(`成功获取用户帖子, 数量: ${res.length}`);
+        return res;
+      } else {
+        logger.debug('返回格式不符合预期，返回空数组');
+        return [];
+      }
+    }).catch(err => {
+      logger.error(`获取用户帖子失败: ${err.message || JSON.stringify(err)}`);
       return [];
     });
   }

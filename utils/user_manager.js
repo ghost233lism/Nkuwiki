@@ -2,7 +2,9 @@
  * 用户管理模块 - 统一管理用户信息获取和存储
  */
 
-const { userAPI, logger } = require('./api/index')
+const { logger } = require('./api/index')
+// 不在顶部导入userAPI，避免循环依赖
+// const { userAPI } = require('./api/index')
 
 // 存储位置枚举
 const STORAGE_KEYS = {
@@ -164,7 +166,68 @@ const userManager = {
    * @returns {Object} 用户信息
    */
   getCurrentUser() {
-    return cachedUserInfo
+    try {
+      // 调试日志
+      console.log('获取当前用户信息，缓存状态:', cachedUserInfo ? '有缓存' : '无缓存');
+      
+      // 首先尝试从内存中获取
+      if (cachedUserInfo && cachedUserInfo.openid) {
+        return cachedUserInfo;
+      }
+      
+      // 从本地存储获取
+      try {
+        const storedUserInfo = wx.getStorageSync(USER_INFO_KEY);
+        if (storedUserInfo && storedUserInfo.openid) {
+          console.log('从存储中获取到用户信息:', storedUserInfo.openid);
+          cachedUserInfo = storedUserInfo;
+          loginState = true;
+          return storedUserInfo;
+        }
+      } catch (storageError) {
+        console.error('从存储获取用户信息失败:', storageError);
+      }
+      
+      // 从最新缓存获取
+      try {
+        const latestUserInfo = wx.getStorageSync(STORAGE_KEYS.LATEST_USER_INFO);
+        if (latestUserInfo && latestUserInfo.openid) {
+          console.log('从最新缓存获取到用户信息:', latestUserInfo.openid);
+          return latestUserInfo;
+        }
+      } catch (latestError) {
+        console.error('从最新缓存获取用户信息失败:', latestError);
+      }
+      
+      // 从全局状态获取
+      try {
+        const app = getApp();
+        if (app && app.globalData && app.globalData.userInfo && app.globalData.userInfo.openid) {
+          console.log('从全局状态获取到用户信息:', app.globalData.userInfo.openid);
+          return app.globalData.userInfo;
+        }
+      } catch (appError) {
+        console.error('从全局状态获取用户信息失败:', appError);
+      }
+      
+      // 如果所有来源都没有获取到有效用户信息，返回一个默认的访客信息
+      console.warn('无法获取有效用户信息，返回默认访客信息');
+      return {
+        openid: 'guest_' + Date.now(),
+        nickname: DEFAULT_NAME,
+        avatar: getDefaultAvatar(),
+        isGuest: true
+      };
+    } catch (error) {
+      console.error('获取用户信息时发生异常:', error);
+      // 返回一个安全的默认值
+      return {
+        openid: 'error_' + Date.now(),
+        nickname: DEFAULT_NAME,
+        avatar: getDefaultAvatar(),
+        isError: true
+      };
+    }
   },
   
   /**
@@ -313,98 +376,92 @@ const userManager = {
   
   /**
    * 更新用户信息
-   * @param {Object} newInfo - 新的用户信息
-   * @returns {Boolean} 是否更新成功
+   * @param {Object} userData - 新的用户信息
+   * @returns {Promise<Object>} 更新后的用户信息
    */
-  updateUserInfo(newInfo) {
-    console.debug('更新用户信息:', JSON.stringify(newInfo));
+  updateUserInfo: function(userData) {
+    // 确保有用户ID和更新数据
+    let userId;
+    let updateData = {};
     
+    console.debug('更新用户信息，原始数据:', userData);
+    
+    // 检查参数类型并适当处理
+    if (typeof userData === 'object' && userData !== null) {
+      if (userData.openid || userData._id || userData.id) {
+        // 如果传入的是用户对象，提取用户ID
+        userId = userData.openid || userData._id || userData.id;
+        // 复制所有有效字段作为更新数据
+        updateData = { ...userData };
+        // 删除ID字段，避免API冲突
+        delete updateData.openid;
+        delete updateData._id;
+        delete updateData.id;
+      } else {
+        // 如果只传入更新数据（不包含ID），使用当前用户ID
+        userId = this.getUserId();
+        updateData = userData;
+      }
+    } else if (userData) {
+      // 如果传入的是ID值本身（字符串或其他类型）
+      userId = userData;
+    } else {
+      // 未提供参数，使用当前用户ID
+      userId = this.getUserId();
+    }
+    
+    // 确保有用户ID
+    if (!userId) {
+      console.error('用户未登录或无法获取用户ID');
+      return Promise.reject(new Error('用户未登录或无法获取用户ID'));
+    }
+    
+    // 确保userId是字符串类型
+    userId = String(userId);
+    
+    // 准备更新数据，移除空值
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === null) {
+        delete updateData[key];
+      }
+    });
+    
+    console.debug('准备更新用户数据:', { userId, updateData });
+    
+    // 动态导入userAPI以避免循环依赖
     try {
-      if (!newInfo) {
-        console.error('更新信息为空');
-        return false;
+      const { userAPI } = require('./api/index');
+      
+      if (!userAPI || typeof userAPI.updateUser !== 'function') {
+        console.error('userAPI未正确加载或updateUser方法不存在');
+        return Promise.reject(new Error('API模块加载失败'));
       }
       
-      // 获取当前用户信息
-      const currentUserInfo = this.getCurrentUser();
-      if (!currentUserInfo || !currentUserInfo.openid) {
-        console.error('当前无用户信息或无有效openid，无法更新');
-        return false;
-      }
-      
-      // 合并新信息到现有用户信息
-      const updatedUserInfo = { ...currentUserInfo };
-      
-      // 只复制有值的字段
-      Object.keys(newInfo).forEach(key => {
-        if (newInfo[key] !== undefined && newInfo[key] !== null) {
-          updatedUserInfo[key] = newInfo[key];
-        }
-      });
-      
-      // 简化字段处理，统一处理常用字段别名
-      const fieldMappings = {
-        // 头像字段别名
-        'avatar': ['avatar_url', 'avatarUrl'],
-        // 昵称字段别名
-        'nickname': ['nickName', 'nick_name'],
-        // 个人简介字段别名
-        'bio': ['personal_bio', 'biography']
-      };
-      
-      // 处理字段别名
-      Object.entries(fieldMappings).forEach(([mainField, aliases]) => {
-        if (newInfo[mainField]) {
-          // 将主字段值同步到所有别名
-          aliases.forEach(alias => {
-            updatedUserInfo[alias] = newInfo[mainField];
-          });
-        } else {
-          // 检查是否有别名字段更新
-          for (const alias of aliases) {
-            if (newInfo[alias]) {
-              updatedUserInfo[mainField] = newInfo[alias];
-              // 同步到其他别名
-              aliases.forEach(otherAlias => {
-                if (otherAlias !== alias) {
-                  updatedUserInfo[otherAlias] = newInfo[alias];
-                }
-              });
-              break;
+      // 调用API更新用户信息，确保userId是字符串
+      return userAPI.updateUser(userId, updateData)
+        .then(result => {
+          if (result && result.success) {
+            // 更新缓存的用户信息
+            cachedUserInfo = {
+              ...cachedUserInfo,
+              ...result.user
+            };
+            
+            // 更新本地存储
+            try {
+              wx.setStorageSync(USER_INFO_KEY, cachedUserInfo);
+            } catch (error) {
+              console.error('更新用户信息到缓存失败:', error);
             }
+            
+            return cachedUserInfo;
+          } else {
+            throw new Error('更新用户信息失败');
           }
-        }
-      });
-      
-      // 确保昵称和个性签名有默认值
-      updatedUserInfo.nickname = updatedUserInfo.nickname || '南开大学用户';
-      updatedUserInfo.bio = updatedUserInfo.bio || '这个人很懒，什么都没留下';
-      
-      // 更新时间戳
-      updatedUserInfo.update_time = new Date().toISOString();
-      
-      // 保存更新后的用户信息
-      wx.setStorageSync(STORAGE_KEYS.USER_INFO, updatedUserInfo);
-      wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, updatedUserInfo);
-      
-      // 更新全局状态
-      const app = getApp();
-      if (app && app.globalData) {
-        app.globalData.userInfo = updatedUserInfo;
-        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
-          app.globalDataChanged('userInfo', updatedUserInfo);
-        }
-      }
-      
-      // 设置刷新标记
-      wx.removeStorageSync('_cached_user_info');
-      wx.setStorageSync('needRefreshUserInfo', true);
-      
-      console.debug('用户信息已成功更新');
-      return true;
+        });
     } catch (error) {
-      console.error('更新用户信息失败:', error);
-      return false;
+      console.error('加载userAPI模块失败:', error);
+      return Promise.reject(error);
     }
   },
   
@@ -426,7 +483,60 @@ const userManager = {
    * @returns {boolean} 是否已登录
    */
   isLoggedIn() {
-    return !!cachedUserInfo && loginState
+    try {
+      console.log('检查用户登录状态');
+      
+      // 首先检查内存中的状态
+      if (loginState && cachedUserInfo && cachedUserInfo.openid) {
+        console.log('用户已登录(内存状态):', cachedUserInfo.openid);
+        return true;
+      }
+      
+      // 检查存储中的状态
+      try {
+        const storedLoginState = wx.getStorageSync(LOGIN_STATE_KEY);
+        const storedUserInfo = wx.getStorageSync(USER_INFO_KEY);
+        
+        if (storedLoginState && storedUserInfo && storedUserInfo.openid) {
+          console.log('用户已登录(存储状态):', storedUserInfo.openid);
+          // 更新内存中的状态
+          loginState = true;
+          cachedUserInfo = storedUserInfo;
+          return true;
+        }
+      } catch (storageError) {
+        console.error('检查存储登录状态失败:', storageError);
+      }
+      
+      // 检查全局状态
+      try {
+        const app = getApp();
+        if (app && app.globalData && app.globalData.hasLogin && app.globalData.userInfo && app.globalData.userInfo.openid) {
+          console.log('用户已登录(全局状态):', app.globalData.userInfo.openid);
+          // 更新内存中的状态
+          loginState = true;
+          cachedUserInfo = app.globalData.userInfo;
+          return true;
+        }
+      } catch (appError) {
+        console.error('检查全局登录状态失败:', appError);
+      }
+      
+      // 不再通过token接口验证登录状态，因为该接口不存在
+      // 而是根据用户信息是否存在判断
+      const userInfo = this.getCurrentUser();
+      if (userInfo && userInfo.openid && !userInfo.isGuest && !userInfo.isError) {
+        // 如果能获取到有效的用户信息，认为用户已登录
+        console.log('用户已登录(有用户信息):', userInfo.openid);
+        return true;
+      }
+      
+      console.log('用户未登录');
+      return false;
+    } catch (error) {
+      console.error('检查登录状态发生异常:', error);
+      return false;
+    }
   },
   
   /**
@@ -627,56 +737,6 @@ const userManager = {
     })
   },
   
-  // 更新用户信息
-  updateUserInfo: function(userData) {
-    // 确保有用户ID
-    const userId = this.getUserId()
-    if (!userId) {
-      return Promise.reject(new Error('用户未登录或无法获取用户ID'))
-    }
-    
-    // 准备更新数据
-    const updateData = {
-      nickname: userData.nickName || userData.nickname,
-      avatar_url: userData.avatarUrl || userData.avatar_url,
-      gender: userData.gender,
-      country: userData.country,
-      province: userData.province,
-      city: userData.city,
-      language: userData.language
-    }
-    
-    // 移除空值
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined || updateData[key] === null) {
-        delete updateData[key]
-      }
-    })
-    
-    // 调用API更新用户信息
-    return userAPI.updateUser(userId, updateData)
-      .then(result => {
-        if (result && result.success) {
-          // 更新缓存的用户信息
-          cachedUserInfo = {
-            ...cachedUserInfo,
-            ...result.user
-          }
-          
-          // 更新本地存储
-          try {
-            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
-          } catch (error) {
-            logger.error('更新用户信息到缓存失败:', error)
-          }
-          
-          return cachedUserInfo
-        } else {
-          throw new Error('更新用户信息失败')
-        }
-      })
-  },
-  
   // 获取最新的用户信息
   refreshUserInfo: function() {
     const userId = this.getUserId()
@@ -684,28 +744,44 @@ const userManager = {
       return Promise.reject(new Error('用户未登录或无法获取用户ID'))
     }
     
-    // 调用API获取用户信息
-    return userAPI.getUser(userId)
-      .then(result => {
-        if (result && result.user) {
-          // 更新缓存的用户信息
-          cachedUserInfo = {
-            ...cachedUserInfo,
-            ...result.user
+    // 动态导入userAPI以避免循环依赖
+    try {
+      const { userAPI } = require('./api/index');
+      
+      if (!userAPI || typeof userAPI.getUserInfo !== 'function') {
+        console.error('userAPI未正确加载或getUserInfo方法不存在');
+        return Promise.reject(new Error('API模块加载失败'));
+      }
+      
+      // 调用API获取用户信息
+      return userAPI.getUserInfo(userId)
+        .then(result => {
+          if (result && (result.user || result.openid)) {
+            // 提取用户信息，处理不同的返回格式
+            const userData = result.user || result;
+            
+            // 更新缓存的用户信息
+            cachedUserInfo = {
+              ...cachedUserInfo,
+              ...userData
+            }
+            
+            // 更新本地存储
+            try {
+              wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
+            } catch (error) {
+              console.error('保存用户信息到缓存失败:', error)
+            }
+            
+            return cachedUserInfo
+          } else {
+            throw new Error('获取用户信息失败')
           }
-          
-          // 更新本地存储
-          try {
-            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
-          } catch (error) {
-            logger.error('保存用户信息到缓存失败:', error)
-          }
-          
-          return cachedUserInfo
-        } else {
-          throw new Error('获取用户信息失败')
-        }
-      })
+        });
+    } catch (error) {
+      console.error('加载userAPI模块失败:', error);
+      return Promise.reject(error);
+    }
   },
 
   // 格式化用户数据，兼容老版本

@@ -467,26 +467,36 @@ Page({
                 
                 // 尝试更新userManager中的用户信息
                 try {
-                  // 使用正确的userManager.updateUserInfo方法
+                  // 使用更安全的方式调用userManager
                   if (userManager && typeof userManager.updateUserInfo === 'function') {
-                    const updateSuccess = userManager.updateUserInfo(updatedUser);
-                    log.debug('userManager用户信息更新结果:', updateSuccess);
+                    // 使用Promise方式处理
+                    userManager.updateUserInfo(updatedUser)
+                      .then(result => {
+                        console.debug('userManager用户信息更新成功:', result);
+                      })
+                      .catch(error => {
+                        // 仅记录错误，不影响后续流程
+                        console.error('userManager.updateUserInfo失败，但已更新本地存储:', error);
+                      });
                   } else {
                     // 备用方案，尝试多种可能的方法
-                    log.error('userManager.updateUserInfo方法不存在，尝试备用方法');
-                    if (userManager && typeof userManager.updateLocalUserInfo === 'function') {
-                      userManager.updateLocalUserInfo(updatedUser);
-                      log.debug('使用updateLocalUserInfo更新用户信息');
-                    } else if (userManager && typeof userManager._setUserInfo === 'function') {
-                      userManager._setUserInfo(updatedUser);
-                      log.debug('使用_setUserInfo更新用户信息');
-                    } else if (userManager) {
-                      log.debug('尝试直接设置userManager._userInfo');
-                      userManager._userInfo = updatedUser;
+                    console.debug('userManager.updateUserInfo方法不存在或不是函数，使用备用更新方式');
+                    if (userManager && typeof userManager.saveUserInfo === 'function') {
+                      userManager.saveUserInfo(updatedUser);
+                    } else {
+                      // 直接更新全局状态
+                      const app = getApp();
+                      if (app && app.globalData) {
+                        app.globalData.userInfo = updatedUser;
+                        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
+                          app.globalDataChanged('userInfo', updatedUser);
+                        }
+                      }
                     }
                   }
                 } catch (userManagerError) {
-                  log.error('更新userManager失败:', userManagerError);
+                  // 仅记录错误，不影响后续流程
+                  console.error('更新userManager异常，但已更新本地存储:', userManagerError);
                 }
               } catch (storageError) {
                 log.error('存储数据错误:', storageError);
@@ -538,12 +548,16 @@ Page({
                         });
                         
                         // 尝试所有可能的刷新方法
-                        if (typeof prevPage.fetchUserInfo === 'function') {
-                          log.debug('调用上一页的fetchUserInfo方法');
-                          prevPage.fetchUserInfo();
-                        } else if (typeof prevPage.refreshUserData === 'function') {
+                        if (typeof prevPage.refreshUserData === 'function') {
                           log.debug('调用上一页的refreshUserData方法');
                           prevPage.refreshUserData();
+                        } else if (typeof prevPage.fetchUserInfo === 'function') {
+                          log.debug('调用上一页的fetchUserInfo方法');
+                          prevPage.fetchUserInfo();
+                        } else if (typeof prevPage.getUserStats === 'function') {
+                          log.debug('调用上一页的getUserStats方法');
+                          const userId = updatedUser._id || updatedUser.id || updatedUser.openid;
+                          prevPage.getUserStats(userId);
                         } else if (typeof prevPage.onShow === 'function') {
                           log.debug('调用上一页的onShow方法');
                           prevPage.onShow();

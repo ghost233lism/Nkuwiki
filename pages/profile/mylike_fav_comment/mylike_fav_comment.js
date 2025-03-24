@@ -128,10 +128,55 @@ Page({
   
   // 跳转到帖子详情
   goToPostDetail(e) {
-    const id = e.currentTarget.dataset.id
+    const id = e.currentTarget.dataset.id;
+    console.log('个人中心-收藏/点赞-详情页跳转帖子ID:', id, '类型:', typeof id);
+    
+    // 验证帖子ID
+    if (!id) {
+      console.error('帖子ID为空');
+      wx.showToast({
+        title: '无法查看帖子详情',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 确保ID是整数
+    let postId;
+    try {
+      if (typeof id === 'number') {
+        postId = id;
+      } else if (typeof id === 'string') {
+        // 尝试转换为整数
+        const numericPart = id.replace(/[^0-9]/g, '');
+        if (!numericPart) {
+          throw new Error('帖子ID不包含有效数字');
+        }
+        postId = parseInt(numericPart, 10);
+      } else {
+        throw new Error('帖子ID类型无效');
+      }
+      
+      // 验证是否为有效整数
+      if (isNaN(postId) || postId <= 0) {
+        throw new Error('无效的帖子ID值');
+      }
+    } catch (error) {
+      console.error('帖子ID处理失败:', error);
+      wx.showToast({
+        title: '无法查看帖子详情',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 使用整数ID跳转
+    const numericPostId = Number(postId);
+    console.log('跳转到详情页，处理后ID:', numericPostId);
+    
     wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${id}`
-    })
+      url: `/pages/post/detail/detail?id=${numericPostId}`
+    });
   },
   
   // 创建新帖子

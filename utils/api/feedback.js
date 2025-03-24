@@ -11,14 +11,25 @@ const feedbackAPI = {
    * @returns {Promise<Object>} 提交结果
    */
   submitFeedback: (feedbackData) => {
-    if (!feedbackData.openid) {
+    // 提取openid到查询参数
+    let openid = '';
+    if (feedbackData.openid) {
+      openid = feedbackData.openid;
+      delete feedbackData.openid; // 从请求体中移除
+    } else {
       const userInfo = userManager.getCurrentUser();
-      feedbackData.openid = userInfo.openid;
+      if (userInfo && userInfo.openid) {
+        openid = userInfo.openid;
+      }
+    }
+    
+    if (!openid) {
+      logger.error('submitFeedback: 缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
     }
     
     // 确保发送正确的字段
     const safeFeedbackData = {
-      openid: feedbackData.openid,
       content: feedbackData.content,
       type: feedbackData.type || 'suggestion',
       contact: feedbackData.contact || '',
@@ -57,10 +68,14 @@ const feedbackAPI = {
       safeFeedbackData.extra = feedbackData.extra;
     }
     
+    logger.debug('提交反馈数据:', JSON.stringify(safeFeedbackData));
+    logger.debug('查询参数 openid:', openid);
+    
     return request({
       url: `${API.PREFIX.WXAPP}/feedback`,
       method: 'POST',
-      data: safeFeedbackData
+      data: safeFeedbackData,
+      params: { openid } // 将openid添加到查询参数
     });
   },
   
@@ -102,6 +117,15 @@ const feedbackAPI = {
    * @returns {Promise<Object>} 更新结果
    */
   updateFeedback: (feedbackId, feedbackData) => {
+    // 获取当前用户openid
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('updateFeedback: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
+    }
+    
+    const openid = userInfo.openid;
+    
     // 确保只更新允许的字段
     const allowedFields = ['content', 'status', 'admin_reply', 'extra'];
     const updateData = {};
@@ -115,7 +139,8 @@ const feedbackAPI = {
     return request({
       url: `${API.PREFIX.WXAPP}/feedback/${feedbackId}`,
       method: 'PUT',
-      data: updateData
+      data: updateData,
+      params: { openid } // 添加openid作为查询参数
     });
   },
 
@@ -125,9 +150,19 @@ const feedbackAPI = {
    * @returns {Promise<Object>} 操作结果
    */
   deleteFeedback: (feedbackId) => {
+    // 获取当前用户openid
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('deleteFeedback: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
+    }
+    
+    const openid = userInfo.openid;
+    
     return request({
       url: `${API.PREFIX.WXAPP}/feedback/${feedbackId}`,
-      method: 'DELETE'
+      method: 'DELETE',
+      params: { openid } // 添加openid作为查询参数
     });
   }
 };

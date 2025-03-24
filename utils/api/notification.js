@@ -60,10 +60,20 @@ const notificationAPI = {
    * @returns {Promise<Object>} 更新结果
    */
   markAsRead: async (notificationId) => {
+    // 获取当前用户openid
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('markAsRead: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
+    }
+    
+    const openid = userInfo.openid;
+    
     return request({
       url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
       method: 'PUT',
-      data: { is_read: 1 }
+      data: { is_read: 1 },
+      params: { openid } // 添加openid作为查询参数
     });
   },
   
@@ -80,6 +90,11 @@ const notificationAPI = {
       openid = userInfo.openid;
     }
     
+    if (!openid) {
+      logger.error('markAllAsRead: 缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
+    }
+    
     const data = {};
     
     // 如果传入了通知ID数组
@@ -92,6 +107,7 @@ const notificationAPI = {
       data.type = type;
     }
     
+    // 注意：这里openid已经在URL中，不需要额外添加到查询参数
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}/notifications/read`,
       method: 'PUT',
@@ -105,9 +121,19 @@ const notificationAPI = {
    * @returns {Promise<Object>} 操作结果
    */
   deleteNotification: async (notificationId) => {
+    // 获取当前用户openid
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('deleteNotification: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
+    }
+    
+    const openid = userInfo.openid;
+    
     return request({
       url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
-      method: 'DELETE'
+      method: 'DELETE',
+      params: { openid } // 添加openid作为查询参数
     });
   }
 };

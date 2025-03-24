@@ -49,23 +49,13 @@ const isDev = env === 'develop' || env === 'trial';
 
 // 基础配置
 const API = {
-  // 基础URL - 将改为动态获取
-  get BASE_URL() {
-    try {
-      const currentApp = getApp();
-      if (currentApp && currentApp.globalData && currentApp.globalData.config) {
-        return currentApp.globalData.config.services.app.base_url || 'https://nkuwiki.com';
-      }
-    } catch (error) {
-      logger.warn('获取BASE_URL失败，使用默认值', error);
-    }
-    return 'https://nkuwiki.com';
-  },
+  // API基础URL
+  BASE_URL: '',
   
-  // 各模块前缀
+  // API前缀定义
   PREFIX: {
-    WXAPP: '/api/wxapp',
-    AGENT: '/api/agent'
+    WXAPP: '/api/wxapp',  // 微信小程序API
+    AGENT: '/api/agent'    // 智能体API
   },
 
   // HTTP状态码
@@ -75,6 +65,261 @@ const API = {
     UNAUTHORIZED: 401,
     NOT_FOUND: 404,
     SERVER_ERROR: 500
+  },
+
+  // 发送请求的通用方法
+  request: function(options) {
+    const { url, method = 'GET', data, params, showError = true, showLoading = false, loadingText = '加载中...', statusCodeCallback, retryCount = 0, retryDelay = 1000, useCloud = false, hasParams = false, hasData = true, fail = null } = options;
+    
+    // 记录开始请求时间
+    const startTime = Date.now();
+    
+    // 判断参数是否合法
+    if (!url) {
+      logger.error('请求URL不能为空');
+      return Promise.reject(new Error('请求URL不能为空'));
+    }
+    
+    // 合并查询参数
+    let fullUrl = url;
+    if (params && Object.keys(params).length > 0) {
+      const queryString = Object.keys(params)
+        .filter(key => params[key] !== undefined && params[key] !== null)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+        .join('&');
+      
+      if (queryString) {
+        fullUrl = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
+      }
+    }
+    
+    // 基本URL
+    const baseUrl = API.BASE_URL || (app && app.globalData.config ? app.globalData.config.services.app.base_url : 'https://nkuwiki.com');
+    
+    // 完整请求URL
+    const requestUrl = fullUrl.startsWith('http') ? fullUrl : `${baseUrl}${fullUrl}`;
+    
+    // 获取用户信息
+    let openid = '';
+    try {
+      const userInfo = wx.getStorageSync('userInfo') || app.globalData.userInfo;
+      openid = userInfo ? userInfo.openid || '' : '';
+    } catch (e) {
+      logger.warn('获取用户信息失败:', e);
+    }
+    
+    // 请求头
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Client-Version': '1.0.0',
+      'X-Client-Platform': 'wxapp'
+    };
+    
+    // 如果有openid，添加到请求头
+    if (openid) {
+      headers['X-User-OpenID'] = openid;
+    }
+    
+    console.debug('request调用开始, 请求选项:', {
+      url: requestUrl, 
+      method, 
+      hasParams: !!params, 
+      hasData: !!data
+    });
+    
+    // 显示加载提示
+    if (showLoading) {
+      wx.showLoading({
+        title: loadingText,
+        mask: true
+      });
+    }
+    
+    // 执行请求
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url: requestUrl,
+        method: method,
+        data: data,
+        header: headers,
+        success: function(res) {
+          // 计算请求耗时
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+          
+          if (duration > 1000) {
+            logger.warn(`请求耗时较长: ${duration}ms, ${method} ${url}`);
+          }
+          
+          // 请求成功
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            logger.debug(`请求成功: ${method} ${url}, 状态码: ${res.statusCode}, 耗时: ${duration}ms`);
+            resolve(res.data);
+          } 
+          // 未找到资源
+          else if (res.statusCode === 404) {
+            logger.warn(`资源不存在: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            // 检查是否有对应的错误处理函数
+            if (statusCodeCallback && statusCodeCallback[404]) {
+              return statusCodeCallback[404](res);
+            }
+            
+            if (showError) {
+              wx.showToast({
+                title: '请求的资源不存在',
+                icon: 'none'
+              });
+            }
+            
+            reject(new Error(`资源不存在: ${res.statusCode}`));
+          }
+          // 未授权 
+          else if (res.statusCode === 401) {
+            logger.warn(`未授权: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            if (showError) {
+              wx.showToast({
+                title: '请先登录',
+                icon: 'none'
+              });
+            }
+            
+            // 清除本地存储的用户信息，触发重新登录
+            try {
+              wx.removeStorageSync('userInfo');
+            } catch (e) {
+              logger.error('清除用户信息失败:', e);
+            }
+            
+            reject(new Error('请先登录'));
+          }
+          // 参数错误
+          else if (res.statusCode === 400 || res.statusCode === 422) {
+            logger.warn(`请求参数错误: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            if (showError) {
+              let errorMsg = '请求参数错误';
+              
+              // 尝试从响应中提取错误信息
+              if (res.data && res.data.message) {
+                errorMsg = res.data.message;
+              } else if (res.data && res.data.details && res.data.details.errors) {
+                const errors = res.data.details.errors;
+                if (Array.isArray(errors) && errors.length > 0) {
+                  errorMsg = errors[0].msg || errorMsg;
+                }
+              }
+              
+              wx.showToast({
+                title: errorMsg,
+                icon: 'none'
+              });
+            }
+            
+            reject({
+              statusCode: res.statusCode,
+              message: res.data?.message || '请求参数错误',
+              details: res.data?.details || {},
+              data: res.data
+            });
+          }
+          // 服务器错误
+          else if (res.statusCode >= 500) {
+            logger.error(`服务器错误: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            if (showError) {
+              wx.showToast({
+                title: '服务器错误，请稍后再试',
+                icon: 'none'
+              });
+            }
+            
+            reject(new Error(`服务器错误: ${res.statusCode}`));
+          } 
+          // 其他错误
+          else {
+            logger.warn(`请求错误: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            // 检查是否有对应的错误处理函数
+            if (statusCodeCallback && statusCodeCallback[res.statusCode]) {
+              return statusCodeCallback[res.statusCode](res);
+            }
+            
+            if (showError) {
+              let errorMsg = '请求失败';
+              if (res.data && typeof res.data === 'object' && res.data.message) {
+                errorMsg = res.data.message;
+              }
+              
+              wx.showToast({
+                title: errorMsg,
+                icon: 'none'
+              });
+            }
+            
+            reject({
+              statusCode: res.statusCode,
+              message: res.data?.message || '请求失败',
+              details: res.data?.details || {},
+              data: res.data
+            });
+          }
+        },
+        fail: function(err) {
+          // 请求失败
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+          
+          logger.error(`请求失败: ${method} ${url}, 错误: ${err.errMsg}, 耗时: ${duration}ms`);
+          
+          // 检查是否需要重试
+          if (retryCount > 0) {
+            logger.debug(`准备重试请求: ${method} ${url}, 剩余重试次数: ${retryCount}`);
+            
+            setTimeout(() => {
+              // 递归调用，减少重试次数
+              const retryOptions = {
+                ...options,
+                retryCount: retryCount - 1
+              };
+              
+              API.request(retryOptions)
+                .then(resolve)
+                .catch(reject);
+            }, retryDelay);
+            
+            return;
+          }
+          
+          // 如果有自定义失败处理函数
+          if (typeof fail === 'function') {
+            return fail(err);
+          }
+          
+          // 显示错误提示
+          if (showError) {
+            let errorMsg = '网络连接失败';
+            if (err.errMsg && err.errMsg.includes('timeout')) {
+              errorMsg = '请求超时，请稍后再试';
+            }
+            
+            wx.showToast({
+              title: errorMsg,
+              icon: 'none'
+            });
+          }
+          
+          reject(err);
+        },
+        complete: function() {
+          // 隐藏加载提示
+          if (showLoading) {
+            wx.hideLoading();
+          }
+        }
+      });
+    });
   }
 };
 
@@ -246,387 +491,6 @@ function handleResponse(res) {
   throw error;
 }
 
-// 基础请求函数
-const request = (options = {}) => {
-  // 设置默认参数
-  const defaultOptions = {
-    showError: true,  // 是否显示错误提示
-    retryCount: 2,    // 重试次数
-    retryDelay: 1000, // 重试延迟
-    timeout: 15000,   // 超时时间
-    showLoading: false, // 是否显示加载提示 (默认不显示)
-    loadingText: '加载中...',
-    params: {}        // 查询参数
-  };
-  
-  // 合并选项
-  options = Object.assign({}, defaultOptions, options);
-  
-  // 检查参数有效性
-  if (!options.url) {
-    const errorMsg = '请求缺少URL参数';
-    logger.error(errorMsg);
-    return Promise.reject(new Error(errorMsg));
-  }
-  
-  // 使用Promise包装请求
-  return new Promise((resolve, reject) => {
-    // 执行请求函数
-    const executeRequest = (retryAttempt = 0) => {
-      try {
-        // 显示加载中
-        let loadingShown = false;
-        if (options.showLoading) {
-          loadingShown = true;
-          wx.showLoading({
-            title: options.loadingText,
-            mask: true
-          });
-        }
-        
-        // 构建完整URL
-        let url = options.url;
-        if (!url.startsWith('http')) {
-          url = API.BASE_URL + url;
-        }
-        
-        // 处理查询参数
-        url = processUrl(url, options.params);
-        
-        // 确保data是一个对象而不是字符串
-        let requestData = options.data;
-        if (requestData && typeof requestData === 'string') {
-          try {
-            requestData = JSON.parse(requestData);
-            logger.debug('请求数据从字符串转换为对象');
-          } catch (e) {
-            logger.error('请求数据解析失败，保持原样', e);
-          }
-        }
-        
-        // 确保所有字段值都不是undefined（微信请求会自动剔除undefined值）
-        if (requestData && typeof requestData === 'object') {
-          Object.keys(requestData).forEach(key => {
-            if (requestData[key] === undefined) {
-              logger.warn(`请求数据中发现undefined值，字段: ${key}，已移除`);
-              delete requestData[key]; // 移除undefined值
-            }
-          });
-          
-          // 特别检查帖子创建请求
-          if (url.includes('/posts') && options.method === 'POST') {
-            // 检查title字段
-            if (!requestData.title && requestData.title !== 0) {
-              logger.error('发帖请求缺少title字段，这将导致422错误');
-            } else {
-              logger.debug(`发帖请求title字段: "${requestData.title}", 类型: ${typeof requestData.title}, 长度: ${requestData.title.length}`);
-            }
-          }
-        }
-        
-        // 记录完整的URL
-        logger.debug(`准备发起请求[${retryAttempt > 0 ? '重试#' + retryAttempt : '首次'}]: ${options.method || 'GET'} ${url}`);
-        if (requestData) {
-          // 增强日志记录，完整显示请求体
-          try {
-            const requestDataStr = JSON.stringify(requestData, null, 2);
-            logger.debug(`完整请求体: ${requestDataStr}`);
-          } catch (e) {
-            logger.debug(`请求体参数: ${requestData}`);
-          }
-        }
-        
-        // 获取token并添加到请求头
-        let headers = options.header || { 'Content-Type': 'application/json' };
-        const token = wx.getStorageSync('token');
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        // 记录请求开始时间用于性能分析
-        const startTime = Date.now();
-
-        // 捕获并记录任何异常
-        try {
-          logger.debug('发送请求参数:', {
-            url, 
-            method: options.method || 'GET',
-            data: requestData,
-            header: headers
-          });
-          
-          // 发起请求
-          const requestTask = wx.request({
-            url: url,
-            data: requestData,
-            method: options.method || 'GET',
-            header: headers,
-            timeout: options.timeout,
-            success: (res) => {
-              // 记录响应时间
-              const responseTime = Date.now() - startTime;
-              logger.debug(`响应时间: ${responseTime}ms`);
-              
-              // 隐藏加载中
-              if (loadingShown) {
-                wx.hideLoading();
-                loadingShown = false;
-              }
-              
-              try {
-                // 请求日志
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                  logger.info(`请求成功: ${options.method || 'GET'} ${url}, 状态码: ${res.statusCode}`);
-                  
-                  // 响应体详细日志（针对重要接口）
-                  if (url.includes('/like') || url.includes('/favorite') || url.includes('/comments')) {
-                    logger.info(`关键接口响应数据: ${JSON.stringify(res.data)}`);
-                  }
-                  
-                  // 处理标准响应
-                  const data = handleResponse(res);
-                  resolve(data);
-                } else if (res.statusCode === 401) {
-                  // 未授权, 引导用户重新登录
-                  logger.warn('服务器返回未授权状态码 (401)');
-                  wx.removeStorageSync('token');
-                  wx.removeStorageSync('userInfo');
-                  
-                  // 提示用户
-                  wx.showToast({
-                    title: '登录已过期，请重新登录',
-                    icon: 'none',
-                    duration: 2000
-                  });
-                  
-                  // 2秒后跳转到登录页
-                  setTimeout(() => {
-                    wx.redirectTo({
-                      url: '/pages/login/login'
-                    });
-                  }, 2000);
-                  
-                  reject(new Error('未授权'));
-                } else {
-                  // 其他错误状态码
-                  logger.warn(`请求返回错误状态码: ${res.statusCode}, 响应数据: ${JSON.stringify(res.data)}`);
-                  
-                  // 特殊处理422错误，详细输出验证失败信息
-                  if (res.statusCode === 422) {
-                    try {
-                      // 尝试解析详细的验证错误信息
-                      const errorData = res.data;
-                      logger.error('数据验证失败(422)，原始错误信息:', JSON.stringify(errorData));
-                      
-                      // 尝试提取具体的字段错误信息
-                      let errorMsg = '数据验证失败';
-                      
-                      if (errorData && errorData.details && errorData.details.errors) {
-                        // 标准FastAPI验证错误格式
-                        const errors = errorData.details.errors;
-                        errorMsg = errors.map(err => `字段 ${err.loc.join('.')} 错误: ${err.msg}`).join('; ');
-                      } else if (errorData && errorData.detail && Array.isArray(errorData.detail)) {
-                        // 另一种常见的FastAPI验证错误格式
-                        errorMsg = errorData.detail.map(err => {
-                          if (typeof err === 'object') {
-                            return `字段 ${err.loc?.join('.') || '未知'}: ${err.msg || JSON.stringify(err)}`;
-                          }
-                          return String(err);
-                        }).join('; ');
-                      } else if (errorData && errorData.detail) {
-                        // 简单的详情字符串
-                        errorMsg = String(errorData.detail);
-                      } else if (errorData && errorData.message) {
-                        // 使用message字段
-                        errorMsg = String(errorData.message);
-                      } else if (errorData && Array.isArray(errorData)) {
-                        // 直接是一个错误数组
-                        errorMsg = errorData.map(err => {
-                          if (typeof err === 'object') {
-                            return JSON.stringify(err);
-                          }
-                          return String(err);
-                        }).join('; ');
-                      } else if (errorData && typeof errorData === 'object') {
-                        // 如果是对象，尝试序列化
-                        errorMsg = JSON.stringify(errorData);
-                      }
-                      
-                      logger.error('解析后的错误信息:', errorMsg);
-                      
-                      // 显示更友好的错误提示
-                      if (options.showError) {
-                        wx.showModal({
-                          title: '数据验证失败',
-                          content: errorMsg,
-                          showCancel: false
-                        });
-                      }
-                      
-                      // 为帖子创建请求特殊处理
-                      if (url.includes('/posts') && options.method === 'POST') {
-                        logger.error('发帖失败，详细错误:', errorMsg);
-                        logger.error('请检查以下字段：title, content, images, tags 等必填字段');
-                      }
-                      
-                      reject(new Error(errorMsg));
-                      return;
-                    } catch (parseError) {
-                      logger.error('解析422错误详情失败:', parseError);
-                    }
-                  }
-                  
-                  // 检查是否需要重试
-                  const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-                  if (retryableStatusCodes.includes(res.statusCode) && retryAttempt < options.retryCount) {
-                    logger.warn(`状态码${res.statusCode}需要重试，${options.retryDelay}ms后重试`);
-                    setTimeout(() => {
-                      executeRequest(retryAttempt + 1);
-                    }, options.retryDelay);
-                    return;
-                  }
-                  
-                  // 状态码回调处理
-                  if (options.statusCodeCallback && options.statusCodeCallback[res.statusCode]) {
-                    try {
-                      const result = options.statusCodeCallback[res.statusCode](res);
-                      if (result instanceof Promise) {
-                        result.then(resolve).catch(reject);
-                      } else {
-                        resolve(result);
-                      }
-                      return;
-                    } catch (callbackError) {
-                      logger.error(`状态码回调处理错误: ${callbackError.message}`);
-                    }
-                  }
-                  
-                  // 显示错误提示
-                  if (options.showError) {
-                    wx.showToast({
-                      title: `请求失败: ${res.statusCode}`,
-                      icon: 'none',
-                      duration: 2000
-                    });
-                  }
-                  
-                  reject(new Error(`请求失败，状态码: ${res.statusCode}`));
-                }
-              } catch (error) {
-                // 处理响应解析错误
-                logger.error(`响应处理错误: ${error.message}, 原始响应: ${JSON.stringify(res.data)}`);
-                
-                if (loadingShown) {
-                  wx.hideLoading();
-                  loadingShown = false;
-                }
-                
-                if (options.showError) {
-                  wx.showToast({
-                    title: error.message || '数据处理错误',
-                    icon: 'none',
-                    duration: 2000
-                  });
-                }
-                
-                reject(error);
-              }
-            },
-            fail: (err) => {
-              // 请求失败
-              const responseTime = Date.now() - startTime;
-              logger.error(`请求失败: ${err.errMsg}, 耗时: ${responseTime}ms`);
-              
-              if (loadingShown) {
-                wx.hideLoading();
-                loadingShown = false;
-              }
-              
-              // 检查是否需要重试
-              const networkErrors = ['request:fail', 'timeout', 'DNSLookupFailed'];
-              const shouldRetry = networkErrors.some(errType => err.errMsg && err.errMsg.includes(errType));
-              
-              if (shouldRetry && retryAttempt < options.retryCount) {
-                logger.warn(`网络错误需要重试，${options.retryDelay}ms后重试`);
-                setTimeout(() => {
-                  executeRequest(retryAttempt + 1);
-                }, options.retryDelay);
-                return;
-              }
-              
-              // 尝试域名切换
-              if (networkErrors.some(errType => err.errMsg && err.errMsg.includes(errType)) && 
-                  retryAttempt === options.retryCount && 
-                  !url.includes(KNOWN_DOMAINS[currentDomainIndex + 1 % KNOWN_DOMAINS.length])) {
-                
-                // 切换域名
-                API.BASE_URL = switchToNextDomain();
-                logger.warn(`尝试使用备用域名重试请求: ${API.BASE_URL}`);
-                
-                // 延迟后重试
-                setTimeout(() => {
-                  executeRequest(0); // 重置重试计数
-                }, options.retryDelay);
-                return;
-              }
-              
-              // 自定义失败处理
-              if (options.fail && typeof options.fail === 'function') {
-                try {
-                  const result = options.fail(err);
-                  if (result !== undefined) {
-                    resolve(result);
-                    return;
-                  }
-                } catch (failHandlerError) {
-                  logger.error(`自定义失败处理器错误: ${failHandlerError.message}`);
-                }
-              }
-              
-              // 显示错误提示
-              if (options.showError) {
-                wx.showToast({
-                  title: '网络请求失败',
-                  icon: 'none',
-                  duration: 2000
-                });
-              }
-              
-              reject(err);
-            },
-            complete: () => {
-              // 确保加载框被关闭
-              if (loadingShown) {
-                wx.hideLoading();
-              }
-            }
-          });
-          
-          // 返回请求任务，允许调用者取消请求
-          return requestTask;
-        } catch (requestError) {
-          logger.error('wx.request调用出错:', requestError);
-          if (loadingShown) {
-            wx.hideLoading();
-          }
-          reject(new Error(`发送请求失败: ${requestError.message || '未知错误'}`));
-        }
-      } catch (outerError) {
-        logger.error('executeRequest外层错误:', outerError);
-        reject(outerError);
-      }
-    };
-    
-    // 开始执行请求
-    try {
-      executeRequest();
-    } catch (startError) {
-      logger.error('启动请求失败:', startError);
-      reject(startError);
-    }
-  });
-};
-
 /**
  * 处理头像URL，确保小程序环境可以正确显示
  * @param {string} avatarUrl - 原始头像URL
@@ -673,6 +537,6 @@ function processAvatarUrl(avatarUrl) {
 module.exports = {
   API,
   logger,
-  request,
+  request: API.request,
   processAvatarUrl
 }; 

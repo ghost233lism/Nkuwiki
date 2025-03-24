@@ -64,8 +64,9 @@ Page({
     try {
       logger.debug('个人页面显示，检查是否需要刷新');
       
-      // 检查是否需要强制刷新
-      let needRefresh = false;
+      // 初始默认需要刷新统计数据，即使用户信息没变
+      let needRefresh = true;
+      let needRefreshStats = true;
       
       // 检查是否有forceRefresh标记
       if (this.data.forceRefresh) {
@@ -99,7 +100,7 @@ Page({
         });
         
         // 更新用户统计数据
-        this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+        this.refreshUserData(); // 使用完整刷新方法替代getUserStats
         return;
       }
       
@@ -118,14 +119,16 @@ Page({
           isLoggedIn: true
         });
         
-        // 如果需要刷新或每次显示都刷新
+        // 如果需要刷新用户信息
         if (needRefresh) {
           logger.debug('需要刷新，调用fetchUserInfo');
-          // 强制刷新用户信息
+          // 强制刷新用户信息和统计数据
           this.fetchUserInfo();
-        } else {
-          // 仅更新统计数据
-          this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+        } 
+        // 即使不需要刷新用户信息，也尝试刷新统计数据
+        else if (needRefreshStats) {
+          logger.debug('只刷新统计数据');
+          this.refreshUserData();
         }
       } else if (!isLoggedIn && this.data.isLoggedIn) {
         // 用户已登出，更新状态
@@ -803,6 +806,12 @@ Page({
   // 获取用户信息
   fetchUserInfo() {
     try {
+      // 设置加载指示器
+      wx.showLoading({
+        title: '刷新数据...',
+        mask: true
+      });
+      
       // 检查是否需要强制刷新
       const needRefresh = wx.getStorageSync('needRefreshUserInfo');
       if (needRefresh) {
@@ -814,20 +823,59 @@ Page({
       const user = userManager.getCurrentUser();
       if (!user || !user.openid) {
         this.setData({ isLogin: false, userInfo: null });
+        wx.hideLoading();
         return;
       }
       
-      // 更新页面数据
-      this.setData({
-        isLogin: true,
-        userInfo: user
-      });
+      // 提取用户ID（优先使用openid）
+      const userId = user.openid || user._id || user.id;
+      if (!userId) {
+        logger.error('获取用户信息失败: 无法确定用户ID');
+        this.setData({ isLogin: false, userInfo: null });
+        wx.hideLoading();
+        return;
+      }
       
-      // 更新用户统计信息
-      this.refreshUserData();
+      // 尝试通过API刷新用户信息
+      userManager.refreshUserInfo()
+        .then(refreshedUser => {
+          logger.debug('API刷新用户信息成功:', refreshedUser);
+          
+          // 更新页面数据
+          this.setData({
+            isLogin: true,
+            isLoggedIn: true,
+            userInfo: refreshedUser || user,
+            hasUserInfo: true
+          });
+          
+          // 确保使用正确的用户ID更新统计信息
+          const finalUserId = refreshedUser?.openid || user.openid || refreshedUser?._id || user._id || refreshedUser?.id || user.id;
+          
+          // 更新用户统计信息
+          return this.refreshUserData();
+        })
+        .catch(error => {
+          logger.error('API刷新用户信息失败:', error);
+          
+          // 即使API刷新失败，仍然使用本地用户信息
+          this.setData({
+            isLogin: true,
+            isLoggedIn: true,
+            userInfo: user,
+            hasUserInfo: true
+          });
+          
+          // 尝试更新统计信息
+          return this.refreshUserData();
+        })
+        .finally(() => {
+          wx.hideLoading();
+        });
     } catch (error) {
       logger.error('获取用户信息失败:', error);
       this.setData({ isLogin: false, userInfo: null });
+      wx.hideLoading();
     }
   }
 });
