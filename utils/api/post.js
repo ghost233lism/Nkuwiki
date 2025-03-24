@@ -153,10 +153,25 @@ const postAPI = {
       }
     });
     
+    // 提取openid到查询参数
+    let openid = '';
+    if (postData.openid) {
+      openid = postData.openid;
+      delete postData.openid; // 从请求体中移除
+    } else if (userManager && typeof userManager.getOpenid === 'function') {
+      openid = userManager.getOpenid() || '';
+    }
+    
+    if (!openid) {
+      logger.error('updatePost: 缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
+    }
+    
     return request({
       url: `${API.PREFIX.WXAPP}/posts/${postId}`,
       method: 'PUT',
-      data: updateData
+      data: updateData,
+      params: { openid } // 将openid添加到查询参数
     });
   },
 
@@ -166,9 +181,22 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   deletePost: (postId) => {
+    // 获取当前用户openid
+    const userInfo = userManager.getCurrentUser();
+    if (!userInfo || !userInfo.openid) {
+      logger.error('deletePost: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
+    }
+    
+    if (!postId) {
+      logger.error('deletePost: 缺少帖子ID');
+      return Promise.reject(new Error('缺少帖子ID'));
+    }
+    
     return request({
       url: `${API.PREFIX.WXAPP}/posts/${postId}`,
-      method: 'DELETE'
+      method: 'DELETE',
+      params: { openid: userInfo.openid } // 添加openid作为查询参数
     });
   },
 
@@ -247,7 +275,8 @@ const postAPI = {
     return request({
       url,
       method,
-      data: { openid: userInfo.openid }
+      params: { openid: userInfo.openid }, // 将openid移到查询参数
+      data: {} // 请求体为空
     }).then(res => {
       logger.debug(`${isLike ? '点赞' : '取消点赞'}结果:`, JSON.stringify(res));
       
@@ -312,7 +341,8 @@ const postAPI = {
     return request({
       url: url,
       method: method,
-      data: { openid }
+      params: { openid }, // 将openid移到查询参数
+      data: {} // 请求体为空
     }).then(res => {
       logger.debug('收藏API响应成功:', JSON.stringify(res));
       
@@ -406,9 +436,10 @@ const postAPI = {
     return request({
       url: `${API.PREFIX.WXAPP}/posts/${postId}/report`,
       method: 'POST',
+      params: { openid: userInfo.openid }, // 将openid移到查询参数
       data: {
-        ...reportData,
-        openid: userInfo.openid
+        reason: reportData.reason,
+        description: reportData.description
       }
     });
   },
