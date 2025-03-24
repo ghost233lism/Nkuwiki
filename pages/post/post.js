@@ -405,17 +405,11 @@ Page({
           title: title.trim(),
           content: content.trim(),
           images: cloudImages,
-          tags: [],
-          is_public: this.data.isPublic,
-          allow_comment: this.data.allowComment,
-          // 兼容字段
-          openid: userInfo.openid,
-          category_id: null,
-          location: '',
-          nick_name: nickName,
-          avatar: avatarUrl
+          openid: userInfo.openid, // 确保包含openid，API内部会将其移至查询参数
+          tags: []
         };
         
+        // 不再添加多余字段
         logger.debug('帖子数据准备完成');
         
         // 调用API发布帖子
@@ -486,38 +480,51 @@ Page({
     
     // 首先检查是否有图片，如果没有图片则优先尝试API方式
     if (!processedImages || processedImages.length === 0) {
-      // 无图片帖子，直接调用API
-      const postData = {
-        openid: userInfo.openid,
-        title: title,
-        content: content,
-        images: [],
-        tags: [],
-        category_id: null,
-        location: '',
-        nick_name: userInfo.nickname || userInfo.nickName || '南开大学用户',
-        avatar: userInfo.avatar || userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
-      };
-      
+      // 无图片帖子，直接调用API - 使用简化数据
       console.debug('无图片帖子，直接使用API');
       
+      // 检查openid是否有效
+      if (!userInfo || !userInfo.openid) {
+        console.error('无法获取有效的openid');
+        wx.hideLoading();
+        wx.showModal({
+          title: '发布失败',
+          content: '无法获取用户信息，请重新登录',
+          showCancel: false,
+          success: function() {
+            setTimeout(() => {
+              wx.navigateTo({
+                url: '/pages/login/login'
+              });
+            }, 1000);
+          }
+        });
+        return;
+      }
+      
+      // 准备安全的最小API数据 - 只包含必须字段
+      const apiPostData = {
+        title: String(title).trim(),
+        content: String(content).trim(),
+        openid: userInfo.openid // 添加openid，API内部会将其移至查询参数
+      };
+      
+      console.debug('准备发送的API数据:', JSON.stringify(apiPostData));
+      console.debug('帖子标题:', apiPostData.title, '长度:', apiPostData.title.length);
+      console.debug('帖子内容长度:', apiPostData.content.length);
+      console.debug('用户openid:', apiPostData.openid);
+      
+      wx.showLoading({
+        title: '发布中...',
+        mask: true
+      });
+      
       const { postAPI } = require('../../utils/api/index');
-      postAPI.createPost(postData)
+      postAPI.createPost(apiPostData)
         .then(res => {
           console.debug('无图片发帖结果:', res);
-          
-          // 检查返回结果是否包含错误信息
-          if (res && res.success === false) {
-            console.error('无图片发帖API返回错误:', res.error);
-            wx.hideLoading();
-            wx.showToast({
-              title: res.error || '发布失败',
-              icon: 'none'
-            });
-            return;
-          }
-          
           wx.hideLoading();
+          
           app.globalData.needRefreshIndexPosts = true;
           wx.showToast({
             title: '发布成功',
@@ -531,10 +538,36 @@ Page({
         })
         .catch(err => {
           console.error('无图片API发帖失败:', err);
+          
           wx.hideLoading();
-          wx.showToast({
-            title: '发布失败，请稍后重试',
-            icon: 'none'
+          
+          // 尝试从错误对象中提取更有用的信息
+          let errorMessage = '发布失败，请稍后重试';
+          
+          if (err) {
+            if (typeof err === 'string') {
+              errorMessage = err;
+            } else if (err.message) {
+              errorMessage = err.message;
+            } else if (err.errMsg) {
+              errorMessage = err.errMsg;
+            } else if (typeof err === 'object') {
+              try {
+                errorMessage = JSON.stringify(err);
+              } catch(e) {
+                console.error('无法解析错误对象:', e);
+              }
+            }
+          }
+          
+          // 将错误信息记录到控制台，方便调试
+          console.error('完整错误信息:', errorMessage);
+          
+          // 显示清晰的错误弹窗，不用toast，防止长信息被截断
+          wx.showModal({
+            title: '发布失败',
+            content: errorMessage.length > 200 ? errorMessage.substring(0, 200) + '...' : errorMessage,
+            showCancel: false
           });
         });
     } else {

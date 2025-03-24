@@ -14,10 +14,23 @@ const commentAPI = {
    * @returns {Promise} - 请求Promise
    */
   createComment: (commentData) => {
+    // 从commentData中提取openid，并移除它
+    let openid = '';
+    if (commentData.openid) {
+      openid = commentData.openid;
+      delete commentData.openid; // 从请求体中移除
+    } else if (userManager && typeof userManager.getOpenid === 'function') {
+      openid = userManager.getOpenid() || '';
+    }
+    
+    if (!openid) {
+      logger.error('缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
+    }
+    
     // 确保只发送后端支持的字段
     const safeCommentData = {
       post_id: commentData.post_id,
-      openid: commentData.openid,
       nick_name: commentData.nick_name,
       avatar: commentData.avatar,
       content: commentData.content,
@@ -25,10 +38,14 @@ const commentAPI = {
       images: commentData.images || []
     };
     
+    logger.debug('创建评论请求体:', JSON.stringify(safeCommentData));
+    logger.debug('创建评论openid (查询参数):', openid);
+    
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,
       method: 'POST',
-      data: safeCommentData
+      data: safeCommentData,
+      params: { openid } // 将openid添加到URL查询参数
     });
   },
 
@@ -120,6 +137,8 @@ const commentAPI = {
       return Promise.reject(new Error('用户未登录'));
     }
     
+    const openid = userInfo.openid;
+    
     // 根据isLike确定请求URL和方法
     const url = isLike 
       ? `${API.PREFIX.WXAPP}/comments/${commentId}/like` 
@@ -130,7 +149,8 @@ const commentAPI = {
     return request({
       url: url,
       method: method,
-      data: { openid: userInfo.openid }
+      params: { openid }, // 将openid移到查询参数
+      data: {} // 空请求体
     }).then(res => {
       logger.debug(`${isLike ? '点赞' : '取消点赞'}评论结果:`, JSON.stringify(res));
       return res;
@@ -177,11 +197,11 @@ const commentAPI = {
       userInfo = userManager.getCurrentUser();
     }
     
+    // 构建请求体，注意将openid从请求体移除，将作为URL参数传递
     const data = {
-      post_id,
+      post_id, // 确保post_id在请求体中
       content,
-      openid,
-      // 添加用户昵称和头像，后端要求这些字段
+      // 添加用户昵称和头像，后端可能会使用
       nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '用户',
       avatar: userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
     };
@@ -196,12 +216,14 @@ const commentAPI = {
       data.images = images;
     }
     
-    logger.debug('添加评论，参数:', JSON.stringify(data));
+    logger.debug('添加评论，请求体:', JSON.stringify(data));
+    logger.debug('添加评论，openid (查询参数):', openid);
     
     return request({
       url: `${API.PREFIX.WXAPP}/comments`,
       method: 'POST',
       data,
+      params: { openid }, // 将openid作为查询参数
       showError: true
     }).then(res => {
       logger.debug('评论API响应成功:', JSON.stringify(res));
@@ -248,28 +270,33 @@ const commentAPI = {
   /**
    * 举报评论
    * @param {number} commentId - 评论ID
-   * @param {Object} reportData - 举报数据
-   * @param {string} reportData.reason - 举报原因
-   * @param {string} [reportData.description] - 详细描述
+   * @param {string} reason - 举报原因
    * @returns {Promise} - 请求Promise
    */
-  reportComment: (commentId, reportData) => {
+  reportComment: (commentId, reason) => {
     const userInfo = userManager.getCurrentUser();
     if (!userInfo || !userInfo.openid) {
-      return Promise.reject(new Error('用户未登录，无法举报'));
+      logger.error('reportComment: 用户未登录');
+      return Promise.reject(new Error('用户未登录'));
     }
     
-    if (!reportData || !reportData.reason) {
+    const openid = userInfo.openid;
+    
+    if (!commentId) {
+      logger.error('reportComment: 缺少评论ID');
+      return Promise.reject(new Error('缺少评论ID'));
+    }
+    
+    if (!reason) {
+      logger.error('reportComment: 缺少举报原因');
       return Promise.reject(new Error('缺少举报原因'));
     }
     
     return request({
       url: `${API.PREFIX.WXAPP}/comments/${commentId}/report`,
       method: 'POST',
-      data: {
-        ...reportData,
-        openid: userInfo.openid
-      }
+      data: { reason },
+      params: { openid } // 将openid移到查询参数
     });
   },
   

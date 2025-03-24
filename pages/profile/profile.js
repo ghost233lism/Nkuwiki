@@ -25,7 +25,8 @@ Page({
       favorites: 0,
       follows: 0,
       followers: 0
-    }
+    },
+    updatedUserInfo: null // Added for updatedUserInfo handling
   },
 
   onLoad(options) {
@@ -59,31 +60,84 @@ Page({
   },
 
   onShow() {
-    // 每次显示页面时重新检查登录状态
-    const isLoggedIn = userManager.isLoggedIn();
-    const userInfo = userManager.getCurrentUser();
-    
-    logger.debug('个人页面显示，登录状态:', isLoggedIn);
-    
-    if (isLoggedIn && userInfo) {
-      // 用户已登录，更新信息
-      this.setData({
-        userInfo: userInfo,
-        hasUserInfo: true,
-        isLogin: true,
-        isLoggedIn: true
-      });
+    // 每次显示页面时重新检查登录状态和刷新用户信息
+    try {
+      logger.debug('个人页面显示，检查是否需要刷新');
       
-      // 更新用户统计数据
-      this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
-    } else if (!isLoggedIn && this.data.isLoggedIn) {
-      // 用户已登出，更新状态
-      this.setData({
-        userInfo: null,
-        hasUserInfo: false,
-        isLogin: false,
-        isLoggedIn: false
-      });
+      // 检查是否需要强制刷新
+      let needRefresh = false;
+      
+      // 检查是否有forceRefresh标记
+      if (this.data.forceRefresh) {
+        logger.debug('检测到forceRefresh标记，将刷新用户数据');
+        needRefresh = true;
+        this.setData({ forceRefresh: false });
+      }
+      
+      // 检查存储中的刷新标记
+      try {
+        const storageNeedRefresh = wx.getStorageSync('needRefreshUserInfo');
+        if (storageNeedRefresh) {
+          logger.debug('检测到存储刷新标记，将刷新用户数据');
+          needRefresh = true;
+          wx.setStorageSync('needRefreshUserInfo', false);
+        }
+      } catch (e) {
+        logger.error('检查存储刷新标记失败:', e);
+      }
+      
+      // 如果有updatedUserInfo数据，直接使用它
+      if (this.data.updatedUserInfo) {
+        logger.debug('检测到updatedUserInfo数据，直接使用');
+        const userInfo = this.data.updatedUserInfo;
+        this.setData({ 
+          userInfo: userInfo,
+          hasUserInfo: true,
+          isLogin: true,
+          isLoggedIn: true,
+          updatedUserInfo: null // 清除更新数据
+        });
+        
+        // 更新用户统计数据
+        this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+        return;
+      }
+      
+      // 检查登录状态
+      const isLoggedIn = userManager.isLoggedIn();
+      const userInfo = userManager.getCurrentUser();
+      
+      logger.debug('个人页面显示，登录状态:', isLoggedIn);
+      
+      if (isLoggedIn && userInfo) {
+        // 用户已登录，更新信息
+        this.setData({
+          userInfo: userInfo,
+          hasUserInfo: true,
+          isLogin: true,
+          isLoggedIn: true
+        });
+        
+        // 如果需要刷新或每次显示都刷新
+        if (needRefresh) {
+          logger.debug('需要刷新，调用fetchUserInfo');
+          // 强制刷新用户信息
+          this.fetchUserInfo();
+        } else {
+          // 仅更新统计数据
+          this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+        }
+      } else if (!isLoggedIn && this.data.isLoggedIn) {
+        // 用户已登出，更新状态
+        this.setData({
+          userInfo: null,
+          hasUserInfo: false,
+          isLogin: false,
+          isLoggedIn: false
+        });
+      }
+    } catch (error) {
+      logger.error('onShow执行出错:', error);
     }
   },
 

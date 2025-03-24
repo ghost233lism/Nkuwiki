@@ -14,50 +14,74 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   createPost: (postData) => {
-    // 标准化帖子数据 - 适配新版API
-    const safePostData = {
-      // 必需字段
-      title: postData.title?.trim() || '',
-      content: postData.content?.trim() || '',
-      
-      // 媒体字段
-      images: postData.images || [],
-      
-      // 分类和标签
-      tags: postData.tags || [],
-      category_id: postData.category_id || null,
-      
-      // 设置
-      is_public: postData.is_public !== undefined ? postData.is_public : true,
-      allow_comment: postData.allow_comment !== undefined ? postData.allow_comment : true,
-      
-      // 位置信息
-      location: postData.location || '',
-      
-      // 兼容字段 - 会被后端API忽略但保留以兼容旧代码
-      openid: postData.openid || userManager.getOpenid() || '',
-      nick_name: postData.nick_name || '',
-      avatar: postData.avatar || ''
+    // 更详细的日志记录，帮助调试
+    logger.debug('创建帖子原始数据:', JSON.stringify(postData));
+    
+    // 提取openid到查询参数
+    let openid = '';
+    if (postData.openid) {
+      openid = postData.openid;
+      delete postData.openid; // 从请求体中移除
+    } else if (userManager && typeof userManager.getOpenid === 'function') {
+      openid = userManager.getOpenid() || '';
+    }
+    
+    if (!openid) {
+      logger.error('缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
+    }
+    
+    // 特别检查title字段
+    if (!postData.title || typeof postData.title !== 'string' || postData.title.trim() === '') {
+      const errorMsg = '创建帖子失败: 标题不能为空';
+      logger.error(errorMsg);
+      return Promise.reject(new Error(errorMsg));
+    }
+    
+    // 特别检查content字段
+    if (!postData.content || typeof postData.content !== 'string' || postData.content.trim() === '') {
+      const errorMsg = '创建帖子失败: 内容不能为空';
+      logger.error(errorMsg);
+      return Promise.reject(new Error(errorMsg));
+    }
+    
+    // 简化为最小数据集，只包含API绝对必需的字段
+    const minimalPostData = {
+      title: String(postData.title).trim(),
+      content: String(postData.content).trim()
     };
     
-    // 参数验证
-    if (!safePostData.title) {
-      logger.warn('创建帖子失败: 标题不能为空');
-      return Promise.reject(new Error('标题不能为空'));
+    // 如果存在有效的images数组，添加到请求
+    if (postData.images && Array.isArray(postData.images) && postData.images.length > 0) {
+      minimalPostData.images = postData.images;
     }
     
-    if (!safePostData.content) {
-      logger.warn('创建帖子失败: 内容不能为空');
-      return Promise.reject(new Error('内容不能为空'));
+    // 如果存在有效的tags数组，添加到请求
+    if (postData.tags && Array.isArray(postData.tags) && postData.tags.length > 0) {
+      minimalPostData.tags = postData.tags.map(tag => String(tag));
     }
     
-    logger.debug('准备创建帖子，标题:', safePostData.title.substring(0, 20) + (safePostData.title.length > 20 ? '...' : ''));
+    // 记录最终要发送的数据
+    logger.debug(`最终发送的最小化帖子数据: ${JSON.stringify(minimalPostData, null, 2)}`);
+    logger.debug(`查询参数 openid: ${openid}`);
+    logger.info(`发帖标题: "${minimalPostData.title}", 内容长度: ${minimalPostData.content.length}`);
     
     return request({
       url: `${API.PREFIX.WXAPP}/posts`,
       method: 'POST',
-      data: safePostData,
+      data: minimalPostData,
+      params: { openid }, // 将openid添加到查询参数中
       showError: true
+    }).catch(error => {
+      logger.error(`创建帖子API请求失败: ${error.message || '未知错误'}`);
+      if (error.data) {
+        try {
+          logger.error(`错误详情: ${JSON.stringify(error.data)}`);
+        } catch (e) {
+          logger.error(`无法序列化错误详情: ${e.message}`);
+        }
+      }
+      return Promise.reject(error);
     });
   },
 
