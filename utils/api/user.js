@@ -159,13 +159,20 @@ const userAPI = {
       return Promise.reject(new Error('openid为空'));
     }
     
+    logger.debug(`开始获取用户信息: openid=${openid}`);
+    
+    // 添加时间戳参数，确保绕过缓存
+    const timestamp = Date.now();
+    
     // API文档中的接口: GET /api/wxapp/users/{openid}
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}`,
       method: 'GET',
+      params: { _t: timestamp }, // 添加时间戳，防止缓存
       showError: false,
-      retryCount: 2,
-      useCache: false, // 禁用缓存，始终获取最新数据
+      retryCount: 3, // 增加重试次数
+      retryDelay: 1000, // 设置重试延迟
+      useCache: false, // 显式禁用缓存，始终获取最新数据
       statusCodeCallback: {
         404: () => {
           // 用户不存在时尝试使用当前用户接口
@@ -173,11 +180,40 @@ const userAPI = {
           return request({
             url: `${API.PREFIX.WXAPP}/users/me`, // API文档中的获取当前用户接口
             method: 'GET',
-            params: { openid },
-            useCache: false
+            params: { openid, _t: timestamp }, // 添加时间戳，防止缓存
+            useCache: false,
+            retryCount: 2
           }).catch(() => getLocalFallbackUserInfo(openid));
         }
       }
+    }).then(response => {
+      // 记录成功获取到的用户信息
+      logger.debug(`成功获取用户信息: openid=${openid}`);
+      
+      // 处理标准API响应格式
+      let userData;
+      if (response && response.code === 200 && response.data) {
+        userData = response.data;
+      } else if (response && response.openid) {
+        userData = response;
+      } else {
+        userData = { openid };
+      }
+      
+      // 检查统计数据字段，确保它们存在
+      ['posts_count', 'likes_count', 'favorites_count', 
+       'following_count', 'followers_count', 'token_count'].forEach(field => {
+        if (userData[field] === undefined) {
+          userData[field] = 0;
+        } else if (typeof userData[field] === 'string') {
+          userData[field] = parseInt(userData[field]) || 0;
+        }
+      });
+      
+      return response;
+    }).catch(error => {
+      logger.error(`获取用户信息失败: openid=${openid}`, error);
+      return getLocalFallbackUserInfo(openid);
     });
   },
 

@@ -851,13 +851,14 @@ Page({
   async loadPosts(refresh = false) {
     if (this.data.loading && !refresh) return;
     
-    console.debug('开始加载帖子，刷新模式:', refresh ? '强制刷新' : '追加');
+    logger.debug('开始加载帖子，刷新模式:', refresh ? '强制刷新' : '追加');
     
     // 强制刷新模式下立即清空现有帖子列表，提供更好的用户体验
     if (refresh) {
       this.setData({
         posts: [],
-        loading: true
+        loading: true,
+        isEmptyContent: false // 重置空内容状态
       });
     } else {
       this.setData({ loading: true });
@@ -906,6 +907,9 @@ Page({
         newPosts = [];
         total = 0;
       }
+      
+      // 检查是否没有帖子数据，并且是刷新模式或者是第一页
+      const isEmptyContent = newPosts.length === 0 && (refresh || this.data.posts.length === 0);
       
       if (newPosts.length > 0) {
         logger.debug('首页加载到帖子数量:', newPosts.length);
@@ -1038,13 +1042,17 @@ Page({
         posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
         loading: false,
         hasMore: hasMore,
-        page: refresh ? 2 : this.data.page + 1
+        page: refresh ? 2 : this.data.page + 1,
+        isEmptyContent: isEmptyContent, // 设置是否显示空内容提示
       });
       
       return processedPosts;
     } catch (error) {
       logger.error('首页加载帖子失败:', error);
-      this.setData({ loading: false });
+      this.setData({ 
+        loading: false,
+        isEmptyContent: true // 加载失败时也显示空内容提示
+      });
       
       wx.showToast({
         title: '加载失败，请重试',

@@ -158,7 +158,7 @@
     </block>
 
     <!-- 添加没有帖子时的提示 -->
-    <view wx:elif="{{!loading && posts.length === 0}}" class="empty-message">
+    <view wx:elif="{{isEmptyContent}}" class="empty-message">
       <image src="/assets/icons/empty-posts.png" mode="aspectFit" class="empty-icon"></image>
       <text>暂无内容，快去发布第一条帖子吧！</text>
       <view class="empty-action" bindtap="goToPost">

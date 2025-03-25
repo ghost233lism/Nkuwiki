@@ -309,9 +309,9 @@ const userManager = {
   /**
    * 保存用户信息到本地存储
    * @param {Object} userInfo - 用户信息
-   * @param {Boolean} updateLatest - 是否同时更新最新用户信息
+   * @param {Boolean} updateGlobal - 是否更新全局状态和触发刷新
    */
-  saveUserInfo(userInfo) {
+  saveUserInfo(userInfo, updateGlobal = true) {
     if (!userInfo) {
       console.error('保存的用户信息为空');
       
@@ -353,9 +353,23 @@ const userManager = {
         console.error('检查用户信息更新状态失败:', e);
       }
       
+      // 保留原有的统计数据，确保不会被覆盖
+      const preserveStatsFields = {};
+      if (existingUserInfo) {
+        // 保留重要的统计数据字段
+        ['posts_count', 'likes_count', 'comments_count', 'favorites_count', 
+         'following_count', 'followers_count', 'token_count'].forEach(field => {
+          if (existingUserInfo[field] !== undefined && 
+              (userInfo[field] === undefined || userInfo[field] === null)) {
+            preserveStatsFields[field] = existingUserInfo[field];
+          }
+        });
+      }
+      
       // 标准化用户信息
       let finalUserInfo = {
-        ...userInfo,
+        ...preserveStatsFields,  // 先添加保留的统计数据
+        ...userInfo,             // 然后是新的用户信息
         // 确保关键字段存在
         openid: userInfo.openid || userInfo.wxapp_id || userInfo.open_id || `user_${userInfo.id || Date.now()}`,
         nick_name: userInfo.nick_name || userInfo.nickName || '南开大学用户',
@@ -366,6 +380,14 @@ const userManager = {
         school: userInfo.school || userInfo.university || '南开大学',
         update_time: new Date().toISOString()
       };
+      
+      // 如果新数据中有统计数据，确保转换为数字类型
+      ['posts_count', 'likes_count', 'comments_count', 'favorites_count', 
+       'following_count', 'followers_count', 'token_count'].forEach(field => {
+        if (finalUserInfo[field] !== undefined) {
+          finalUserInfo[field] = parseInt(finalUserInfo[field]) || 0;
+        }
+      });
       
       // 如果需要保留用户编辑的信息
       if (shouldPreserveUpdates && existingUserInfo) {
@@ -401,19 +423,27 @@ const userManager = {
       wx.setStorageSync(LOGIN_STATE_KEY, true);
       wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, finalUserInfo);
       
-      // 更新全局状态
-      const app = getApp();
-      if (app && app.globalData) {
-        app.globalData.userInfo = finalUserInfo;
-        app.globalData.hasLogin = true;
-        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
-          app.globalDataChanged('userInfo', finalUserInfo);
+      // 仅在需要时更新全局状态和触发刷新
+      if (updateGlobal) {
+        // 更新全局状态
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.userInfo = finalUserInfo;
+          app.globalData.hasLogin = true;
+          
+          // 设置需要刷新首页和个人资料页的标记
+          app.globalData.needRefreshIndexPosts = true;
+          app.globalData.needRefreshUserInfo = true;
+          
+          if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
+            app.globalDataChanged('userInfo', finalUserInfo);
+          }
         }
+        
+        // 设置刷新标记
+        wx.removeStorageSync('_cached_user_info');
+        wx.setStorageSync('needRefreshUserInfo', true);
       }
-      
-      // 设置刷新标记
-      wx.removeStorageSync('_cached_user_info');
-      wx.setStorageSync('needRefreshUserInfo', true);
       
       console.info('用户信息和登录状态已成功保存');
       return true;
