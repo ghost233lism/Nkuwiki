@@ -114,10 +114,20 @@ const postAPI = {
    * @returns {Promise} - 请求Promise
    */
   getPosts: (params = {}) => {
+    // 强制添加时间戳参数，防止缓存
+    const timestamp = Date.now();
+    const paramsWithTimestamp = { 
+      ...params, 
+      _t: timestamp // 添加时间戳参数
+    };
+    
+    logger.debug('获取帖子列表，添加时间戳防止缓存:', timestamp);
+    
     return request({
       url: `${API.PREFIX.WXAPP}/posts`,
       method: 'GET',
-      params: params
+      params: paramsWithTimestamp,
+      useCache: false // 显式禁用缓存
     }).catch(err => {
       logger.error('获取帖子列表失败:', err);
       // 返回空数据，避免前端崩溃

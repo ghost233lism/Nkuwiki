@@ -423,6 +423,22 @@ Page({
           
           // 设置首页需要刷新
           app.globalData.needRefreshIndexPosts = true;
+          console.debug('设置全局刷新标记: app.globalData.needRefreshIndexPosts = true');
+          
+          // 尝试直接刷新首页数据 - 方法一：直接访问实例
+          const pages = getCurrentPages();
+          const indexPage = pages.find(page => page.route === 'pages/index/index' || page.route === '/pages/index/index');
+          if (indexPage && typeof indexPage.loadPosts === 'function') {
+            console.debug('直接调用首页loadPosts方法刷新数据');
+            try {
+              indexPage.loadPosts(true);
+              console.debug('首页loadPosts方法调用成功');
+            } catch (e) {
+              console.error('调用首页loadPosts方法失败:', e);
+            }
+          } else {
+            console.debug('未找到首页实例，将在返回时通过onShow刷新');
+          }
           
           // 显示成功提示并返回
           wx.showToast({
@@ -431,7 +447,20 @@ Page({
             duration: 1500,
             success: function() {
               setTimeout(() => {
-                wx.navigateBack();
+                // 添加参数标记需要刷新 - 方法二：通过页面参数传递
+                wx.navigateBack({
+                  delta: 1,
+                  success: () => {
+                    console.debug('成功返回上一页');
+                  },
+                  fail: (err) => {
+                    console.error('返回上一页失败，尝试重定向到首页', err);
+                    // 如果返回失败，尝试直接跳转到首页 - 方法三：重定向
+                    wx.reLaunch({
+                      url: '/pages/index/index?refresh=true'
+                    });
+                  }
+                });
               }, 1500);
             }
           });
@@ -446,7 +475,20 @@ Page({
             duration: 1500,
             success: function() {
               setTimeout(() => {
-                wx.navigateBack();
+                // 添加参数标记需要刷新
+                wx.navigateBack({
+                  delta: 1,
+                  success: () => {
+                    console.debug('成功返回上一页');
+                  },
+                  fail: (err) => {
+                    console.error('返回上一页失败，尝试重定向到首页', err);
+                    // 如果返回失败，尝试直接跳转到首页
+                    wx.reLaunch({
+                      url: '/pages/index/index?refresh=true'
+                    });
+                  }
+                });
               }, 1500);
             }
           });
@@ -525,13 +567,43 @@ Page({
           console.debug('无图片发帖结果:', res);
           wx.hideLoading();
           
+          // 立即标记需要刷新首页数据
           app.globalData.needRefreshIndexPosts = true;
+          
+          // 获取首页实例，直接刷新数据
+          const pages = getCurrentPages();
+          const indexPage = pages.find(page => page.route === 'pages/index/index' || page.route === '/pages/index/index');
+          if (indexPage && typeof indexPage.loadPosts === 'function') {
+            console.debug('直接调用首页loadPosts方法刷新数据');
+            try {
+              indexPage.loadPosts(true);
+              console.debug('首页loadPosts方法调用成功');
+            } catch (e) {
+              console.error('调用首页loadPosts方法失败:', e);
+            }
+          } else {
+            console.debug('未找到首页实例，将在返回时通过onShow刷新');
+          }
+          
           wx.showToast({
             title: '发布成功',
             icon: 'success',
             success: function() {
               setTimeout(() => {
-                wx.navigateBack();
+                // 添加参数标记需要刷新
+                wx.navigateBack({
+                  delta: 1,
+                  success: () => {
+                    console.debug('成功返回上一页');
+                  },
+                  fail: (err) => {
+                    console.error('返回上一页失败，尝试重定向到首页', err);
+                    // 如果返回失败，尝试直接跳转到首页
+                    wx.reLaunch({
+                      url: '/pages/index/index?refresh=true'
+                    });
+                  }
+                });
               }, 1500);
             }
           });

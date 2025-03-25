@@ -11,14 +11,22 @@ const postAPI = require('./post');
  * @returns {Object} 本地用户信息
  */
 function getLocalFallbackUserInfo(openid) {
-  logger.warn(`无法从服务器获取用户信息，尝试使用本地缓存, openid=${openid}`);
+  logger.warn(`无法从服务器获取用户信息，使用本地缓存, openid=${openid}`);
+  
+  // 从本地获取用户信息
   const localUser = userManager.getCurrentUser();
   
+  // 只有当本地用户与请求的用户匹配时才返回
   if (localUser && localUser.openid === openid) {
-    return Promise.resolve(localUser);
+    return Promise.resolve({
+      code: 200,
+      message: "success (from local cache)",
+      data: localUser,
+      source: "local_cache"
+    });
   }
   
-  return Promise.reject(new Error('无法获取用户信息'));
+  return Promise.reject(new Error(`无法获取用户(${openid})信息`));
 }
 
 /**
@@ -56,6 +64,43 @@ const userAPI = {
       return Promise.reject(new Error('缺少必要参数: openid'));
     }
     
+    // 检查是否有本地更新的用户信息，避免覆盖用户编辑的信息
+    let userInfoUpdated = false;
+    let updatedUser = null;
+    let updateTime = 0;
+    
+    try {
+      userInfoUpdated = wx.getStorageSync('userInfoUpdated') || false;
+      updatedUser = wx.getStorageSync('_latest_user_info') || wx.getStorageSync('userInfo');
+      updateTime = wx.getStorageSync('userInfoUpdateTime') || 0;
+      
+      const now = new Date().getTime();
+      const thirtyMinutesInMs = 30 * 60 * 1000;
+      
+      // 如果有更新的用户信息且不超过30分钟，优先使用更新的信息
+      if (userInfoUpdated && updatedUser && (now - updateTime) < thirtyMinutesInMs) {
+        logger.debug('检测到已更新的用户信息，优先使用更新信息进行同步');
+        
+        // 使用更新后的用户信息而不是传入的数据
+        if (updatedUser.openid === userData.openid) {
+          userData = {
+            ...userData,
+            nick_name: updatedUser.nick_name || updatedUser.nickName || userData.nick_name,
+            avatar: updatedUser.avatar || updatedUser.avatarUrl || userData.avatar,
+            gender: updatedUser.gender !== undefined ? updatedUser.gender : userData.gender,
+            bio: updatedUser.bio || userData.bio,
+            birthday: updatedUser.birthday || userData.birthday,
+            wechatId: updatedUser.wechatId || userData.wechatId,
+            qqId: updatedUser.qqId || userData.qqId
+          };
+          
+          logger.debug('使用本地更新的用户信息:', userData);
+        }
+      }
+    } catch (e) {
+      logger.error('检查本地更新状态失败:', e);
+    }
+    
     // 准备请求数据
     const requestData = {
       openid: userData.openid,
@@ -63,6 +108,12 @@ const userAPI = {
       avatar: userData.avatar || userData.avatarUrl || '',
       gender: userData.gender || 0
     };
+    
+    // 添加其他可能被编辑的字段
+    if (userData.bio) requestData.bio = userData.bio;
+    if (userData.birthday) requestData.birthday = userData.birthday;
+    if (userData.wechatId) requestData.wechatId = userData.wechatId;
+    if (userData.qqId) requestData.qqId = userData.qqId;
     
     // 位置信息
     if (userData.location || (userData.province && userData.city)) {
@@ -86,6 +137,14 @@ const userAPI = {
       data: requestData,
       showLoading: true,
       loadingText: '同步用户信息...'
+    }).then(response => {
+      // 同步成功后清除标记
+      try {
+        wx.setStorageSync('userInfoUpdated', false);
+      } catch (e) {
+        logger.error('清除用户信息更新标记失败:', e);
+      }
+      return response;
     });
   },
 
@@ -100,26 +159,25 @@ const userAPI = {
       return Promise.reject(new Error('openid为空'));
     }
     
+    // API文档中的接口: GET /api/wxapp/users/{openid}
     return request({
       url: `${API.PREFIX.WXAPP}/users/${openid}`,
       method: 'GET',
       showError: false,
-      retryCount: 3,
+      retryCount: 2,
+      useCache: false, // 禁用缓存，始终获取最新数据
       statusCodeCallback: {
         404: () => {
-          logger.debug(`用户openid ${openid} 不存在，尝试获取当前用户信息`);
+          // 用户不存在时尝试使用当前用户接口
+          logger.debug(`用户 ${openid} 不存在，尝试获取当前用户信息`);
           return request({
-            url: `${API.PREFIX.WXAPP}/users/me`,
+            url: `${API.PREFIX.WXAPP}/users/me`, // API文档中的获取当前用户接口
             method: 'GET',
             params: { openid },
-            showError: false
-          }).catch(err => {
-            logger.error('获取当前用户信息也失败:', err);
-            return getLocalFallbackUserInfo(openid);
-          });
+            useCache: false
+          }).catch(() => getLocalFallbackUserInfo(openid));
         }
-      },
-      fail: () => getLocalFallbackUserInfo(openid)
+      }
     });
   },
 

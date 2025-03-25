@@ -77,9 +77,16 @@ Page({
       }
     })
   },
-  onLoad() {
-    console.log('页面加载')
-    this.loadPosts()
+  onLoad(options) {
+    console.log('首页加载，参数:', options);
+    
+    // 检查是否需要强制刷新
+    const needRefresh = options && options.refresh === 'true';
+    if (needRefresh) {
+      console.debug('检测到URL参数refresh=true，将强制刷新');
+    }
+    
+    this.loadPosts(needRefresh); // 如果有刷新参数则强制刷新
     this.setData({
       currentPostId: '',  // 初始化为空字符串
       currentPostIndex: -1
@@ -91,11 +98,26 @@ Page({
     }
   },
   onShow() {
-    console.log('页面显示')
+    console.log('首页显示');
+    
     // 检查是否需要刷新数据
     if (app.globalData.needRefreshIndexPosts) {
-      this.loadPosts(true) // 参数true表示强制刷新
-      app.globalData.needRefreshIndexPosts = false // 重置标志
+      console.debug('检测到needRefreshIndexPosts标记，立即刷新首页数据');
+      
+      // 使用全局变量记录最后刷新时间，避免短时间内重复刷新
+      const now = Date.now();
+      const lastRefreshTime = app.globalData.lastIndexRefreshTime || 0;
+      
+      // 如果距离上次刷新超过2秒，才执行刷新
+      if (now - lastRefreshTime > 2000) {
+        console.debug('开始刷新首页数据');
+        this.loadPosts(true); // 参数true表示强制刷新
+        app.globalData.lastIndexRefreshTime = now;
+      } else {
+        console.debug('距离上次刷新时间不足2秒，跳过此次刷新');
+      }
+      
+      app.globalData.needRefreshIndexPosts = false; // 重置标志
     }
     
     // 检查是否有全局数据更新
@@ -829,13 +851,24 @@ Page({
   async loadPosts(refresh = false) {
     if (this.data.loading && !refresh) return;
     
-    this.setData({ loading: true });
+    console.debug('开始加载帖子，刷新模式:', refresh ? '强制刷新' : '追加');
+    
+    // 强制刷新模式下立即清空现有帖子列表，提供更好的用户体验
+    if (refresh) {
+      this.setData({
+        posts: [],
+        loading: true
+      });
+    } else {
+      this.setData({ loading: true });
+    }
     
     try {
       const params = {
         limit: this.data.pageSize,
         offset: refresh ? 0 : this.data.posts.length,
-        sort_by: 'create_time'  // 首页按创建时间排序
+        sort_by: 'create_time',  // 首页按创建时间排序
+        _t: Date.now() // 添加时间戳防止缓存
       };
       
       logger.debug('首页加载帖子，参数：', params);
@@ -852,18 +885,22 @@ Page({
         if (Array.isArray(result.data.posts)) {
           newPosts = result.data.posts;
           total = result.data.total || newPosts.length;
+          logger.debug(`获取到帖子数量: ${newPosts.length}, 总数: ${total}`);
         } else if (Array.isArray(result.data)) {
           newPosts = result.data;
           total = result.data.length;
+          logger.debug(`获取到帖子数量: ${newPosts.length}`);
         }
       } 
       // 兼容旧版格式
       else if (Array.isArray(result)) {
         newPosts = result;
         total = result.length;
+        logger.debug(`获取到帖子数量(旧格式): ${newPosts.length}`);
       } else if (result && result.posts && Array.isArray(result.posts)) {
         newPosts = result.posts;
         total = result.total || newPosts.length;
+        logger.debug(`获取到帖子数量(旧格式): ${newPosts.length}, 总数: ${total}`);
       } else {
         logger.warn('无法解析帖子数据格式:', typeof result);
         newPosts = [];

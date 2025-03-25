@@ -326,8 +326,35 @@ const userManager = {
         return false;
       }
       
+      // 检查是否存在已更新的用户信息，防止覆盖
+      let shouldPreserveUpdates = false;
+      let existingUserInfo = null;
+      let userInfoUpdated = false;
+      let updateTime = 0;
+      
+      try {
+        userInfoUpdated = wx.getStorageSync('userInfoUpdated') || false;
+        existingUserInfo = wx.getStorageSync('userInfo');
+        updateTime = wx.getStorageSync('userInfoUpdateTime') || 0;
+        
+        const now = new Date().getTime();
+        const thirtyMinutesInMs = 30 * 60 * 1000;
+        
+        // 如果在最近30分钟内用户信息被更新过，且当前调用不是从编辑页面来的
+        shouldPreserveUpdates = userInfoUpdated && 
+                               existingUserInfo && 
+                               (now - updateTime) < thirtyMinutesInMs && 
+                               !userInfo.fromEditor;
+        
+        if (shouldPreserveUpdates) {
+          console.info('检测到已更新的用户信息，将保留用户编辑字段');
+        }
+      } catch (e) {
+        console.error('检查用户信息更新状态失败:', e);
+      }
+      
       // 标准化用户信息
-      const finalUserInfo = {
+      let finalUserInfo = {
         ...userInfo,
         // 确保关键字段存在
         openid: userInfo.openid || userInfo.wxapp_id || userInfo.open_id || `user_${userInfo.id || Date.now()}`,
@@ -339,6 +366,26 @@ const userManager = {
         school: userInfo.school || userInfo.university || '南开大学',
         update_time: new Date().toISOString()
       };
+      
+      // 如果需要保留用户编辑的信息
+      if (shouldPreserveUpdates && existingUserInfo) {
+        // 将编辑过的字段合并到新数据中
+        finalUserInfo = {
+          ...finalUserInfo,
+          // 保留用户编辑的字段
+          nick_name: existingUserInfo.nick_name || finalUserInfo.nick_name,
+          bio: existingUserInfo.bio || finalUserInfo.bio,
+          birthday: existingUserInfo.birthday || finalUserInfo.birthday,
+          wechatId: existingUserInfo.wechatId || finalUserInfo.wechatId,
+          qqId: existingUserInfo.qqId || finalUserInfo.qqId,
+          // 如果头像是用户自己上传的，也应保留
+          avatar: existingUserInfo.avatar || finalUserInfo.avatar,
+          avatar_url: existingUserInfo.avatar_url || finalUserInfo.avatar_url,
+          avatarUrl: existingUserInfo.avatarUrl || finalUserInfo.avatarUrl
+        };
+        
+        console.info('已保留用户编辑的信息');
+      }
       
       // 移除旧的nickname字段，确保只使用nick_name
       if (finalUserInfo.hasOwnProperty('nickname')) {
@@ -778,52 +825,35 @@ const userManager = {
   
   // 获取最新的用户信息
   refreshUserInfo: function() {
-    // 直接使用openid，不要使用数字ID
+    // 获取用户openid
     const openid = this.getOpenid();
     if (!openid) {
       return Promise.reject(new Error('用户未登录或无法获取用户openid'));
     }
     
-    // 动态导入userAPI以避免循环依赖
-    try {
-      const { userAPI } = require('./api/index');
-      
-      if (!userAPI || typeof userAPI.getUserInfo !== 'function') {
-        console.error('userAPI未正确加载或getUserInfo方法不存在');
-        return Promise.reject(new Error('API模块加载失败'));
-      }
-      
-      console.debug(`刷新用户信息，使用openid: ${openid}`);
-      
-      // 调用API获取用户信息，使用openid
-      return userAPI.getUserInfo(openid)
-        .then(result => {
-          if (result && (result.user || result.openid)) {
-            // 提取用户信息，处理不同的返回格式
-            const userData = result.user || result;
-            
-            // 更新缓存的用户信息
-            cachedUserInfo = {
-              ...cachedUserInfo,
-              ...userData
-            }
-            
-            // 更新本地存储
-            try {
-              wx.setStorageSync(USER_INFO_KEY, cachedUserInfo)
-            } catch (error) {
-              console.error('保存用户信息到缓存失败:', error)
-            }
-            
-            return cachedUserInfo
-          } else {
-            throw new Error('获取用户信息失败')
-          }
-        });
-    } catch (error) {
-      console.error('加载userAPI模块失败:', error);
-      return Promise.reject(error);
-    }
+    // 动态导入userAPI
+    const { userAPI } = require('./api/index');
+    
+    console.debug(`刷新用户信息，使用openid: ${openid}`);
+    
+    // 调用API获取用户信息，禁用缓存
+    return userAPI.getUserInfo(openid)
+      .then(result => {
+        // 提取用户数据 - API文档标准格式: {code: 200, message: "success", data: {...}}
+        const userData = result.code === 200 ? result.data : result;
+        
+        // 更新缓存的用户信息
+        cachedUserInfo = {
+          ...cachedUserInfo,
+          ...userData
+        };
+        
+        // 更新本地存储
+        wx.setStorageSync(USER_INFO_KEY, cachedUserInfo);
+        wx.setStorageSync(STORAGE_KEYS.LATEST_USER_INFO, cachedUserInfo);
+        
+        return cachedUserInfo;
+      });
   },
 
   /**

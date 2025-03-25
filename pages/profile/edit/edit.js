@@ -456,225 +456,198 @@ Page({
         return;
       }
       
-      // 直接使用wx.request发送请求
-      log.debug('使用wx.request发送请求');
-      wx.request({
-        url: 'https://nkuwiki.com/api/wxapp/users/' + openid,
-        method: 'PUT',
-        data: updateData,
-        header: {
-          'content-type': 'application/json'
-        },
-        success: (res) => {
-          log.debug('请求成功:', res);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            // 获取返回的用户数据
-            let userData = null;
-            // API文档标准响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
-            const responseData = res.data;
-            
-            // 处理API响应格式
-            if (responseData) {
-              // 标准API响应格式
-              if (responseData.code === 200 && responseData.data) {
-                log.debug('收到标准API响应格式');
-                userData = responseData.data;
-              }
-              // 直接返回用户对象
-              else if (responseData.openid) {
-                log.debug('API直接返回用户对象');
-                userData = responseData;
-              }
-              // 简单成功响应
-              else if (responseData.success) {
-                log.debug('API返回简单成功标志');
-                userData = updateData; // 使用提交的数据作为更新结果
-              }
-              // 其他情况，使用提交的数据
-              else {
-                log.debug('API返回未识别格式，使用提交的数据');
-                userData = updateData;
-              }
-            }
-            
-            // 本地更新数据
-            try {
-              // 创建更新后的用户对象
-              const updatedUser = {
-                ...user,
-                ...userData || updateData,
-                // 如果响应中有update_time则使用，否则使用当前时间
-                update_time: userData?.update_time || responseData?.timestamp || new Date().toISOString()
-              };
-              
-              // 更新本地存储
-              try {
-                wx.setStorageSync('userInfo', updatedUser);
-                wx.setStorageSync('needRefreshUserInfo', true);
-                wx.removeStorageSync('_cached_user_info');
-                
-                // 尝试更新userManager中的用户信息
-                try {
-                  // 优先使用updateUserInfo方法更新用户信息
-                  if (userManager && typeof userManager.updateUserInfo === 'function') {
-                    log.debug('使用userManager.updateUserInfo方法更新用户信息');
-                    // 使用Promise方式处理
-                    userManager.updateUserInfo(updatedUser)
-                      .then(result => {
-                        console.debug('userManager用户信息更新成功:', result);
-                      })
-                      .catch(error => {
-                        // 仅记录错误，不影响后续流程
-                        console.error('userManager.updateUserInfo失败，尝试使用备用方法:', error);
-                        
-                        // 备用方法：如果updateUserInfo失败，尝试使用saveUserInfo
-                        if (userManager && typeof userManager.saveUserInfo === 'function') {
-                          log.debug('使用userManager.saveUserInfo方法更新用户信息');
-                          userManager.saveUserInfo(updatedUser);
-                        }
-                      });
-                  } else if (userManager && typeof userManager.saveUserInfo === 'function') {
-                    log.debug('updateUserInfo方法不存在，使用saveUserInfo方法');
-                    userManager.saveUserInfo(updatedUser);
-                  } else {
-                    // 备用方案，尝试多种可能的方法
-                    console.debug('userManager方法不存在，使用备用更新方式');
-                    // 直接更新全局状态
-                    const app = getApp();
-                    if (app && app.globalData) {
-                      app.globalData.userInfo = updatedUser;
-                      if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
-                        app.globalDataChanged('userInfo', updatedUser);
-                      }
-                    }
-                  }
-                } catch (userManagerError) {
-                  // 仅记录错误，不影响后续流程
-                  console.error('更新userManager异常，但已更新本地存储:', userManagerError);
-                }
-              } catch (storageError) {
-                log.error('存储数据错误:', storageError);
-              }
-              
-              // 更新页面数据
-              this.setData({
-                user: updatedUser,
-                modified: {
-                  nick_name: false,
-                  birthday: false,
-                  wechatId: false,
-                  qqId: false,
-                  bio: false,
-                  avatar: false
-                }
-              });
-              
-              // 显示成功提示
-              wx.showToast({
-                title: '保存成功',
-                icon: 'success'
-              });
-              
-              // 延迟返回
-              setTimeout(() => {
-                // 标记存储，确保其他页面知道用户信息已更新
-                try {
-                  wx.setStorageSync('needRefreshUserInfo', true);
-                  wx.removeStorageSync('_cached_user_info');
-                } catch (e) {
-                  log.error('设置刷新标记失败:', e);
-                }
-                
-                // 返回上一页并触发刷新
-                wx.navigateBack({
-                  success: () => {
-                    // 尝试刷新上一页
-                    try {
-                      // 获取页面栈
-                      const pages = getCurrentPages();
-                      if (pages.length > 1) {
-                        const prevPage = pages[pages.length - 2]; // 上一页
-                        
-                        // 设置必要的刷新标记和数据
-                        prevPage.setData({
-                          forceRefresh: true,
-                          updatedUserInfo: updatedUser
-                        });
-                        
-                        // 尝试所有可能的刷新方法
-                        if (typeof prevPage.refreshUserData === 'function') {
-                          log.debug('调用上一页的refreshUserData方法');
-                          prevPage.refreshUserData();
-                        } else if (typeof prevPage.fetchUserInfo === 'function') {
-                          log.debug('调用上一页的fetchUserInfo方法');
-                          prevPage.fetchUserInfo();
-                        } else if (typeof prevPage.getUserStats === 'function') {
-                          log.debug('调用上一页的getUserStats方法');
-                          const userId = updatedUser._id || updatedUser.id || updatedUser.openid;
-                          prevPage.getUserStats(userId);
-                        } else if (typeof prevPage.onShow === 'function') {
-                          log.debug('调用上一页的onShow方法');
-                          prevPage.onShow();
-                        } else {
-                          // 无法找到合适的刷新方法，可能需要重新加载整个页面
-                          log.debug('无法找到合适的刷新方法，尝试重载页面');
-                          const currentRoute = getCurrentPages()[getCurrentPages().length-2]?.route;
-                          if (currentRoute) {
-                            setTimeout(() => {
-                              wx.reLaunch({
-                                url: '/' + currentRoute
-                              });
-                            }, 100);
-                          }
-                        }
-                      }
-                    } catch (navError) {
-                      log.error('通知上一页刷新失败:', navError);
-                    }
-                  }
-                });
-              }, 1000);
-            } catch (successError) {
-              log.error('处理成功响应时出错:', successError);
-              wx.showToast({
-                title: '保存成功，但刷新失败',
-                icon: 'success'
-              });
-              setTimeout(() => wx.navigateBack(), 1500);
-            }
-          } else {
-            // 处理非2xx响应
-            log.error('请求失败，状态码:', res.statusCode);
-            wx.showModal({
-              title: '保存失败',
-              content: `服务器返回错误 (${res.statusCode})`,
-              showCancel: false
-            });
-          }
-        },
-        fail: (err) => {
-          log.error('请求失败:', err);
-          wx.showModal({
-            title: '保存失败',
-            content: '网络请求失败，请检查网络连接',
-            showCancel: false
-          });
-        },
-        complete: () => {
-          this.setData({ isUpdating: false });
+      // 使用userAPI模块更新用户信息
+      try {
+        // 动态导入userAPI避免循环依赖
+        const { userAPI } = require('../../../utils/api/index');
+        if (!userAPI || typeof userAPI.updateUser !== 'function') {
+          throw new Error('API模块加载失败');
         }
-      });
-    } catch (error) {
-      log.error('保存过程中出现异常:', error);
-      wx.showModal({
+        
+        log.debug('使用userAPI.updateUser发送请求');
+        userAPI.updateUser(openid, updateData)
+          .then(res => {
+            log.debug('请求成功:', res);
+            // 处理响应
+            this.handleUpdateSuccess(res, user, updateData, openid, log);
+          })
+          .catch(error => {
+            log.error('更新用户信息失败:', error);
+            // 回退到直接请求
+            this.fallbackToDirectRequest(openid, updateData, user, log);
+          });
+      } catch (apiError) {
+        log.error('加载API模块失败，回退到直接请求:', apiError);
+        // 回退到直接请求
+        this.fallbackToDirectRequest(openid, updateData, user, log);
+      }
+    } catch (mainError) {
+      console.error('保存用户信息主流程异常:', mainError);
+      wx.showToast({
         title: '保存失败',
-        content: '发生未知错误',
-        showCancel: false
+        icon: 'none'
       });
       this.setData({ isUpdating: false });
     }
   },
   
+  // 处理更新成功响应
+  handleUpdateSuccess(res, user, updateData, openid, log) {
+    // 获取返回的用户数据
+    let userData = null;
+    
+    // 处理API响应格式
+    if (res) {
+      // 标准API响应格式
+      if (res.code === 200 && res.data) {
+        log.debug('收到标准API响应格式');
+        userData = res.data;
+      }
+      // 直接返回用户对象
+      else if (res.openid) {
+        log.debug('API直接返回用户对象');
+        userData = res;
+      }
+      // 简单成功响应
+      else if (res.success) {
+        log.debug('API返回简单成功标志');
+        userData = updateData; // 使用提交的数据作为更新结果
+      }
+      // 其他情况，使用提交的数据
+      else {
+        log.debug('API返回未识别格式，使用提交的数据');
+        userData = updateData;
+      }
+    }
+    
+    // 本地更新数据
+    try {
+      // 创建更新后的用户对象，确保保留所有原始字段
+      const updatedUser = {
+        ...user,
+        ...userData || updateData,
+        // 确保保留原始openid
+        openid: openid,
+        // 如果响应中有update_time则使用，否则使用当前时间
+        update_time: userData?.update_time || res?.timestamp || new Date().toISOString()
+      };
+      
+      // 更新本地存储 - 保存到多个存储位置确保同步问题
+      try {
+        // 主用户信息
+        wx.setStorageSync('userInfo', updatedUser);
+        // 设置标记以防止同步接口覆盖更新
+        wx.setStorageSync('userInfoUpdated', true);
+        wx.setStorageSync('userInfoUpdateTime', new Date().getTime());
+        // 缓存更新标记
+        wx.setStorageSync('needRefreshUserInfo', true);
+        wx.removeStorageSync('_cached_user_info');
+        // 用于同步的最新用户信息
+        wx.setStorageSync('_latest_user_info', updatedUser);
+        
+        // 更新userManager中的用户信息
+        try {
+          const userManager = require('../../../utils/user_manager');
+          // 确保使用最可靠的方法更新用户信息
+          if (userManager && typeof userManager.saveUserInfo === 'function') {
+            log.debug('使用userManager.saveUserInfo方法更新用户信息');
+            userManager.saveUserInfo(updatedUser);
+          }
+        } catch (userManagerError) {
+          log.error('更新userManager异常，但已更新本地存储:', userManagerError);
+        }
+      } catch (storageError) {
+        log.error('存储数据错误:', storageError);
+      }
+      
+      // 更新页面数据
+      this.setData({
+        user: updatedUser,
+        modified: {
+          nick_name: false,
+          birthday: false,
+          wechatId: false,
+          qqId: false,
+          bio: false,
+          avatar: false
+        }
+      });
+      
+      // 显示成功提示
+      wx.showToast({
+        title: '保存成功',
+        icon: 'success'
+      });
+      
+      // 延迟返回
+      setTimeout(() => {
+        // 返回上一页并触发刷新
+        wx.navigateBack({
+          success: () => {
+            // 尝试刷新上一页
+            try {
+              // 获取页面栈
+              const pages = getCurrentPages();
+              if (pages.length > 1) {
+                const prevPage = pages[pages.length - 2]; // 上一页
+                
+                // 设置必要的刷新标记和数据
+                prevPage.setData({
+                  forceRefresh: true,
+                  updatedUserInfo: updatedUser
+                });
+                
+                // 尝试所有可能的刷新方法
+                if (typeof prevPage.refreshUserData === 'function') {
+                  log.debug('调用上一页的refreshUserData方法');
+                  prevPage.refreshUserData();
+                } else if (typeof prevPage.onShow === 'function') {
+                  log.debug('调用上一页的onShow方法');
+                  prevPage.onShow();
+                }
+              }
+            } catch (navError) {
+              log.error('通知上一页刷新失败:', navError);
+            }
+          }
+        });
+      }, 1000);
+    } catch (successError) {
+      log.error('处理成功响应时出错:', successError);
+      wx.showToast({
+        title: '保存成功，但刷新失败',
+        icon: 'success'
+      });
+      setTimeout(() => wx.navigateBack(), 1500);
+    }
+    
+    this.setData({ isUpdating: false });
+  },
+  
+  // 回退到直接请求
+  fallbackToDirectRequest(openid, updateData, user, log) {
+    log.debug('使用wx.request发送请求');
+    wx.request({
+      url: 'https://nkuwiki.com/api/wxapp/users/' + openid,
+      method: 'PUT',
+      data: updateData,
+      header: {
+        'content-type': 'application/json'
+      },
+      success: (res) => {
+        this.handleUpdateSuccess(res.data, user, updateData, openid, log);
+      },
+      fail: (error) => {
+        log.error('直接请求失败:', error);
+        wx.showToast({
+          title: '保存失败',
+          icon: 'none'
+        });
+        this.setData({ isUpdating: false });
+      }
+    });
+  },
+
   // 头像加载错误处理
   handleAvatarError() {
     try {

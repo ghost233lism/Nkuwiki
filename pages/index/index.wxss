@@ -347,6 +347,43 @@
 /* 添加空内容提示的样式 */
 .empty-message {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+  text-align: center;
+  color: #999;
+  margin-top: 100rpx;
+}
+
+.empty-icon {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-message text {
+  font-size: 28rpx;
+  margin: 10rpx 0;
+}
+
+.empty-action {
+  margin-top: 30rpx;
+  background-color: #4285f4;
+  color: white;
+  padding: 15rpx 40rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+}
+
+.empty-action text {
+  color: white;
+  margin: 0;
+}
+
+/* 添加空内容提示的样式 */
+.empty-message {
+  display: flex;
   justify-content: center;
   align-items: center;
   height: 300rpx;

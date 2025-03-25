@@ -69,7 +69,23 @@ const API = {
 
   // 发送请求的通用方法
   request: function(options) {
-    const { url, method = 'GET', data, params, showError = true, showLoading = false, loadingText = '加载中...', statusCodeCallback, retryCount = 0, retryDelay = 1000, useCloud = false, hasParams = false, hasData = true, fail = null } = options;
+    const { 
+      url, 
+      method = 'GET', 
+      data, 
+      params, 
+      showError = true, 
+      showLoading = false, 
+      loadingText = '加载中...', 
+      statusCodeCallback, 
+      retryCount = 0, 
+      retryDelay = 1000, 
+      useCloud = false, 
+      hasParams = false, 
+      hasData = true, 
+      fail = null,
+      useCache = true // 新增参数，默认使用缓存
+    } = options;
     
     // 记录开始请求时间
     const startTime = Date.now();
@@ -99,6 +115,20 @@ const API = {
     // 完整请求URL
     const requestUrl = fullUrl.startsWith('http') ? fullUrl : `${baseUrl}${fullUrl}`;
     
+    // 缓存处理 - 仅对GET请求启用
+    if (method === 'GET' && useCache) {
+      try {
+        const cacheKey = `api_cache_${requestUrl}`;
+        const cachedData = wx.getStorageSync(cacheKey);
+        if (cachedData && cachedData.data && cachedData.expiry > Date.now()) {
+          logger.debug(`使用缓存数据: ${method} ${url}, 缓存时间: ${new Date(cachedData.timestamp).toISOString()}`);
+          return Promise.resolve(cachedData.data);
+        }
+      } catch (e) {
+        logger.warn('读取缓存失败:', e);
+      }
+    }
+    
     // 获取用户信息
     let openid = '';
     try {
@@ -120,11 +150,18 @@ const API = {
       headers['X-User-OpenID'] = openid;
     }
     
+    // 如果明确指定不使用缓存，添加相应请求头
+    if (!useCache) {
+      headers['Cache-Control'] = 'no-cache, no-store';
+      headers['Pragma'] = 'no-cache';
+    }
+    
     console.debug('request调用开始, 请求选项:', {
       url: requestUrl, 
       method, 
       hasParams: !!params, 
-      hasData: !!data
+      hasData: !!data,
+      useCache
     });
     
     // 显示加载提示
@@ -137,8 +174,15 @@ const API = {
     
     // 执行请求
     return new Promise((resolve, reject) => {
+      // 添加时间戳参数以避免缓存（当useCache=false时）
+      let finalUrl = requestUrl;
+      if (!useCache && method === 'GET') {
+        const timestamp = Date.now();
+        finalUrl = `${requestUrl}${requestUrl.includes('?') ? '&' : '?'}_t=${timestamp}`;
+      }
+      
       wx.request({
-        url: requestUrl,
+        url: finalUrl,
         method: method,
         data: data,
         header: headers,
@@ -151,9 +195,26 @@ const API = {
             logger.warn(`请求耗时较长: ${duration}ms, ${method} ${url}`);
           }
           
-          // 请求成功
+          // 请求成功，根据API文档，响应格式应为:
+          // {code: 200, message: "success", data: {...}, details: null, timestamp: "..."}
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            logger.debug(`请求成功: ${method} ${url}, 状态码: ${res.statusCode}, 耗时: ${duration}ms`);
+            logger.debug(`请求成功: ${method} ${url}, 状态码: ${res.statusCode}`);
+            
+            // 缓存处理 - 仅对GET请求启用
+            if (method === 'GET' && useCache) {
+              try {
+                const cacheKey = `api_cache_${requestUrl}`;
+                const expiry = Date.now() + (5 * 60 * 1000); // 5分钟缓存
+                wx.setStorageSync(cacheKey, {
+                  data: res.data,
+                  timestamp: Date.now(),
+                  expiry: expiry
+                });
+              } catch (e) {
+                logger.warn('缓存响应数据失败:', e);
+              }
+            }
+            
             resolve(res.data);
           } 
           // 未找到资源

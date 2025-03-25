@@ -925,107 +925,61 @@ Page({
 
   // 获取用户信息
   fetchUserInfo() {
-    try {
-      // 设置加载指示器
-      wx.showLoading({
-        title: '刷新数据...',
-        mask: true
-      });
-      
-      // 检查是否需要强制刷新
-      const needRefresh = wx.getStorageSync('needRefreshUserInfo');
-      if (needRefresh) {
-        wx.removeStorageSync('_cached_user_info');
-        wx.setStorageSync('needRefreshUserInfo', false);
-      }
-      
-      // 从userManager获取最新用户信息
-      const user = userManager.getCurrentUser();
-      if (!user || !user.openid) {
-        this.setData({ isLogin: false, userInfo: null });
-        wx.hideLoading();
-        return;
-      }
-      
-      // 提取用户openid（不要使用数字ID）
-      const userId = user.openid;
-      if (!userId) {
-        logger.error('获取用户信息失败: 无法确定用户openid');
-        this.setData({ isLogin: false, userInfo: null });
-        wx.hideLoading();
-        return;
-      }
-      
-      logger.debug(`开始使用openid获取用户信息: ${userId}`);
-      
-      // 尝试通过API刷新用户信息
-      userManager.refreshUserInfo()
-        .then(response => {
-          logger.debug('API刷新用户信息响应:', response);
-          
-          // 处理标准API响应格式
-          let refreshedUser = null;
-          
-          // 判断是否是标准API响应格式：{code: 200, data: {...}, message: "success"}
-          if (response && response.code === 200 && response.data) {
-            logger.debug('收到标准API响应格式，获取data字段');
-            refreshedUser = response.data;
-          } 
-          // 判断是否直接返回用户对象（旧格式）
-          else if (response && response.openid) {
-            logger.debug('收到直接用户对象格式');
-            refreshedUser = response;
-          }
-          // 其他情况，尝试使用原始user
-          else {
-            logger.debug('使用原始用户信息');
-            refreshedUser = user;
-          }
-          
-          // 如果成功获取了新的用户信息
-          if (refreshedUser) {
-            logger.debug('用户信息刷新成功:', refreshedUser);
-            
-            // 确保使用nick_name字段（后端支持的字段）
-            if (refreshedUser.nickname && !refreshedUser.nick_name) {
-              refreshedUser.nick_name = refreshedUser.nickname;
-            }
-            
-            // 更新页面数据
-            this.setData({
-              isLogin: true,
-              isLoggedIn: true,
-              userInfo: refreshedUser,
-              hasUserInfo: true
-            });
-            
-            // 刷新统计数据
-            return this.refreshUserData();
-          } else {
-            throw new Error('未能获取有效的用户信息');
-          }
-        })
-        .catch(error => {
-          logger.error('API刷新用户信息失败:', error);
-          
-          // 即使API刷新失败，仍然使用本地用户信息
-          this.setData({
-            isLogin: true,
-            isLoggedIn: true,
-            userInfo: user,
-            hasUserInfo: true
-          });
-          
-          // 尝试更新统计信息
-          return this.refreshUserData();
-        })
-        .finally(() => {
-          wx.hideLoading();
-        });
-    } catch (error) {
-      logger.error('获取用户信息失败:', error);
+    // 设置加载指示器
+    wx.showLoading({
+      title: '刷新数据...',
+      mask: true
+    });
+    
+    // 重置刷新标志
+    wx.setStorageSync('needRefreshUserInfo', false);
+    
+    // 获取用户openid
+    const user = userManager.getCurrentUser();
+    if (!user || !user.openid) {
       this.setData({ isLogin: false, userInfo: null });
       wx.hideLoading();
+      return;
     }
+    
+    // 使用API获取最新用户信息
+    userAPI.getUserInfo(user.openid)
+      .then(result => {
+        // 处理标准API响应格式
+        const userData = result.code === 200 ? result.data : result;
+        
+        logger.debug('获取到最新用户信息:', userData);
+        
+        // 更新页面数据
+        this.setData({
+          isLogin: true,
+          isLoggedIn: true,
+          userInfo: userData,
+          hasUserInfo: true
+        });
+        
+        // 保存到本地
+        userManager.saveUserInfo(userData);
+        
+        // 刷新统计数据
+        return this.refreshUserData();
+      })
+      .catch(error => {
+        logger.error('获取用户信息失败:', error);
+        
+        // 使用现有用户信息
+        this.setData({
+          isLogin: true,
+          isLoggedIn: true,
+          userInfo: user,
+          hasUserInfo: true
+        });
+        
+        // 尝试刷新统计信息
+        return this.refreshUserData();
+      })
+      .finally(() => {
+        wx.hideLoading();
+      });
   }
 });
