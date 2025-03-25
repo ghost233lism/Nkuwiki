@@ -62,7 +62,7 @@ function transformData(collection, data) {
         wxapp_id: item._id,
         openid: item.openid || item._openid || '',
         unionid: item.unionid || '',
-        nickname: item.nickName || '',
+        nick_name: item.nickName || '',
         avatar_url: item.avatarUrl || '',
         gender: item.gender || 0,
         country: item.country || '',

@@ -24,7 +24,7 @@
                src="{{userInfo.avatar_url || userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
                mode="aspectFill"></image>
         <view class="user-details">
-          <view class="username">{{userInfo.nickname || userInfo.nickName || '校园用户'}}</view>
+          <view class="username">{{userInfo.nick_name || userInfo.nickName || '校园用户'}}</view>
           <view class="school">{{userInfo.school || '南开大学'}}</view>
           <view class="bio">{{userInfo.bio || userInfo.status || '这个人很懒，什么都没留下'}}</view>
         </view>

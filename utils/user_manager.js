@@ -214,7 +214,7 @@ const userManager = {
       console.warn('无法获取有效用户信息，返回默认访客信息');
       return {
         openid: 'guest_' + Date.now(),
-        nickname: DEFAULT_NAME,
+        nick_name: DEFAULT_NAME,
         avatar: getDefaultAvatar(),
         isGuest: true
       };
@@ -223,7 +223,7 @@ const userManager = {
       // 返回一个安全的默认值
       return {
         openid: 'error_' + Date.now(),
-        nickname: DEFAULT_NAME,
+        nick_name: DEFAULT_NAME,
         avatar: getDefaultAvatar(),
         isError: true
       };
@@ -239,8 +239,7 @@ const userManager = {
     // getCurrentUser方法已确保返回格式化的openid
     return {
       openid: userInfo.openid,
-      nickname: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,
-      nick_name: userInfo.nickname || userInfo.nickName || DEFAULT_NAME,  // 为了兼容性同时提供两种格式
+      nick_name: userInfo.nick_name || userInfo.nickName || DEFAULT_NAME,
       avatar: userInfo.avatar || userInfo.avatarUrl || getDefaultAvatar(),
       bio: userInfo.bio || ''  // 添加个人简介字段
     };
@@ -262,7 +261,7 @@ const userManager = {
     const hasUserId = !!(userInfo.id || userInfo._id || userInfo.openid);
     
     // 检查用户昵称 (可能存在于多个字段)
-    const hasNickname = !!(userInfo.nickname || userInfo.nickName || userInfo.author_name);
+    const hasNickname = !!(userInfo.nick_name || userInfo.nickName || userInfo.author_name);
     
     // 检查头像 (可能存在于多个字段)
     const hasAvatar = !!(userInfo.avatar_url || userInfo.avatarUrl || userInfo.author_avatar);
@@ -285,7 +284,7 @@ const userManager = {
     // 处理字段别名映射
     const fieldMap = {
       '_id': 'id',
-      'nickName': 'nickname',
+      'nickName': 'nick_name',
       'avatarUrl': 'avatar_url'
     };
     
@@ -332,9 +331,7 @@ const userManager = {
         ...userInfo,
         // 确保关键字段存在
         openid: userInfo.openid || userInfo.wxapp_id || userInfo.open_id || `user_${userInfo.id || Date.now()}`,
-        nickname: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
-        nickName: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
-        nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '南开大学用户',
+        nick_name: userInfo.nick_name || userInfo.nickName || '南开大学用户',
         bio: userInfo.bio || userInfo.signature || userInfo.description || userInfo.status || '这个人很懒，什么都没留下',
         avatar: userInfo.avatar || userInfo.avatarUrl || userInfo.avatar_url || getDefaultAvatar(),
         avatar_url: userInfo.avatar_url || userInfo.avatarUrl || userInfo.avatar || getDefaultAvatar(),
@@ -342,6 +339,11 @@ const userManager = {
         school: userInfo.school || userInfo.university || '南开大学',
         update_time: new Date().toISOString()
       };
+      
+      // 移除旧的nickname字段，确保只使用nick_name
+      if (finalUserInfo.hasOwnProperty('nickname')) {
+        delete finalUserInfo.nickname;
+      }
       
       // 更新内存中的用户信息和登录状态
       cachedUserInfo = finalUserInfo;
@@ -440,24 +442,61 @@ const userManager = {
       // 调用API更新用户信息，确保userId是字符串
       return userAPI.updateUser(userId, updateData)
         .then(result => {
-          if (result && result.success) {
-            // 更新缓存的用户信息
-            cachedUserInfo = {
-              ...cachedUserInfo,
-              ...result.user
-            };
-            
-            // 更新本地存储
-            try {
-              wx.setStorageSync(USER_INFO_KEY, cachedUserInfo);
-            } catch (error) {
-              console.error('更新用户信息到缓存失败:', error);
+          console.debug('API更新用户信息响应:', result);
+          
+          // 处理标准API响应格式
+          // API文档响应格式: { code: 200, message: "success", data: {...用户数据...}, details: null, timestamp: "..." }
+          let userData = null;
+          
+          if (result) {
+            // 标准API响应格式处理
+            if (result.code === 200) {
+              console.debug('收到标准API响应格式，状态码200');
+              userData = result.data;
+            } 
+            // 如果API直接返回了用户对象(包含openid)
+            else if (result.openid) {
+              console.debug('API直接返回用户对象');
+              userData = result;
             }
-            
-            return cachedUserInfo;
-          } else {
-            throw new Error('更新用户信息失败');
+            // 如果是简单成功标志或旧版返回格式
+            else if (result.success || result.user) {
+              console.debug('API返回了简单成功标志或user对象');
+              userData = result.user || (result.openid ? result : null);
+            }
           }
+          
+          // 检查是否成功获取到用户数据
+          if (!userData) {
+            console.error('无法从API响应中提取有效用户数据:', result);
+            throw new Error('更新用户信息失败：响应中无有效用户数据');
+          }
+          
+          // 确保用户对象有ID字段
+          if (!userData.openid && !userData.id && !userData._id) {
+            // 如果API返回的用户对象没有ID，使用当前用户的ID
+            userData.openid = userId;
+          }
+          
+          // 更新缓存的用户信息
+          cachedUserInfo = {
+            ...cachedUserInfo,
+            ...userData,
+            // 确保关键字段存在
+            openid: userData.openid || cachedUserInfo.openid || userId,
+            update_time: userData.update_time || new Date().toISOString()
+          };
+          
+          // 更新本地存储
+          try {
+            wx.setStorageSync(USER_INFO_KEY, cachedUserInfo);
+            wx.setStorageSync('needRefreshUserInfo', true);
+            wx.removeStorageSync('_cached_user_info');
+          } catch (error) {
+            console.error('更新用户信息到缓存失败:', error);
+          }
+          
+          return cachedUserInfo;
         });
     } catch (error) {
       console.error('加载userAPI模块失败:', error);
@@ -473,7 +512,7 @@ const userManager = {
     return {
       id: '0',
       wxapp_id: 'guest',
-      nickname: DEFAULT_NAME,
+      nick_name: DEFAULT_NAME,
       avatar_url: getDefaultAvatar(),
     };
   },
@@ -739,9 +778,10 @@ const userManager = {
   
   // 获取最新的用户信息
   refreshUserInfo: function() {
-    const userId = this.getUserId()
-    if (!userId) {
-      return Promise.reject(new Error('用户未登录或无法获取用户ID'))
+    // 直接使用openid，不要使用数字ID
+    const openid = this.getOpenid();
+    if (!openid) {
+      return Promise.reject(new Error('用户未登录或无法获取用户openid'));
     }
     
     // 动态导入userAPI以避免循环依赖
@@ -753,8 +793,10 @@ const userManager = {
         return Promise.reject(new Error('API模块加载失败'));
       }
       
-      // 调用API获取用户信息
-      return userAPI.getUserInfo(userId)
+      console.debug(`刷新用户信息，使用openid: ${openid}`);
+      
+      // 调用API获取用户信息，使用openid
+      return userAPI.getUserInfo(openid)
         .then(result => {
           if (result && (result.user || result.openid)) {
             // 提取用户信息，处理不同的返回格式
@@ -784,17 +826,20 @@ const userManager = {
     }
   },
 
-  // 格式化用户数据，兼容老版本
+  /**
+   * 格式化用户数据用于显示
+   * @param {Object} userData - 原始用户数据
+   * @returns {Object} 格式化后的用户数据
+   */
   formatUserData(userData) {
+    // 确保用户数据存在
     if (!userData) return null;
     
+    // 返回标准化的用户数据
     return {
-      id: userData.id || userData._id,
-      openid: userData.openid || userData._openid,
-      nickname: userData.nickname || userData.nick_name || DEFAULT_NAME,
-      avatar_url: userData.avatar_url || userData.avatar || userData.avatarUrl || getDefaultAvatar(),
-      avatarUrl: userData.avatarUrl || userData.avatar_url || getDefaultAvatar(),
-      gender: userData.gender || 0,
+      ...userData,
+      nick_name: userData.nick_name || userData.nickName || DEFAULT_NAME,
+      avatar: userData.avatar || userData.avatarUrl || getDefaultAvatar(),
     };
   },
 };

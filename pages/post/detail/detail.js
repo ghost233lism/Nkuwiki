@@ -223,11 +223,11 @@ Page({
       // 获取用户信息
       const userManager = require('../../../utils/user_manager');
       const userInfo = userManager.getCurrentUser();
-      const userId = userInfo?.id || '';
-      const userOpenId = userInfo?.openid || '';
+      const userId = userInfo.id || userInfo._id || userInfo.openid;
+      const userOpenId = userInfo.openid;
       
       if (userInfo) {
-        logger.debug("当前用户信息:", userInfo.nickname, userId, userOpenId);
+        logger.debug("当前用户信息:", userInfo.nick_name, userId, userOpenId);
       }
       
       // 获取本地存储的点赞收藏状态

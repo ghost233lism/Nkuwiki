@@ -396,7 +396,7 @@ Page({
         
         // 获取用户信息
         const avatarUrl = userInfo.avatar_url || userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png';
-        const nickName = userInfo.nickname || userInfo.nick_name || userInfo.nickName || '南开大学用户';
+        const nickName = userInfo.nick_name || userInfo.nickName || '南开大学用户';
         
         logger.debug('用户昵称和头像:', nickName, avatarUrl);
         

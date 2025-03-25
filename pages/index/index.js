@@ -620,7 +620,7 @@ Page({
       const commentData = {
         post_id: this.data.currentCommentPostId,
         openid: userInfo.openid,
-        nick_name: userInfo.nickname,
+        nick_name: userInfo.nick_name,
         avatar: userInfo.avatar_url,
         content: this.data.commentText.trim(),
         images: imageUrls,

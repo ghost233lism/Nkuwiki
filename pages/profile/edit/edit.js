@@ -59,14 +59,14 @@ Page({
     showDatePicker: false,
     dateValue: "",
     inputData: {
-      nickname: '',
+      nick_name: '',
       birthday: '',
       wechatId: '',
       qqId: '',
       bio: ''
     },
     modified: {
-      nickname: false,
+      nick_name: false,
       birthday: false,
       wechatId: false,
       qqId: false,
@@ -114,7 +114,7 @@ Page({
       this.setData({
         user,
         inputData: {
-          nickname: user.nickname || '',
+          nick_name: user.nick_name || '',
           birthday: user.birthday || '',
           wechatId: user.wechatId || '',
           qqId: user.qqId || '',
@@ -269,7 +269,25 @@ Page({
           
           // 更新本地数据
           const updatedUser = {...this.data.user, avatar: fileID};
-          userManager.updateUserInfo(updatedUser);
+          
+          // 优先使用updateUserInfo更新用户信息
+          if (userManager && typeof userManager.updateUserInfo === 'function') {
+            logger.debug('使用updateUserInfo方法更新用户信息');
+            userManager.updateUserInfo(updatedUser)
+              .then(result => {
+                logger.debug('用户头像信息更新成功:', result);
+              })
+              .catch(err => {
+                // 如果失败，尝试使用saveUserInfo
+                logger.warn('updateUserInfo失败，尝试使用saveUserInfo:', err);
+                if (userManager && typeof userManager.saveUserInfo === 'function') {
+                  userManager.saveUserInfo(updatedUser);
+                }
+              });
+          } else if (userManager && typeof userManager.saveUserInfo === 'function') {
+            logger.debug('使用saveUserInfo方法更新用户信息');
+            userManager.saveUserInfo(updatedUser);
+          }
           
           this.setData({
             user: updatedUser,
@@ -332,8 +350,8 @@ Page({
   onNicknameInput(e) {
     const value = e.detail.value;
     this.setData({
-      'inputData.nickname': value,
-      'modified.nickname': value !== this.data.user.nickname
+      'inputData.nick_name': value,
+      'modified.nick_name': value !== this.data.user.nick_name
     });
   },
 
@@ -414,7 +432,7 @@ Page({
       const updateData = {};
       
       // 添加所有修改过的字段
-      if (modified.nickname) updateData.nickname = inputData.nickname;
+      if (modified.nick_name) updateData.nick_name = inputData.nick_name;
       if (modified.birthday) updateData.birthday = inputData.birthday;
       if (modified.wechatId) updateData.wechatId = inputData.wechatId;
       if (modified.qqId) updateData.qqId = inputData.qqId;
@@ -450,13 +468,43 @@ Page({
         success: (res) => {
           log.debug('请求成功:', res);
           if (res.statusCode >= 200 && res.statusCode < 300) {
+            // 获取返回的用户数据
+            let userData = null;
+            // API文档标准响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+            const responseData = res.data;
+            
+            // 处理API响应格式
+            if (responseData) {
+              // 标准API响应格式
+              if (responseData.code === 200 && responseData.data) {
+                log.debug('收到标准API响应格式');
+                userData = responseData.data;
+              }
+              // 直接返回用户对象
+              else if (responseData.openid) {
+                log.debug('API直接返回用户对象');
+                userData = responseData;
+              }
+              // 简单成功响应
+              else if (responseData.success) {
+                log.debug('API返回简单成功标志');
+                userData = updateData; // 使用提交的数据作为更新结果
+              }
+              // 其他情况，使用提交的数据
+              else {
+                log.debug('API返回未识别格式，使用提交的数据');
+                userData = updateData;
+              }
+            }
+            
             // 本地更新数据
             try {
               // 创建更新后的用户对象
               const updatedUser = {
                 ...user,
-                ...updateData,
-                update_time: new Date().toISOString()
+                ...userData || updateData,
+                // 如果响应中有update_time则使用，否则使用当前时间
+                update_time: userData?.update_time || responseData?.timestamp || new Date().toISOString()
               };
               
               // 更新本地存储
@@ -467,8 +515,9 @@ Page({
                 
                 // 尝试更新userManager中的用户信息
                 try {
-                  // 使用更安全的方式调用userManager
+                  // 优先使用updateUserInfo方法更新用户信息
                   if (userManager && typeof userManager.updateUserInfo === 'function') {
+                    log.debug('使用userManager.updateUserInfo方法更新用户信息');
                     // 使用Promise方式处理
                     userManager.updateUserInfo(updatedUser)
                       .then(result => {
@@ -476,21 +525,26 @@ Page({
                       })
                       .catch(error => {
                         // 仅记录错误，不影响后续流程
-                        console.error('userManager.updateUserInfo失败，但已更新本地存储:', error);
+                        console.error('userManager.updateUserInfo失败，尝试使用备用方法:', error);
+                        
+                        // 备用方法：如果updateUserInfo失败，尝试使用saveUserInfo
+                        if (userManager && typeof userManager.saveUserInfo === 'function') {
+                          log.debug('使用userManager.saveUserInfo方法更新用户信息');
+                          userManager.saveUserInfo(updatedUser);
+                        }
                       });
+                  } else if (userManager && typeof userManager.saveUserInfo === 'function') {
+                    log.debug('updateUserInfo方法不存在，使用saveUserInfo方法');
+                    userManager.saveUserInfo(updatedUser);
                   } else {
                     // 备用方案，尝试多种可能的方法
-                    console.debug('userManager.updateUserInfo方法不存在或不是函数，使用备用更新方式');
-                    if (userManager && typeof userManager.saveUserInfo === 'function') {
-                      userManager.saveUserInfo(updatedUser);
-                    } else {
-                      // 直接更新全局状态
-                      const app = getApp();
-                      if (app && app.globalData) {
-                        app.globalData.userInfo = updatedUser;
-                        if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
-                          app.globalDataChanged('userInfo', updatedUser);
-                        }
+                    console.debug('userManager方法不存在，使用备用更新方式');
+                    // 直接更新全局状态
+                    const app = getApp();
+                    if (app && app.globalData) {
+                      app.globalData.userInfo = updatedUser;
+                      if (app.globalDataChanged && typeof app.globalDataChanged === 'function') {
+                        app.globalDataChanged('userInfo', updatedUser);
                       }
                     }
                   }
@@ -506,7 +560,7 @@ Page({
               this.setData({
                 user: updatedUser,
                 modified: {
-                  nickname: false,
+                  nick_name: false,
                   birthday: false,
                   wechatId: false,
                   qqId: false,

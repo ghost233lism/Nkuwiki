@@ -28,10 +28,23 @@ const notificationAPI = {
         params
       });
       
-      if (res && res.notifications) {
-        return res;
-      } else if (res && res.data && res.data.notifications) {
-        return res.data;
+      // 处理标准API响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+      if (res) {
+        // 标准API响应格式
+        if (res.code === 200 && res.data) {
+          logger.debug('收到标准API响应格式');
+          // 如果data包含notifications
+          if (res.data.notifications) {
+            return res.data;
+          }
+          // 如果data本身就是结果
+          return res.data;
+        }
+        // 兼容旧格式 - 直接返回notifications字段
+        else if (res.notifications) {
+          logger.debug('收到旧格式数据，直接包含notifications字段');
+          return res;
+        }
       }
       
       logger.debug('获取通知列表返回格式不符合预期:', res);
@@ -74,6 +87,15 @@ const notificationAPI = {
       method: 'PUT',
       data: { is_read: 1 },
       params: { openid } // 添加openid作为查询参数
+    }).then(res => {
+      // 处理标准API响应格式
+      if (res && res.code === 200) {
+        logger.debug('标记通知已读成功 (标准格式)');
+        return res;
+      }
+      
+      logger.debug('标记通知已读成功 (旧格式)');
+      return res;
     });
   },
   
@@ -112,6 +134,16 @@ const notificationAPI = {
       url: `${API.PREFIX.WXAPP}/users/${openid}/notifications/read`,
       method: 'PUT',
       data
+    }).then(res => {
+      // 处理标准API响应格式
+      if (res && res.code === 200) {
+        logger.debug('批量标记通知已读成功 (标准格式)');
+        return res.data || res;
+      }
+      
+      // 旧格式处理
+      logger.debug('批量标记通知已读成功 (旧格式)');
+      return res;
     });
   },
   
@@ -134,7 +166,68 @@ const notificationAPI = {
       url: `${API.PREFIX.WXAPP}/notifications/${notificationId}`,
       method: 'DELETE',
       params: { openid } // 添加openid作为查询参数
+    }).then(res => {
+      // 处理标准API响应格式
+      if (res && res.code === 200) {
+        logger.debug('删除通知成功 (标准格式)');
+        return res.data || res;
+      }
+      
+      // 旧格式处理
+      logger.debug('删除通知成功 (旧格式)');
+      return res;
     });
+  },
+  
+  /**
+   * 获取未读通知数量
+   * @param {string} openid 用户openid
+   * @param {string} type 可选，通知类型
+   * @returns {Promise<Object>} 未读通知数量
+   */
+  getUnreadCount: async (openid, type = null) => {
+    if (!openid) {
+      const userInfo = userManager.getCurrentUser();
+      openid = userInfo?.openid;
+    }
+    
+    if (!openid) {
+      logger.error('getUnreadCount: 缺少必需的openid参数');
+      return Promise.reject(new Error('缺少必需的openid参数'));
+    }
+    
+    const params = {};
+    if (type) {
+      params.type = type;
+    }
+    
+    try {
+      const res = await request({
+        url: `${API.PREFIX.WXAPP}/users/${openid}/notifications/count`,
+        method: 'GET',
+        params,
+        showError: false
+      });
+      
+      // 处理标准API响应格式
+      if (res && res.code === 200) {
+        logger.debug('获取未读通知数量成功 (标准格式)');
+        if (res.data && typeof res.data.unread_count !== 'undefined') {
+          return res.data.unread_count;
+        }
+        return 0;
+      }
+      
+      // 处理旧格式响应
+      if (res && typeof res.unread_count !== 'undefined') {
+        return res.unread_count;
+      }
+      
+      return 0;
+    } catch (error) {
+      logger.error('获取未读通知数量失败:', error);
+      return 0;
+    }
   }
 };
 

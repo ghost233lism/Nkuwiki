@@ -144,7 +144,10 @@ const commentAPI = {
       ? `${API.PREFIX.WXAPP}/comments/${commentId}/like` 
       : `${API.PREFIX.WXAPP}/comments/${commentId}/unlike`;
     
-    const method = isLike ? 'PUT' : 'POST';
+    // 根据API文档，两种操作都使用POST方法
+    const method = 'POST';
+    
+    logger.debug(`${isLike ? '点赞' : '取消点赞'}评论，ID: ${commentId}, 用户: ${openid}`);
     
     return request({
       url: url,
@@ -153,6 +156,45 @@ const commentAPI = {
       data: {} // 空请求体
     }).then(res => {
       logger.debug(`${isLike ? '点赞' : '取消点赞'}评论结果:`, JSON.stringify(res));
+      
+      // 处理标准API响应格式
+      let responseData = res;
+      
+      // 标准API响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+      if (res && res.code === 200 && res.data) {
+        logger.debug('收到标准API响应格式');
+        responseData = res.data;
+      }
+      
+      // 提取最终点赞状态和点赞数
+      let isLikedFinal = isLike;
+      let likeCount = null;
+      
+      // 从API响应中提取数据
+      if (responseData) {
+        if (responseData.liked !== undefined) {
+          isLikedFinal = !!responseData.liked;
+        }
+        if (responseData.like_count !== undefined) {
+          likeCount = responseData.like_count;
+        }
+      }
+      
+      // 更新评论缓存状态
+      try {
+        // 尝试更新评论缓存(如果有的话)
+        const cache = getApp()?.globalData?._commentCache || {};
+        if (cache[commentId]) {
+          cache[commentId].is_liked = isLikedFinal;
+          if (likeCount !== null) {
+            cache[commentId].like_count = likeCount;
+          }
+          logger.debug('评论缓存已更新');
+        }
+      } catch (cacheError) {
+        logger.error('更新评论缓存失败:', cacheError);
+      }
+      
       return res;
     }).catch(err => {
       logger.error(`${isLike ? '点赞' : '取消点赞'}评论失败:`, err);
@@ -202,7 +244,7 @@ const commentAPI = {
       post_id, // 确保post_id在请求体中
       content,
       // 添加用户昵称和头像，后端可能会使用
-      nick_name: userInfo.nickname || userInfo.nickName || userInfo.nick_name || '用户',
+      nick_name: userInfo.nick_name || userInfo.nickName || '用户',
       avatar: userInfo.avatar || userInfo.avatarUrl || '/assets/icons/default-avatar.png'
     };
     

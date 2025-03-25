@@ -44,7 +44,7 @@ async function syncUserToServer(userData) {
     // 构建同步请求数据
     const syncData = {
       openid: userData.openid,
-      nickname: userData.nickName || userData.nickname || '',
+      nick_name: userData.nickName || userData.nick_name || '',
       avatar_url: userData.avatarUrl || userData.avatar_url || '',
       gender: userData.gender || 0,
       country: userData.country || '',

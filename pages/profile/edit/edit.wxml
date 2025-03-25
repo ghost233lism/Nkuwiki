@@ -23,7 +23,7 @@
     <!-- 昵称 -->
     <view class="info-item">
       <text class="item-label">昵称</text>
-      <input class="item-value" value="{{inputData.nickname}}" bindinput="onNicknameInput" placeholder="请输入昵称" maxlength="20"/>
+      <input class="item-value" value="{{inputData.nick_name}}" bindinput="onNicknameInput" placeholder="请输入昵称" maxlength="20"/>
     </view>
     
     <!-- 生日 -->

@@ -61,7 +61,6 @@ Page({
             openid: userData.openid,
             wxapp_id: userData.openid,
             // 用户基本信息
-            nickname: userData.nickName || userData.nick_name || '',
             nick_name: userData.nickName || userData.nick_name || '',
             avatar_url: userData.avatarUrl || userData.avatar || '',
             avatar: userData.avatarUrl || userData.avatar || '',
@@ -82,7 +81,7 @@ Page({
             
             const syncData = {
               openid: formattedUserInfo.openid,
-              nick_name: formattedUserInfo.nickname,
+              nick_name: formattedUserInfo.nick_name,
               avatar: formattedUserInfo.avatar_url,
               gender: formattedUserInfo.gender
             };

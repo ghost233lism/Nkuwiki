@@ -10,7 +10,7 @@ Page({
     lastPage: false,
     currentPage: 0,
     pageSize: 20,
-    selectedType: '', // 筛选类型：'' - 全部, 'system' - 系统通知, 'like' - 点赞, 'comment' - 评论, 'follow' - 关注
+    selectedType: 'like', // 默认选择点赞通知，可选值: 'like' - 点赞, 'favorite' - 收藏, 'comment' - 评论
     isLoggedIn: false,
     userId: '',
     activeTab: 'all',
@@ -159,13 +159,23 @@ Page({
         wx.hideLoading();
         logger.debug('获取用户通知成功, 完整响应:', JSON.stringify(res));
         
-        // 检查响应格式
-        if (!res.notifications && res.data && res.data.notifications) {
+        // 处理标准API响应格式
+        // 标准API响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+        let responseData = res;
+        
+        // 从标准响应中提取数据
+        if (res && res.code === 200) {
+          logger.debug('收到标准API响应格式，状态码200');
+          responseData = res.data;
+        } 
+        // 兼容旧格式 - 检查是否直接返回了数据对象
+        else if (!res.notifications && res.data && res.data.notifications) {
           logger.debug('使用res.data中的通知数据');
-          res = res.data;
+          responseData = res.data;
         }
         
-        const newNotifications = res.notifications || [];
+        // 提取通知列表和计数
+        const newNotifications = responseData.notifications || [];
         // 记录更详细的通知信息
         if (newNotifications.length > 0) {
           logger.debug(`获取到${newNotifications.length}条通知，第一条:`, JSON.stringify(newNotifications[0]));
@@ -173,8 +183,9 @@ Page({
           logger.debug('未获取到任何通知');
         }
         
-        const unreadCount = res.unread_count || 0;
-        const totalCount = res.total || 0;
+        // 提取未读计数和总计数
+        const unreadCount = responseData.unread_count || 0;
+        const totalCount = responseData.total || 0;
         
         // 检查是否还有更多数据
         const isLastPage = newNotifications.length < limit;
@@ -186,7 +197,8 @@ Page({
           totalCount: totalCount,
           loading: false,
           lastPage: isLastPage,
-          currentPage: this.data.currentPage + 1
+          currentPage: this.data.currentPage + 1,
+          isLoading: false
         });
       })
       .catch(err => {
@@ -206,7 +218,7 @@ Page({
 
   // 切换通知类型筛选
   switchType: function (e) {
-    const type = e.currentTarget.dataset.type || '';
+    const type = e.currentTarget.dataset.type || 'like';
     
     // 如果选择的类型与当前相同，不做操作
     if (type === this.data.selectedType) {
@@ -214,7 +226,10 @@ Page({
     }
     
     this.setData({
-      selectedType: type
+      selectedType: type,
+      notifications: [],
+      currentPage: 0,
+      lastPage: false
     });
     
     // 重新加载通知
@@ -382,11 +397,11 @@ Page({
         }
         break;
         
-      case 'follow':
-        // 跳转到关注用户的个人页面
-        if (notification.sender_id) {
+      case 'favorite':
+        // 跳转到收藏的帖子
+        if (notification.related_id) {
           wx.navigateTo({
-            url: `/pages/userProfile/userProfile?userId=${notification.sender_id}`
+            url: `/pages/postDetail/postDetail?id=${notification.related_id}`
           });
         }
         break;
@@ -405,6 +420,11 @@ Page({
 
   // 下拉刷新
   onPullDownRefresh: function () {
+    this.setData({
+      notifications: [],
+      currentPage: 0,
+      lastPage: false
+    });
     this.loadNotifications(true);
     wx.stopPullDownRefresh();
   },
@@ -414,5 +434,10 @@ Page({
     if (!this.data.lastPage && !this.data.loading) {
       this.loadNotifications();
     }
+  },
+
+  // 返回上一页
+  navigateBack: function() {
+    wx.navigateBack();
   }
 }); 

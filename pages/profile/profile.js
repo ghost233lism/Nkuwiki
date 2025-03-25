@@ -160,21 +160,47 @@ Page({
       .then(res => {
         logger.debug('获取到用户信息:', res);
         
+        // 处理标准API响应格式
+        let userData = null;
+        
+        // 判断是否是标准API响应格式
+        if (res && res.code === 200 && res.data) {
+          logger.debug('收到标准API响应格式，获取data字段');
+          userData = res.data;
+        } 
+        // 判断是否直接返回用户对象（旧格式）
+        else if (res && (res.openid || res.posts_count !== undefined || res.likes_count !== undefined)) {
+          logger.debug('收到直接用户对象格式');
+          userData = res;
+        }
+        // 其他情况，使用默认值
+        else {
+          logger.debug('收到未知格式响应，使用默认值');
+          userData = {
+            posts_count: 0,
+            likes_count: 0,
+            following_count: 0,
+            followers_count: 0,
+            comments_count: 0,
+            favorites_count: 0
+          };
+        }
+        
         // 更新数据，兼容不同API返回格式
         this.setData({
-          postCount: res.posts_count || 0,
-          likeCount: res.likes_count || 0,
-          followedCount: res.following_count || 0,
-          followerCount: res.followers_count || 0,
+          postCount: userData.posts_count || 0,
+          likeCount: userData.likes_count || 0,
+          followedCount: userData.following_count || 0,
+          followerCount: userData.followers_count || 0,
           
           // 同时更新stats对象以兼容旧代码
           stats: {
-            posts: res.posts_count || 0,
-            comments: res.comments_count || 0,
-            likes: res.likes_count || 0,
-            favorites: res.favorites_count || 0,
-            follows: res.following_count || 0,
-            followers: res.followers_count || 0
+            posts: userData.posts_count || 0,
+            comments: userData.comments_count || 0,
+            likes: userData.likes_count || 0,
+            favorites: userData.favorites_count || 0,
+            follows: userData.following_count || 0,
+            followers: userData.followers_count || 0
           }
         });
       })
@@ -399,16 +425,60 @@ Page({
       console.debug('获取用户发帖数量，用户openid:', openid);
       
       // 使用API获取用户的所有帖子
-      const posts = await postAPI.getUserPosts(openid);
+      const response = await postAPI.getUserPosts(openid);
       
-      // 标准响应会直接返回帖子数组
-      console.debug(`成功获取用户帖子列表，帖子数量: ${posts.length}`);
+      // 标准API响应格式处理
+      if (response && response.code === 200 && response.data) {
+        // 标准格式：返回在data.posts中，有total字段
+        const posts = response.data.posts || [];
+        const total = response.data.total || posts.length || 0;
+        
+        console.debug(`获取用户帖子成功(标准格式)，帖子数量: ${total}`);
+        
+        this.setData({
+          postCount: total
+        });
+        
+        return Promise.resolve(total);
+      } 
+      // 处理直接返回帖子数组的情况（旧格式）
+      else if (Array.isArray(response)) {
+        console.debug(`获取用户帖子成功(数组格式)，帖子数量: ${response.length}`);
+        
+        this.setData({
+          postCount: response.length || 0
+        });
+        
+        return Promise.resolve(response.length || 0);
+      }
+      // 处理嵌套格式
+      else if (response && response.posts && Array.isArray(response.posts)) {
+        console.debug(`获取用户帖子成功(嵌套格式)，帖子数量: ${response.posts.length}`);
+        
+        this.setData({
+          postCount: response.posts.length || 0
+        });
+        
+        return Promise.resolve(response.posts.length || 0);
+      }
+      // 未知格式，尝试从total字段获取
+      else if (response && typeof response.total === 'number') {
+        console.debug(`获取用户帖子成功(带total字段)，帖子数量: ${response.total}`);
+        
+        this.setData({
+          postCount: response.total || 0
+        });
+        
+        return Promise.resolve(response.total || 0);
+      }
       
+      // 默认情况，设为0
+      console.debug('无法识别帖子数量响应格式:', response);
       this.setData({
-        postCount: posts.length || 0
+        postCount: 0
       });
       
-      return Promise.resolve(posts.length || 0);
+      return Promise.resolve(0);
     } catch (error) {
       console.error('获取用户发帖数失败:', error);
       this.setData({
@@ -436,17 +506,66 @@ Page({
       
       console.debug('获取用户获赞总数，用户openid:', openid);
       
-      // 使用API获取用户的所有帖子
-      const posts = await postAPI.getUserPosts(openid);
+      // 尝试先直接从用户信息获取点赞数
+      const userInfo = await userAPI.getUserInfo(openid);
       
-      // 日志记录获取到的数据
-      console.debug('获取到的帖子原始数据:', typeof posts, posts ? (Array.isArray(posts) ? `数组(${posts.length}项)` : '非数组') : '空');
-      
-      // 确认posts是一个数组再使用reduce
-      if (posts && Array.isArray(posts)) {
-        console.debug('成功获取用户帖子:', posts.length, '篇');
+      // 标准API响应格式处理
+      if (userInfo && userInfo.code === 200 && userInfo.data) {
+        const likesCount = userInfo.data.likes_count || 0;
+        console.debug('从用户信息(标准格式)获取到获赞总数:', likesCount);
         
-        // 计算所有帖子获得的点赞总数，检查多种可能的字段名
+        this.setData({
+          likeCount: likesCount
+        });
+        
+        return Promise.resolve(likesCount);
+      }
+      // 处理直接返回用户信息的情况（旧格式）
+      else if (userInfo && userInfo.likes_count !== undefined) {
+        const likesCount = userInfo.likes_count || 0;
+        console.debug('从用户信息(旧格式)获取到获赞总数:', likesCount);
+        
+        this.setData({
+          likeCount: likesCount
+        });
+        
+        return Promise.resolve(likesCount);
+      }
+      
+      // 如果无法直接获取，尝试通过计算帖子点赞数总和获取
+      const response = await postAPI.getUserPosts(openid);
+      
+      // 处理标准API响应
+      let posts = [];
+      if (response && response.code === 200 && response.data) {
+        posts = response.data.posts || [];
+        console.debug('获取到用户帖子(标准格式):', posts.length, '篇');
+      } 
+      // 处理直接返回帖子数组的情况
+      else if (Array.isArray(response)) {
+        posts = response;
+        console.debug('获取到用户帖子(数组格式):', posts.length, '篇');
+      }
+      // 处理嵌套格式
+      else if (response && response.posts && Array.isArray(response.posts)) {
+        posts = response.posts;
+        console.debug('获取到用户帖子(嵌套格式):', posts.length, '篇');
+      }
+      
+      // 如果有直接返回total_likes的情况
+      if (response && response.total_likes !== undefined) {
+        const totalLikes = parseInt(response.total_likes || 0);
+        console.debug('API直接返回用户获赞总数:', totalLikes);
+        
+        this.setData({
+          likeCount: totalLikes
+        });
+        
+        return Promise.resolve(totalLikes);
+      }
+      
+      // 计算所有帖子获得的点赞总数
+      if (posts && posts.length > 0) {
         let totalLikes = 0;
         
         for (const post of posts) {
@@ -465,26 +584,15 @@ Page({
         });
         
         return Promise.resolve(totalLikes);
-      } else if (posts && typeof posts === 'object' && posts.total_likes !== undefined) {
-        // 处理直接返回总赞数的情况
-        const totalLikes = parseInt(posts.total_likes || 0);
-        
-        console.debug('API直接返回用户获赞总数:', totalLikes);
-        
-        this.setData({
-          likeCount: totalLikes
-        });
-        
-        return Promise.resolve(totalLikes);
-      } else {
-        // 如果posts不是数组或有错误，设置默认值
-        console.debug('获取帖子列表失败或格式不是预期的:', posts);
-        this.setData({
-          likeCount: 0
-        });
-        
-        return Promise.resolve(0);
       }
+      
+      // 如果都没有获取到有效数据，返回0
+      console.debug('无法获取到有效的点赞数据');
+      this.setData({
+        likeCount: 0
+      });
+      
+      return Promise.resolve(0);
     } catch (error) {
       console.error('获取用户获赞总数失败:', error);
       this.setData({
@@ -839,33 +947,63 @@ Page({
         return;
       }
       
-      // 提取用户ID（优先使用openid）
-      const userId = user.openid || user._id || user.id;
+      // 提取用户openid（不要使用数字ID）
+      const userId = user.openid;
       if (!userId) {
-        logger.error('获取用户信息失败: 无法确定用户ID');
+        logger.error('获取用户信息失败: 无法确定用户openid');
         this.setData({ isLogin: false, userInfo: null });
         wx.hideLoading();
         return;
       }
       
+      logger.debug(`开始使用openid获取用户信息: ${userId}`);
+      
       // 尝试通过API刷新用户信息
       userManager.refreshUserInfo()
-        .then(refreshedUser => {
-          logger.debug('API刷新用户信息成功:', refreshedUser);
+        .then(response => {
+          logger.debug('API刷新用户信息响应:', response);
           
-          // 更新页面数据
-          this.setData({
-            isLogin: true,
-            isLoggedIn: true,
-            userInfo: refreshedUser || user,
-            hasUserInfo: true
-          });
+          // 处理标准API响应格式
+          let refreshedUser = null;
           
-          // 确保使用正确的用户ID更新统计信息
-          const finalUserId = refreshedUser?.openid || user.openid || refreshedUser?._id || user._id || refreshedUser?.id || user.id;
+          // 判断是否是标准API响应格式：{code: 200, data: {...}, message: "success"}
+          if (response && response.code === 200 && response.data) {
+            logger.debug('收到标准API响应格式，获取data字段');
+            refreshedUser = response.data;
+          } 
+          // 判断是否直接返回用户对象（旧格式）
+          else if (response && response.openid) {
+            logger.debug('收到直接用户对象格式');
+            refreshedUser = response;
+          }
+          // 其他情况，尝试使用原始user
+          else {
+            logger.debug('使用原始用户信息');
+            refreshedUser = user;
+          }
           
-          // 更新用户统计信息
-          return this.refreshUserData();
+          // 如果成功获取了新的用户信息
+          if (refreshedUser) {
+            logger.debug('用户信息刷新成功:', refreshedUser);
+            
+            // 确保使用nick_name字段（后端支持的字段）
+            if (refreshedUser.nickname && !refreshedUser.nick_name) {
+              refreshedUser.nick_name = refreshedUser.nickname;
+            }
+            
+            // 更新页面数据
+            this.setData({
+              isLogin: true,
+              isLoggedIn: true,
+              userInfo: refreshedUser,
+              hasUserInfo: true
+            });
+            
+            // 刷新统计数据
+            return this.refreshUserData();
+          } else {
+            throw new Error('未能获取有效的用户信息');
+          }
         })
         .catch(error => {
           logger.error('API刷新用户信息失败:', error);

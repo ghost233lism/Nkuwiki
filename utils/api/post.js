@@ -313,12 +313,44 @@ const postAPI = {
       return requestPromise.then(res => {
         console.log(`${isLike ? '点赞' : '取消点赞'}结果:`, JSON.stringify(res));
         
+        // 处理标准API响应格式
+        let responseData = res;
+        
+        // 标准API响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+        if (res && res.code === 200 && res.data) {
+          console.log('收到标准API响应格式');
+          responseData = res.data;
+        }
+        
         // 通知全局的帖子更新事件
         try {
           const app = getApp();
           if (app && app.globalData) {
+            // 提取更新后的点赞状态和计数
+            let isLikedFinal = isLike;
+            let likeCount = null;
+            
+            // 从API响应中提取数据
+            if (responseData) {
+              if (responseData.liked !== undefined) {
+                isLikedFinal = !!responseData.liked;
+              }
+              if (responseData.like_count !== undefined) {
+                likeCount = responseData.like_count;
+              }
+            }
+            
             // 更新帖子点赞状态
-            const updatedPost = { id: postIdInt, is_liked: isLike };
+            const updatedPost = { 
+              id: postIdInt, 
+              is_liked: isLikedFinal
+            };
+            
+            // 如果响应中包含点赞数，也一并更新
+            if (likeCount !== null) {
+              updatedPost.like_count = likeCount;
+            }
+            
             notifyPostUpdate(updatedPost);
             console.log('全局帖子状态已更新');
           }
@@ -414,11 +446,43 @@ const postAPI = {
     }).then(res => {
       logger.debug('收藏API响应成功:', JSON.stringify(res));
       
+      // 处理标准API响应格式
+      let responseData = res;
+      
+      // 标准API响应格式: { code: 200, message: "success", data: {...}, details: null, timestamp: "..." }
+      if (res && res.code === 200 && res.data) {
+        logger.debug('收到标准API响应格式');
+        responseData = res.data;
+      }
+      
       // 通知全局的帖子更新事件
       const app = getApp();
       if (app && app.globalData) {
+        // 提取更新后的收藏状态和计数
+        let isFavoritedFinal = shouldFavorite;
+        let favoriteCount = null;
+        
+        // 从API响应中提取数据
+        if (responseData) {
+          if (responseData.favorite !== undefined) {
+            isFavoritedFinal = !!responseData.favorite;
+          }
+          if (responseData.favorite_count !== undefined) {
+            favoriteCount = responseData.favorite_count;
+          }
+        }
+        
         // 更新帖子收藏状态
-        const updatedPost = { id: postIdInt, is_favorited: shouldFavorite };
+        const updatedPost = { 
+          id: postIdInt, 
+          is_favorited: isFavoritedFinal
+        };
+        
+        // 如果响应中包含收藏数，也一并更新
+        if (favoriteCount !== null) {
+          updatedPost.favorite_count = favoriteCount;
+        }
+        
         notifyPostUpdate(updatedPost);
       }
       

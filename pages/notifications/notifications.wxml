@@ -1,18 +1,26 @@
 <!-- pages/notifications/notifications.wxml -->
 <view class="notifications-container">
+  <!-- 顶部标题 -->
+  <view class="page-header">
+    <view class="back-icon" bindtap="navigateBack">
+      <text class="icon">&#xe60e;</text>
+    </view>
+    <view class="header-title">消息通知</view>
+    <view class="more-icon">
+      <text class="icon">&#xe638;</text>
+    </view>
+  </view>
+
   <!-- 顶部标签切换 -->
   <view class="tabs-container">
-    <view class="tab {{selectedType === '' ? 'active' : ''}}" bindtap="switchType" data-type="">
-      <text>全部</text>
-    </view>
     <view class="tab {{selectedType === 'like' ? 'active' : ''}}" bindtap="switchType" data-type="like">
       <text>点赞</text>
     </view>
+    <view class="tab {{selectedType === 'favorite' ? 'active' : ''}}" bindtap="switchType" data-type="favorite">
+      <text>收藏</text>
+    </view>
     <view class="tab {{selectedType === 'comment' ? 'active' : ''}}" bindtap="switchType" data-type="comment">
       <text>评论</text>
-    </view>
-    <view class="tab {{selectedType === 'system' ? 'active' : ''}}" bindtap="switchType" data-type="system">
-      <text>系统</text>
     </view>
   </view>
 
@@ -30,17 +38,6 @@
     <text class="empty-text">暂无通知消息</text>
   </view>
 
-  <!-- 顶部标签导航 -->
-  <view class="notification-tabs">
-    <view class="tab {{activeTab === 'all' ? 'active' : ''}}" bindtap="switchTab" data-tab="all">全部</view>
-    <view class="tab {{activeTab === 'like' ? 'active' : ''}}" bindtap="switchTab" data-tab="like">点赞</view>
-    <view class="tab {{activeTab === 'comment' ? 'active' : ''}}" bindtap="switchTab" data-tab="comment">评论</view>
-    <view class="tab {{activeTab === 'system' ? 'active' : ''}}" bindtap="switchTab" data-tab="system">系统</view>
-  </view>
-
-  <!-- 刷新测试按钮 -->
-  <view class="refresh-btn" bindtap="manualRefresh">手动刷新</view>
-
   <!-- 通知列表 -->
   <scroll-view scroll-y="true" class="notifications-list" bindscrolltolower="onReachBottom" wx:if="{{notifications.length > 0}}">
     <view class="notification-item {{item.is_read ? '' : 'unread'}}" 
@@ -56,7 +53,7 @@
         <view class="icon-bg {{item.type}}">
           <image class="icon" wx:if="{{item.type === 'like'}}" src="/assets/icons/index/liked.png" mode="aspectFill"></image>
           <image class="icon" wx:elif="{{item.type === 'comment'}}" src="/assets/icons/index/comment.png" mode="aspectFill"></image>
-          <image class="icon" wx:elif="{{item.type === 'follow'}}" src="/assets/icons/default-avatar.png" mode="aspectFill"></image>
+          <image class="icon" wx:elif="{{item.type === 'favorite'}}" src="/assets/icons/index/favorite.png" mode="aspectFill"></image>
           <image class="icon" wx:else src="/assets/icons/profile/notification.png" mode="aspectFill"></image>
         </view>
       </view>
@@ -66,13 +63,10 @@
         <view class="notification-title">
           <text>{{item.title}}</text>
         </view>
-        <view class="notification-desc">
-          <text>{{item.content}}</text>
-        </view>
         
         <!-- 发送者和关联内容信息 -->
-        <view class="notification-meta" wx:if="{{item.sender || item.related_id}}">
-          <text class="meta-text">在「{{item.post_title || '帖子'}}」</text>
+        <view class="notification-meta" wx:if="{{item.post_title}}">
+          <text class="meta-text">在「{{item.post_title}}」这条帖子</text>
         </view>
       </view>
       
@@ -97,7 +91,7 @@
   <!-- 底部操作区 -->
   <view class="bottom-action">
     <button class="mark-all-read-btn" bindtap="markAllAsRead" disabled="{{unreadCount === 0}}">
-      <image class="btn-icon" src="/assets/icons/search/token.png" mode="aspectFill"></image>
+      <image class="btn-icon" src="/assets/icons/profile/notification.png" mode="aspectFill"></image>
       <text>全部标记为已读</text>
     </button>
   </view>

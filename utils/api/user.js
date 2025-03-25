@@ -217,17 +217,65 @@ const userAPI = {
       showLoading: true,
       loadingText: '保存中...'
     }).then(result => {
-      logger.debug('用户信息更新成功:', JSON.stringify(result));
-      return result || { success: true }; // 确保始终返回成功对象
+      logger.debug('用户信息更新API响应:', JSON.stringify(result));
+      
+      // 处理标准API响应格式，根据API文档
+      // 响应格式: { code: 200, message: "success", data: {...用户数据...}, details: null, timestamp: "..." }
+      
+      if (result) {
+        // 标准API响应格式处理
+        if (result.code === 200) {
+          logger.debug('收到标准API响应格式，状态码200');
+          return result.data ? result : { data: result }; // 如果已有data字段则返回整个结果，否则封装
+        }
+        // 错误状态码处理
+        else if (result.code && result.code !== 200) {
+          logger.error(`API响应错误，状态码: ${result.code}, 消息: ${result.message}`);
+          throw new Error(result.message || '更新用户信息失败');
+        }
+        // 兼容处理旧格式：如果直接返回了用户对象(包含openid)
+        else if (result.openid) {
+          logger.debug('API返回直接用户对象格式');
+          return {
+            code: 200,
+            message: 'success',
+            data: result
+          };
+        }
+        // 兼容处理旧格式：如果是简单成功标志
+        else if (result.success) {
+          logger.debug('API返回简单成功对象格式');
+          return {
+            code: 200,
+            message: result.message || 'success',
+            data: result
+          };
+        }
+      }
+      
+      // 默认返回标准成功格式
+      logger.debug('使用默认标准响应格式包装结果');
+      return { 
+        code: 200, 
+        message: 'success',
+        data: result || { success: true },
+        timestamp: new Date().toISOString()
+      }; 
     }).catch(error => {
-      logger.error('用户信息更新失败:', error);
-      // 如果是因为网络或者超时导致的错误，模拟成功响应
+      logger.error('用户信息更新请求失败:', error);
+      // 如果是因为网络或者超时导致的错误，返回友好的错误响应
       if (error.errMsg && (error.errMsg.includes('timeout') || error.errMsg.includes('fail'))) {
-        logger.warn('因网络问题模拟成功响应');
+        logger.warn('网络问题导致请求失败，返回友好响应');
         return { 
-          success: true, 
-          simulated: true,
-          message: '网络不稳定，但数据可能已保存' 
+          code: 200,
+          message: '网络不稳定，但数据可能已保存',
+          data: { 
+            success: true, 
+            simulated: true
+          },
+          details: {
+            originalError: error.errMsg
+          }
         };
       }
       throw error;
@@ -247,7 +295,7 @@ const userAPI = {
   },
 
   /**
-   * 获取用户关注和粉丝统计
+   * 获取用户关注和粉丝数量统计
    * @param {string} openid - 用户openid
    * @returns {Promise<object>} 关注和粉丝数据
    */
@@ -261,6 +309,27 @@ const userAPI = {
       url: `${API.PREFIX.WXAPP}/users/${openid}/follow-stats`,
       method: 'GET',
       showError: false
+    }).then(res => {
+      // 处理标准API响应格式
+      if (res && res.code === 200 && res.data) {
+        logger.debug('关注统计响应(标准格式):', res);
+        // 标准API响应中数据在 data 字段
+        return {
+          followedCount: res.data.following || 0,
+          followerCount: res.data.followers || 0
+        };
+      } else if (res && (res.following !== undefined || res.followers !== undefined)) {
+        // 兼容旧格式
+        logger.debug('关注统计响应(旧格式):', res);
+        return {
+          followedCount: res.following || 0,
+          followerCount: res.followers || 0
+        };
+      }
+      
+      // 默认返回
+      logger.debug('关注统计响应(无法识别格式):', res);
+      return { followedCount: 0, followerCount: 0 };
     }).catch(error => {
       logger.error('获取用户关注统计失败:', error);
       return { followedCount: 0, followerCount: 0 };
@@ -283,9 +352,24 @@ const userAPI = {
     // 使用getUserInfo接口获取用户完整信息，从中提取token数量
     return userAPI.getUserInfo(openid)
       .then(userData => {
-        const tokenCount = userData?.token || 0;
-        logger.debug(`用户代币数量: ${tokenCount}`);
-        return { token: tokenCount };
+        // 处理标准API响应格式
+        if (userData && userData.code === 200 && userData.data) {
+          logger.debug('用户信息响应(标准格式):', userData);
+          // 从data字段中获取token_count
+          const tokenCount = userData.data.token_count || 0;
+          logger.debug(`用户代币数量(标准格式): ${tokenCount}`);
+          return { token: tokenCount };
+        } else if (userData && userData.token_count !== undefined) {
+          // 兼容旧格式：直接从返回对象中获取
+          const tokenCount = userData.token_count || 0;
+          logger.debug(`用户代币数量(旧格式): ${tokenCount}`);
+          return { token: tokenCount };
+        } else {
+          // 查看是否有其他可能的字段命名
+          const possibleTokenField = userData?.token || userData?.tokens || 0;
+          logger.debug(`使用可能的token字段: ${possibleTokenField}`);
+          return { token: possibleTokenField };
+        }
       })
       .catch(error => {
         logger.error('获取用户代币数量失败:', error);
