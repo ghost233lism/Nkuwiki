@@ -49,8 +49,12 @@ Page({
         loading: false
       });
       
-      // 获取用户统计数据
-      this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+      // 获取用户统计数据，只使用openid
+      if (userInfo.openid) {
+        this.getUserStats(userInfo.openid);
+      } else {
+        logger.error('用户信息中缺少openid');
+      }
     } else {
       this.setData({
         isLoggedIn: false,
@@ -145,21 +149,21 @@ Page({
   },
 
   // 获取用户统计数据
-  getUserStats(userId) {
-    if (!userId) {
-      logger.error('获取用户统计数据失败：缺少用户ID');
+  getUserStats(openid) {
+    if (!openid) {
+      logger.error('获取用户统计数据失败：缺少openid');
       return;
     }
     
-    // 调用API获取用户统计信息
-    userAPI.getUserStats(userId)
+    // 调用API获取用户信息和统计数据
+    userAPI.getUserInfo(openid)
       .then(res => {
-        logger.debug('获取到用户统计信息:', res);
+        logger.debug('获取到用户信息:', res);
         
         // 更新数据，兼容不同API返回格式
         this.setData({
           postCount: res.posts_count || 0,
-          likeCount: res.likes_received || 0,
+          likeCount: res.likes_count || 0,
           followedCount: res.following_count || 0,
           followerCount: res.followers_count || 0,
           
@@ -167,7 +171,7 @@ Page({
           stats: {
             posts: res.posts_count || 0,
             comments: res.comments_count || 0,
-            likes: res.likes_received || 0,
+            likes: res.likes_count || 0,
             favorites: res.favorites_count || 0,
             follows: res.following_count || 0,
             followers: res.followers_count || 0
@@ -175,14 +179,22 @@ Page({
         });
       })
       .catch(err => {
-        logger.error('获取用户统计失败:', err);
+        logger.error('获取用户信息失败:', err);
         
         // 出错时设置默认值，避免显示NaN
         this.setData({
           postCount: 0,
           likeCount: 0,
           followedCount: 0,
-          followerCount: 0
+          followerCount: 0,
+          stats: {
+            posts: 0,
+            comments: 0,
+            likes: 0,
+            favorites: 0,
+            follows: 0,
+            followers: 0
+          }
         });
       });
   },
@@ -206,7 +218,7 @@ Page({
             });
             
             // 获取用户统计数据
-            this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+            this.getUserStats(userInfo.openid);
           })
           .catch(err => {
             logger.error('用户登录失败:', err);
@@ -247,7 +259,7 @@ Page({
           });
           
           // 获取用户统计数据
-          this.getUserStats(userInfo._id || userInfo.id || userInfo.openid);
+          this.getUserStats(userInfo.openid);
         })
         .catch(err => {
           logger.error('用户登录失败:', err);
