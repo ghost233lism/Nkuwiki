@@ -42,7 +42,7 @@ project
 │   │   └── search.js   # 搜索相关API
 │   ├── request.js      # 网络请求工具
 │   ├── config.js       # 配置文件
-│   └── utils.js        # 通用工具函数
+│   └── util.js        # 通用工具函数
 ├── cloudfunctions/     # 云函数
 │   ├── getOpenID/      # 获取用户OpenID
 │   └── uploadImage/    # 图片上传
