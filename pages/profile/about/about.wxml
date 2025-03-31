@@ -17,25 +17,35 @@
     <!-- Logo区域 -->
     <view class="logo-section">
       <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-      <text class="app-name">nkuwiki</text>
-      <text class="version">版本 1.0.0</text>
+      <text class="app-name">{{companyInfo.app_name}}</text>
+      <text class="version">版本 {{companyInfo.version}}</text>
     </view>
 
     <!-- 公司信息区域 -->
     <view class="company-info">
       <view class="info-item">
         <text class="label">公司名称</text>
-        <text class="content">{{companyInfo.name}}</text>
+        <text class="content">{{companyInfo.company}}</text>
       </view>
       
       <view class="info-item">
-        <text class="label">联系地址</text>
-        <text class="content">{{companyInfo.address}}</text>
+        <text class="label">项目介绍</text>
+        <text class="content">{{companyInfo.description}}</text>
       </view>
       
       <view class="info-item" bindtap="contactUs">
         <text class="label">联系邮箱</text>
         <text class="content">{{companyInfo.email}}</text>
+      </view>
+
+      <view class="info-item">
+        <text class="label">官方网站</text>
+        <text class="content">{{companyInfo.website}}</text>
+      </view>
+
+      <view class="info-item">
+        <text class="label">GitHub</text>
+        <text class="content">{{companyInfo.github}}</text>
       </view>
     </view>
 
@@ -43,42 +53,16 @@
     <view class="company-intro">
       <view class="intro-title">项目介绍</view>
       <view class="intro-content">
-        <!-- 服务平台部分 -->
+        <!-- 服务说明 -->
         <view class="section">
-          <view class="section-title">服务平台</view>
-          
-          <view class="platform-item" wx:for="{{platforms}}" wx:key="title">
-            <view class="item-title">{{index + 1}}. {{item.title}}</view>
-            <view class="item-content">
-              <block wx:if="{{item.items && item.items.length > 0}}">
-                <view class="list-item" wx:for="{{item.items}}" wx:key="*this" wx:for-item="subItem">
-                  • {{subItem}}
-                </view>
-              </block>
-              <block wx:elif="{{item.description}}">
-                {{item.description}}
-              </block>
-            </view>
-          </view>
-        </view>
-
-        <!-- 参与方式部分 -->
-        <view class="section">
-          <view class="section-title">参与方式</view>
-          <view class="section-subtitle">（根据项目进度动态更新中）</view>
-
-          <view class="contribution-item" wx:for="{{contributions}}" wx:key="title">
-            <view class="item-title">{{index + 1}}. {{item.title}}</view>
-            <view class="item-content">{{item.description}}</view>
-          </view>
+          <view class="section-content">{{companyInfo.description}}</view>
         </view>
       </view>
     </view>
 
     <!-- 版权信息 -->
     <view class="copyright">
-      <text>Copyright © {{currentYear}} {{companyInfo.name}}</text>
-      <text>All Rights Reserved</text>
+      <text>{{companyInfo.copyright}}</text>
     </view>
   </block>
 </view>

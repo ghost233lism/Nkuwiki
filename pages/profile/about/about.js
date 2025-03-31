@@ -20,11 +20,18 @@ Page({
       wx.showLoading({ title: '加载中...' });
       const result = await api.user.getAboutInfo();
       
-      if (result?.success && result.data) {
+      if (result?.code === 200 && result.data) {
         this.setData({
-          companyInfo: result.data.companyInfo || {},
-          platforms: result.data.platforms || [],
-          contributions: result.data.contributions || [],
+          companyInfo: {
+            app_name: result.data.app_name,
+            version: result.data.version,
+            description: result.data.description,
+            company: result.data.company,
+            email: result.data.email,
+            github: result.data.github,
+            website: result.data.website,
+            copyright: result.data.copyright
+          },
           loading: false
         });
       } else {

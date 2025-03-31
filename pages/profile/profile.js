@@ -237,5 +237,51 @@ Page({
     } finally {
       wx.hideLoading();
     }
+  },
+
+  // 跳转到关于我们页面
+  onAboutTap() {
+    wx.navigateTo({
+      url: '/pages/profile/about/about',
+      fail: (err) => {
+        console.debug('跳转到关于我们页面失败:', err);
+        wx.showToast({
+          title: '页面跳转失败',
+          icon: 'none'
+        });
+      }
+    });
+  },
+
+  // 清除缓存
+  clearCache() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要清除缓存吗？',
+      success: (res) => {
+        if (res.confirm) {
+          // 保留openid和userInfo
+          const openid = getStorage('openid');
+          const userInfo = getStorage('userInfo');
+          
+          // 清除所有缓存
+          wx.clearStorageSync();
+          
+          // 重新存储关键信息
+          if (openid) setStorage('openid', openid);
+          if (userInfo) setStorage('userInfo', userInfo);
+          
+          wx.showToast({
+            title: '清除成功',
+            icon: 'success'
+          });
+        }
+      }
+    });
+  },
+
+  // 退出登录
+  onLogoutTap() {
+    this.handleLogout();
   }
 });
