@@ -97,9 +97,12 @@ project
 #### 引入方式
 
 ```javascript
-// 按需引入API方法
-import { syncUser, follow } from '../../utils/api/user';
-import { getPostList, createPost } from '../../utils/api/post';
+// 方式一：引入整个API模块
+const api = require('../../utils/api/index');
+
+// 方式二：引入单个API模块
+const userApi = require('../../utils/api/user');
+const postApi = require('../../utils/api/post');
 ```
 
 #### 用户模块
@@ -115,7 +118,7 @@ async function syncUserInfo() {
     const openid = wxCloudResult.result.openid;
     
     // 调用API
-    const result = await syncUser({
+    const result = await api.user.syncUser({
       openid,
       nickname: userInfo.nickName,
       avatar: userInfo.avatarUrl,
@@ -134,7 +137,7 @@ async function syncUserInfo() {
 // 关注用户
 async function followUser(followedId) {
   const openid = wx.getStorageSync('openid');
-  const result = await follow({
+  const result = await api.user.follow({
     follower_id: openid,
     followed_id: followedId
   });
@@ -153,7 +156,7 @@ async function followUser(followedId) {
 ```javascript
 // 获取帖子列表
 async function loadPosts() {
-  const result = await getPostList({
+  const result = await api.post.getPosts({
     page: 1,
     limit: 20,
     category_id: 1
@@ -166,16 +169,45 @@ async function loadPosts() {
 
 // 创建帖子
 async function createNewPost(postData) {
-  const openid = wx.getStorageSync('openid');
-  const result = await createPost({
-    openid,
-    title: postData.title,
-    content: postData.content,
-    images: postData.images,
-    tags: postData.tags
-  });
-  
-  return result.code === 200;
+  try {
+    wx.showLoading({
+      title: '正在发布...',
+      mask: true
+    });
+    
+    const params = {
+      title: postData.title.trim(),
+      content: postData.content.trim(),
+      images: JSON.stringify(postData.images),
+      is_public: postData.isPublic,
+      allow_comment: postData.allowComment
+    };
+    
+    const result = await api.post.createPost(params);
+    
+    if (result.code === 200) {
+      wx.showToast({
+        title: '发布成功',
+        icon: 'success'
+      });
+      return true;
+    } else {
+      wx.showToast({
+        title: result.message || '发布失败',
+        icon: 'none'
+      });
+      return false;
+    }
+  } catch (err) {
+    console.debug('发布失败:', err);
+    wx.showToast({
+      title: '发布失败',
+      icon: 'none'
+    });
+    return false;
+  } finally {
+    wx.hideLoading();
+  }
 }
 ```
 
@@ -187,7 +219,7 @@ async function createNewPost(postData) {
 
 ```javascript
 // 引入所需方法
-import { get, post } from '../../utils/request';
+const {get, post, processResponse} = require('../../utils/request');
 
 // GET请求示例
 async function getUserProfile() {
@@ -218,14 +250,15 @@ async function createComment(postId, content) {
 
 ```javascript
 // 引入所需方法
-import { 
+const {
   formatTime,
   formatRelativeTime,
   getOpenID,
   getStorage,
   setStorage,
+  processCloudUrl,
   processPostData
-} from '../../utils/util';
+} = require('../../utils/util');
 
 // 时间格式化
 function displayTime() {
@@ -244,6 +277,11 @@ function storeUserPreferences() {
 function handlePost(rawPost) {
   // 处理图片URL、标签、点赞用户列表等
   return processPostData(rawPost);
+}
+
+// 处理云存储图片URL
+function processImageUrl(url) {
+  return processCloudUrl(url);
 }
 ```
 
