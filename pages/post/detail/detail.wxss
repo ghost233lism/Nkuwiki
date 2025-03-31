@@ -601,3 +601,45 @@
   font-size: 24rpx;
   border-bottom-left-radius: 6rpx;
 }
+
+/* 回复预览样式 */
+.reply-preview {
+  margin-top: 10rpx;
+  padding: 15rpx;
+  background-color: #f6f6f6;
+  border-radius: 10rpx;
+  font-size: 26rpx;
+}
+
+.reply-item {
+  margin-bottom: 10rpx;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.reply-author {
+  font-weight: bold;
+  color: #333;
+}
+
+.reply-text {
+  color: #666;
+}
+
+.view-more-replies {
+  font-size: 24rpx;
+  color: #5E8BC8;
+  margin-top: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.reply-action {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.reply-action text {
+  padding: 5rpx 10rpx;
+}

@@ -97,7 +97,123 @@ function formatRelativeTime(timestamp) {
   }
 }
 
+/**
+ * 获取用户OpenID
+ * @param {boolean} showLoading - 是否显示加载中提示，默认为true
+ * @returns {Promise<string>} 用户OpenID
+ */
+const getOpenID = async (showLoading = true) => {
+  try {
+    // 先尝试从本地获取openid
+    let openid = wx.getStorageSync('openid');
+    if (openid) {
+      console.debug('从本地获取到openid:', openid);
+      return openid;
+    }
+    
+    // 调用云函数获取openid
+    console.debug('本地无openid，准备调用getOpenID云函数');
+    
+    // 添加Loading提示，根据参数决定是否显示
+    if (showLoading) {
+      wx.showLoading({
+        title: '登录中...',
+        mask: true
+      });
+    } else {
+      // 确保关闭任何现有loading
+      wx.hideLoading();
+    }
+    
+    // 确保云环境初始化
+    if (!wx.cloud) {
+      console.error('云开发环境未初始化');
+      if (showLoading) wx.hideLoading();
+      return null;
+    }
+    
+    // 最多尝试3次
+    let retryCount = 0;
+    let wxCloudResult = null;
+    
+    while (retryCount < 3 && !wxCloudResult) {
+      try {
+        wxCloudResult = await wx.cloud.callFunction({
+          name: 'getOpenID',
+          timeout: 10000 // 设置超时时间为10秒
+        });
+        break; // 成功获取，跳出循环
+      } catch (err) {
+        retryCount++;
+        console.error(`调用getOpenID云函数失败，第${retryCount}次尝试:`, err);
+        
+        if (retryCount >= 3) {
+          if (showLoading) wx.hideLoading();
+          
+          // 只在显示loading的模式下显示错误提示
+          if (showLoading) {
+            wx.showToast({
+              title: '获取用户信息失败，请重试',
+              icon: 'none',
+              duration: 2000
+            });
+          }
+          return null;
+        }
+        
+        // 等待1秒后重试
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    // 隐藏loading
+    if (showLoading) wx.hideLoading();
+    
+    console.debug('getOpenID云函数调用结果:', wxCloudResult);
+    
+    if (wxCloudResult && wxCloudResult.result && 
+        wxCloudResult.result.code === 0 && 
+        wxCloudResult.result.data && 
+        wxCloudResult.result.data.openid) {
+      
+      openid = wxCloudResult.result.data.openid;
+      // 存储到本地
+      wx.setStorageSync('openid', openid);
+      console.debug('成功获取并存储openid:', openid);
+      return openid;
+    } else {
+      console.error('getOpenID云函数返回格式不正确:', wxCloudResult);
+      
+      // 只在显示loading的模式下显示错误提示
+      if (showLoading) {
+        wx.showToast({
+          title: '获取用户标识失败',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+      return null;
+    }
+  } catch (err) {
+    // 确保隐藏loading
+    if (showLoading) wx.hideLoading();
+    
+    console.error('获取OpenID失败:', err);
+    
+    // 只在显示loading的模式下显示错误提示
+    if (showLoading) {
+      wx.showToast({
+        title: '登录失败，请重试',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+    return null;
+  }
+};
+
 module.exports = {
   formatTime,
-  formatRelativeTime
+  formatRelativeTime,
+  getOpenID
 }

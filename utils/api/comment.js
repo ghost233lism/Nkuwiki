@@ -45,9 +45,9 @@ async function createComment(commentData) {
     const result = await request.post('/api/wxapp/comment', data);
     
     return {
-      success: true,
-      comment: result.data,
-      message: '评论成功'
+      success: result.data.code === 200,
+      data: result.data.data,
+      message: result.data.details?.message || '评论成功'
     };
   } catch (err) {
     console.error('发表评论失败:', err);
@@ -89,9 +89,9 @@ async function updateComment(commentId, commentData) {
     const result = await request.post('/api/wxapp/comment/update', data);
     
     return {
-      success: true,
-      comment: result.data,
-      message: '更新成功'
+      success: result.data.code === 200,
+      data: result.data.data,
+      message: result.data.details?.message || '更新成功'
     };
   } catch (err) {
     console.error('更新评论失败:', err);
@@ -128,8 +128,8 @@ async function deleteComment(commentId) {
     });
     
     return {
-      success: true,
-      message: '删除成功'
+      success: result.data.code === 200,
+      message: result.data.details?.message || '删除成功'
     };
   } catch (err) {
     console.error('删除评论失败:', err);
@@ -166,12 +166,9 @@ async function likeComment(commentId) {
     });
     
     return {
-      success: true,
-      message: result.data.message || '点赞成功',
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      comment_id: result.data.comment_id,
-      action: result.data.action
+      success: result.data.code === 200,
+      data: result.data.data,
+      message: result.data.details?.message || '点赞成功'
     };
   } catch (err) {
     console.error('点赞评论失败:', err);

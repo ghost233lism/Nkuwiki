@@ -3,6 +3,7 @@
  */
 
 const request = require('../request');
+const util = require('../util');
 
 /**
  * 用户登录/同步
@@ -13,46 +14,17 @@ async function login(userData = {}) {
   try {
     console.log('开始登录/同步用户:', userData);
     
-    // 先尝试从本地获取openid
-    let openid = wx.getStorageSync('openid');
-    console.log('本地存储的openid:', openid);
+    // 确保隐藏任何系统加载提示
+    wx.hideLoading();
     
-    // 如果没有openid，直接调用getOpenID云函数
-    if (!openid) {
-      try {
-        console.log('本地无openid，准备调用getOpenID云函数');
-        // 确保云环境已初始化
-        if (!wx.cloud) {
-          throw new Error('云开发环境未正确加载');
-        }
-        
-        // 尝试调用云函数获取openid
-        const wxCloudResult = await wx.cloud.callFunction({
-          name: 'getOpenID'  // 这个云函数直接返回用户openid，不需要参数
-        });
-        
-        console.log('getOpenID云函数调用结果:', wxCloudResult);
-        
-        if (wxCloudResult && wxCloudResult.result) {
-          // 检查code字段确认请求成功
-          if (wxCloudResult.result.code === 0 && wxCloudResult.result.data && wxCloudResult.result.data.openid) {
-            openid = wxCloudResult.result.data.openid;
-            wx.setStorageSync('openid', openid);
-            console.log('成功获取openid:', openid);
-          } else {
-            console.error('getOpenID返回数据格式不正确或code非0:', wxCloudResult.result);
-          }
-        } else {
-          console.error('getOpenID返回数据格式不正确:', wxCloudResult);
-        }
-      } catch (cloudError) {
-        console.error('调用getOpenID云函数失败:', cloudError);
-      }
-    }
+    // 获取openid，使用util中的getOpenID函数，并传入不显示loading的参数
+    let openid = await util.getOpenID(false);
+    console.log('获取到的openid:', openid);
     
     // 如果仍然没有openid，返回错误
     if (!openid) {
       return {
+        success: false,
         code: -1,
         message: '登录失败: 无法获取用户标识',
         openid: ''
@@ -80,25 +52,45 @@ async function login(userData = {}) {
     
     console.log('开始同步用户数据:', syncData);
     
-    // 调用同步用户API - 更新API路径
+    // 调用同步用户API
     const result = await request.post('/api/wxapp/user/sync', syncData);
-    console.log('用户同步成功, 结果:', result);
+    console.log('用户同步结果:', result);
+    
+    // 即使返回用户已存在也算成功
+    if (result.message === '用户已存在') {
+      console.log('用户已存在，获取用户信息');
+      // 获取用户信息
+      const profileResult = await getProfile({ openid });
+      if (profileResult.success && profileResult.data) {
+        // 存储用户信息
+        wx.setStorageSync('userInfo', profileResult.data);
+        console.log('用户信息已存储到本地');
+        
+        return {
+          success: true,
+          code: 0,
+          data: profileResult.data,
+          message: '登录成功'
+        };
+      }
+    }
     
     // 存储用户信息
-    if (result.data) {
+    if (result.success && result.data) {
       wx.setStorageSync('userInfo', result.data);
       console.log('用户信息已存储到本地');
     }
     
     return {
-      code: 0,
+      success: result.success,
+      code: result.success ? 0 : -1,
       data: result.data,
-      openid: openid,
-      message: '登录成功'
+      message: result.message
     };
   } catch (err) {
     console.error('登录流程出现异常:', err);
     return {
+      success: false,
       code: -1,
       message: '登录失败: ' + (err.message || '未知错误'),
       openid: wx.getStorageSync('openid') || ''
@@ -123,11 +115,7 @@ async function getProfile(params = {}) {
     // 调用获取用户信息API
     const result = await request.get('/api/wxapp/user/profile', { openid });
     
-    return {
-      success: true,
-      data: result.data,
-      message: '获取用户信息成功'
-    };
+    return result;
   } catch (err) {
     console.error('获取用户信息失败:', err);
     return {
@@ -155,12 +143,7 @@ async function getUserList(params = {}) {
     // 调用获取用户列表API
     const result = await request.get('/api/wxapp/user/list', queryParams);
     
-    return {
-      success: true,
-      data: result.data.data,
-      pagination: result.data.pagination,
-      message: '获取用户列表成功'
-    };
+    return result;
   } catch (err) {
     console.error('获取用户列表失败:', err);
     return {
@@ -204,26 +187,16 @@ async function updateUser(userData = {}) {
     if (userData.status !== undefined) updateData.status = userData.status;
     if (userData.extra !== undefined) updateData.extra = userData.extra;
     
-    // 调用更新用户API - 更新API路径
-    const result = await request.put('/api/wxapp/user/update', updateData, {}, { openid });
-    console.log('用户信息更新成功:', result);
+    // 调用更新用户API
+    const result = await request.post('/api/wxapp/user/update', updateData);
     
-    // 更新本地存储的用户信息
-    if (result.data) {
+    // 更新成功后，更新本地存储的用户信息
+    if (result.success && result.data) {
       const userInfo = wx.getStorageSync('userInfo') || {};
-      const newUserInfo = {
-        ...userInfo,
-        ...result.data
-      };
-      wx.setStorageSync('userInfo', newUserInfo);
+      wx.setStorageSync('userInfo', { ...userInfo, ...result.data });
     }
     
-    return {
-      code: 0,
-      success: true,
-      message: '更新成功',
-      data: result.data
-    };
+    return result;
   } catch (err) {
     console.error('更新用户信息失败:', err);
     return {
@@ -289,12 +262,9 @@ async function followUser(followedId) {
     const result = await request.post('/api/wxapp/user/follow', data);
     
     return {
-      success: true,
-      status: result.data.status,
-      following_count: result.data.following_count,
-      followers_count: result.data.followers_count,
-      is_following: result.data.is_following,
-      message: '关注成功'
+      success: result.data.code === 200,
+      data: result.data.data,
+      message: result.data.details?.message || '关注成功'
     };
   } catch (err) {
     console.error('关注用户失败:', err);
@@ -329,12 +299,9 @@ async function unfollowUser(followedId) {
     const result = await request.post('/api/wxapp/user/unfollow', data);
     
     return {
-      success: true,
-      status: result.data.status,
-      following_count: result.data.following_count,
-      followers_count: result.data.followers_count,
-      is_following: result.data.is_following,
-      message: '取消关注成功'
+      success: result.data.code === 200,
+      data: result.data.data,
+      message: result.data.details?.message || '取消关注成功'
     };
   } catch (err) {
     console.error('取消关注用户失败:', err);

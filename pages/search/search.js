@@ -2,7 +2,7 @@ const app = getApp()
 const config = app.globalData.config || {};
 const API_BASE_URL = config.services?.app?.base_url || 'https://nkuwiki.com';
 const towxml = require('../../wxcomponents/towxml/index');
-const api = require('../../utils/api/index');
+const api = require('../../utils/api');
 
 // 简单的Markdown解析函数
 function parseMarkdown(markdown) {
@@ -76,10 +76,169 @@ Page({
     requestTask: null, // 存储请求任务，用于取消请求
   },
 
-  // 处理输入框变化
-  onInputChange(e) {
+  // 输入框内容变化
+  onSearchInput: function(e) {
     this.setData({
       searchValue: e.detail.value
+    });
+  },
+
+  // 清空搜索框
+  clearSearchInput: function() {
+    this.setData({
+      searchValue: '',
+      searchResults: [],
+      currentPage: 1,
+      hasMore: true
+    });
+  },
+
+  // 加载搜索历史
+  loadSearchHistory: function() {
+    const searchHistory = wx.getStorageSync('searchHistory') || [];
+    this.setData({ searchHistory });
+  },
+
+  // 保存搜索历史
+  saveSearchHistory: function(keyword) {
+    let searchHistory = this.data.searchHistory;
+    
+    // 如果已存在相同关键词，先删除
+    searchHistory = searchHistory.filter(item => item !== keyword);
+    
+    // 添加到开头
+    searchHistory.unshift(keyword);
+    
+    // 限制历史记录数量，保留最新10条
+    if (searchHistory.length > 10) {
+      searchHistory = searchHistory.slice(0, 10);
+    }
+    
+    this.setData({ searchHistory });
+    wx.setStorageSync('searchHistory', searchHistory);
+  },
+
+  // 清空搜索历史
+  clearSearchHistory: function() {
+    this.setData({ searchHistory: [] });
+    wx.removeStorageSync('searchHistory');
+  },
+
+  // 点击历史记录
+  onHistoryItemTap: function(e) {
+    const keyword = e.currentTarget.dataset.keyword;
+    this.setData({
+      searchValue: keyword
+    });
+    this.handleSearch();
+  },
+
+  // 处理搜索事件
+  handleSearch: function() {
+    const { searchValue } = this.data;
+    if (!searchValue.trim()) {
+      wx.showToast({
+        title: '请输入搜索内容',
+        icon: 'none'
+      });
+      return;
+    }
+
+    this.setData({
+      loading: true,
+      currentPage: 1,
+      searchResults: []
+    });
+
+    // 调用搜索API
+    api.search.searchPosts({
+      keyword: searchValue,
+      page: 1,
+      pageSize: this.data.pageSize
+    }).then(result => {
+      if (result.success) {
+        this.setData({
+          searchResults: result.data,
+          hasMore: result.data.length === this.data.pageSize,
+          loading: false
+        });
+
+        // 保存搜索历史
+        this.saveSearchHistory(searchValue);
+      } else {
+        wx.showToast({
+          title: result.message || '搜索失败',
+          icon: 'none'
+        });
+        this.setData({ loading: false });
+      }
+    }).catch(err => {
+      console.error('搜索失败:', err);
+      wx.showToast({
+        title: err.message || '搜索失败',
+        icon: 'none'
+      });
+      this.setData({ loading: false });
+    });
+  },
+
+  // 加载更多
+  loadMore: function() {
+    if (!this.data.hasMore || this.data.loading) return;
+
+    this.setData({ loading: true });
+
+    const nextPage = this.data.currentPage + 1;
+    api.search.searchPosts({
+      keyword: this.data.searchValue,
+      page: nextPage,
+      pageSize: this.data.pageSize
+    }).then(result => {
+      if (result.success) {
+        this.setData({
+          searchResults: [...this.data.searchResults, ...result.data],
+          currentPage: nextPage,
+          hasMore: result.data.length === this.data.pageSize,
+          loading: false
+        });
+      } else {
+        wx.showToast({
+          title: result.message || '加载更多失败',
+          icon: 'none'
+        });
+        this.setData({ loading: false });
+      }
+    }).catch(err => {
+      console.error('加载更多失败:', err);
+      wx.showToast({
+        title: err.message || '加载更多失败',
+        icon: 'none'
+      });
+      this.setData({ loading: false });
+    });
+  },
+
+  // 跳转到详情页
+  goToDetail: function(e) {
+    const post = e.currentTarget.dataset.post;
+    if (!post || !post.id) {
+      console.error('跳转详情页失败：未提供帖子ID', post);
+      wx.showToast({
+        title: '无法打开帖子',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: `/pages/post/detail/detail?id=${post.id}`,
+      fail: (err) => {
+        console.error('跳转详情页失败:', err);
+        wx.showToast({
+          title: '跳转失败',
+          icon: 'none'
+        });
+      }
     });
   },
 
@@ -136,205 +295,6 @@ Page({
     
     this.setData({ chatHistory });
     wx.setStorageSync('chatHistory', chatHistory);
-  },
-
-  // 处理搜索事件
-  handleSearch() {
-    const { searchValue } = this.data;
-    if (!searchValue.trim()) {
-      wx.showToast({
-        title: '请输入搜索内容',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 取消现有请求
-    if (this.data.requestTask) {
-      this.data.requestTask.abort();
-    }
-
-    this.setData({
-      textContent: '',  // 清空之前的内容
-      richTextContent: null, // 清除之前的富文本内容
-      loading: true,
-      isStreaming: false // 不立即显示流式状态，避免出现"正在生成"
-    });
-
-    console.log(`开始搜索: ${searchValue}`);
-    
-    // 添加一个调试选项，显示固定内容用于测试打字机效果
-    if (searchValue === 'test') {
-      console.log('使用测试内容');
-      const testContent = "# 测试标题\n\n这是一段测试文字，用于测试打字机效果。\n\n## 二级标题\n\n* 列表项1\n* 列表项2\n* 列表项3\n\n";
-      this.setData({
-        textContent: testContent,
-        loading: false
-      });
-      
-      try {
-        // 一次性完整生成markdown内容
-        const result = towxml(testContent, 'markdown', {
-          theme: 'light',
-          typer: {
-            enable: true,  // 直接硬编码为true
-            speed: 20,     // 加快速度
-            delay: 100,
-            showCursor: true,
-            skippable: ['table', 'pre', 'code', 'image']
-          }
-        });
-        
-        // 处理表格和代码块的noType属性
-        this.handleNoTypeElements(result);
-        
-        this.setData({
-          richTextContent: result
-        });
-      } catch (error) {
-        console.error('处理测试内容失败:', error);
-      }
-      
-      return;
-    }
-    
-    // 测试超短内容
-    if (searchValue === 't') {
-      console.log('使用超短测试内容');
-      const testContent = "这是测试。";
-      this.setData({
-        textContent: testContent,
-        loading: false
-      });
-      
-      try {
-        // 一次性完整生成markdown内容
-        const result = towxml(testContent, 'markdown', {
-          theme: 'light',
-          typer: {
-            enable: true,  // 直接硬编码为true
-            speed: 20,     // 速度设为较快
-            delay: 100,    // 减少延迟
-            showCursor: true
-          }
-        });
-      
-        this.setData({
-          richTextContent: result
-        });
-      } catch (error) {
-        console.error('处理测试内容失败:', error);
-      }
-      
-      return;
-    }
-    
-    // 使用新的API发起流式请求
-    this.startChatWithAgent(searchValue);
-  },
-
-  // 使用agent API开始聊天
-  startChatWithAgent: function(query) {
-    const that = this;
-    
-    console.log('开始调用agent.chat API');
-    
-    // 初始化累积的响应文本
-    let accumulatedText = '';
-    let isFirstChunk = true;
-    
-    // 设置为正在流式响应状态
-    this.setData({
-      isStreaming: true
-    });
-    
-    // 调用agent API
-    api.agent.chat({
-      query: query,
-      stream: true,
-      format: 'markdown',
-      onMessage: function(content) {
-        // 处理第一个数据块的前导空行
-        if (isFirstChunk) {
-          content = content.replace(/^\s+/, '');
-          isFirstChunk = false;
-          
-          // 收到第一个数据块时，关闭loading
-          that.setData({
-            loading: false
-          });
-        }
-        
-        // 处理连续的空行，将多个空行替换为单个空行
-        content = content.replace(/\n\s*\n/g, '\n');
-        
-        // 更新累积文本
-        accumulatedText += content;
-        
-        // 确保整个文本中不会有多余的空行
-        const processedText = accumulatedText.replace(/\n\s*\n/g, '\n').trim();
-        
-        // 更新纯文本内容
-        that.setData({
-          textContent: processedText
-        });
-        
-        // 使用towxml处理富文本
-        if (!that.data.usePlainText) {
-          that.formatRichTextContent(processedText);
-        }
-      },
-      onError: function(error) {
-        console.error('流式请求错误:', error);
-        wx.showToast({
-          title: '请求失败: ' + (error.errMsg || '未知错误'),
-          icon: 'none'
-        });
-        that.setData({
-          loading: false,
-          isStreaming: false
-        });
-      },
-      onComplete: function() {
-        console.log('流式请求完成');
-        that.setData({
-          loading: false,
-          isStreaming: false,
-          fullResponse: accumulatedText
-        });
-        
-        // 保存会话历史
-        if (that.data.enableTyper && !that.data.usePlainText) {
-          that.saveChatHistory(query, accumulatedText);
-        }
-      }
-    }).then(result => {
-      if (result.success && result.requestTask) {
-        // 保存请求任务，以便能够取消
-        this.setData({
-          requestTask: result.requestTask
-        });
-      } else if (!result.success) {
-        wx.showToast({
-          title: result.message || '请求失败',
-          icon: 'none'
-        });
-        this.setData({
-          loading: false,
-          isStreaming: false
-        });
-      }
-    }).catch(error => {
-      console.error('API调用异常:', error);
-      wx.showToast({
-        title: '系统错误',
-        icon: 'none'
-      });
-      this.setData({
-        loading: false,
-        isStreaming: false
-      });
-    });
   },
 
   // 实时美化文本内容，识别链接、Email等
@@ -595,6 +555,9 @@ Page({
     
     // 初始化会话历史
     this.loadChatHistory();
+    
+    // 加载搜索历史
+    this.loadSearchHistory();
   },
   
   onUnload: function() {
@@ -606,6 +569,12 @@ Page({
     // 取消现有请求
     if (this.data.requestTask) {
       this.data.requestTask.abort();
+    }
+  },
+
+  onReachBottom: function() {
+    if (this.data.hasMore) {
+      this.loadMore();
     }
   }
 }); 

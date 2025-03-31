@@ -12,10 +12,7 @@ async function getCategories() {
   try {
     const result = await request.get('/api/wxapp/categories');
     
-    return {
-      success: true,
-      categories: result.data
-    };
+    return result;
   } catch (err) {
     console.error('获取分类列表失败:', err);
     return {
@@ -41,10 +38,7 @@ async function getCategoryDetail(categoryId) {
     
     const result = await request.get(`/api/wxapp/categories/${categoryId}`);
     
-    return {
-      success: true,
-      category: result.data
-    };
+    return result;
   } catch (err) {
     console.error('获取分类详情失败:', err);
     return {
@@ -63,10 +57,7 @@ async function getHotTags(limit = 20) {
   try {
     const result = await request.get(`/api/wxapp/tags/hot?limit=${limit}`);
     
-    return {
-      success: true,
-      tags: result.data
-    };
+    return result;
   } catch (err) {
     console.error('获取热门标签失败:', err);
     return {
@@ -93,10 +84,7 @@ async function searchTags(keyword, limit = 10) {
     
     const result = await request.get(`/api/wxapp/tags/search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
     
-    return {
-      success: true,
-      tags: result.data
-    };
+    return result;
   } catch (err) {
     console.error('搜索标签失败:', err);
     return {
@@ -122,10 +110,7 @@ async function getTagDetail(tagId) {
     
     const result = await request.get(`/api/wxapp/tags/${tagId}`);
     
-    return {
-      success: true,
-      tag: result.data
-    };
+    return result;
   } catch (err) {
     console.error('获取标签详情失败:', err);
     return {
@@ -156,14 +141,7 @@ async function followTag(tagId) {
     
     const result = await request.post(`/api/wxapp/tags/${tagId}/follow`, { openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      followed: result.data.followed,
-      follow_count: result.data.follow_count,
-      tag_id: result.data.tag_id,
-      action: result.data.action
-    };
+    return result;
   } catch (err) {
     console.error('关注标签失败:', err);
     return {
@@ -194,14 +172,7 @@ async function unfollowTag(tagId) {
     
     const result = await request.post(`/api/wxapp/tags/${tagId}/unfollow`, { openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      followed: result.data.followed,
-      follow_count: result.data.follow_count,
-      tag_id: result.data.tag_id,
-      action: result.data.action
-    };
+    return result;
   } catch (err) {
     console.error('取消关注标签失败:', err);
     return {

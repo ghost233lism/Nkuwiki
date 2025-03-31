@@ -72,8 +72,14 @@ function request(url, method = 'GET', data = {}, header = {}, query = {}) {
         });
         
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          // 请求成功
-          resolve(res.data);
+          // 统一返回格式
+          resolve({
+            success: res.data.code === 200,
+            data: res.data.data,
+            message: res.data.details?.message || res.data.message,
+            pagination: res.data.pagination,
+            timestamp: res.data.timestamp
+          });
         } else {
           // HTTP请求成功，但业务状态失败
           console.error('请求失败:', {
@@ -84,9 +90,9 @@ function request(url, method = 'GET', data = {}, header = {}, query = {}) {
             response: res.data
           });
           reject({
-            code: res.data.code || res.statusCode,
-            message: res.data.message || '请求失败',
-            details: res.data.details
+            success: false,
+            message: res.data.details?.message || res.data.message || '请求失败',
+            code: res.data.code || res.statusCode
           });
         }
       },
@@ -99,8 +105,9 @@ function request(url, method = 'GET', data = {}, header = {}, query = {}) {
           error: err
         });
         reject({
-          code: -1,
-          message: '网络请求失败: ' + (err.errMsg || '未知错误')
+          success: false,
+          message: '网络请求失败: ' + (err.errMsg || '未知错误'),
+          code: -1
         });
       }
     });

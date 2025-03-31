@@ -419,7 +419,7 @@ Page({
           getApp().globalData.needRefreshHomePage = true;
           
           wx.showToast({
-            title: '发布成功',
+            title: result.message || '发布成功',
             icon: 'success',
             success: function() {
               // 延迟返回上一页
@@ -440,7 +440,7 @@ Page({
         console.error('发布帖子API异常:', err);
         wx.hideLoading();
         wx.showToast({
-          title: '发布失败: ' + (err.message || '网络异常'),
+          title: err.message || '网络异常',
           icon: 'none',
           duration: 2000
         });

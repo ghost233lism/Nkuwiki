@@ -81,12 +81,13 @@
           >
             <view class="source-icon">
               <image 
-                src="{{ item.type === 'website_nku' ? '/assets/icons/search/website.png' : 
-                      item.type === 'wechat_nku' ? '/assets/icons/search/wechat.png' :
-                      item.type === 'wxapp_post' ? '/assets/icons/post.png' : 
-                      '/assets/icons/search/search.png' }}" 
-                mode="aspectFit" 
-              />
+                wx:if="{{ item.type === 'website_nku' }}" src="/assets/icons/search/website.png" mode="aspectFit" />
+                <image 
+                wx:elif="{{ item.type === 'wechat_nku' }}" src="/assets/icons/search/wechat.png" mode="aspectFit" />
+                <image 
+                wx:elif="{{ item.type === 'wxapp_post' }}" src="/assets/icons/post.png" mode="aspectFit" />
+                <image 
+                wx:else src="/assets/icons/search/search.png" mode="aspectFit" />
             </view>
             <view class="source-content">
               <text class="source-title">{{ item.title || '未知标题' }}</text>

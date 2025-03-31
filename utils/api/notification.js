@@ -241,6 +241,44 @@ async function deleteNotification(params = {}) {
   }
 }
 
+/**
+ * 获取通知状态
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid（可选，默认当前登录用户）
+ * @returns {Promise} - 返回Promise对象，包含isRead状态
+ */
+async function getStatus(params = {}) {
+  try {
+    // 使用传入的openid或从本地获取
+    const openid = params.openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+
+    // 获取未读通知数量作为状态判断依据
+    const result = await getUnreadCount({ openid });
+    
+    return {
+      success: true,
+      data: {
+        isRead: result.count === 0, // 如果未读数量为0，则标记为已读
+        unreadCount: result.count
+      },
+      message: '获取通知状态成功'
+    };
+  } catch (err) {
+    console.error('获取通知状态失败:', err);
+    return {
+      success: false,
+      data: {
+        isRead: true, // 出错时默认为已读，避免显示红点
+        unreadCount: 0
+      },
+      message: '获取通知状态失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
 // 导出所有通知相关API方法
 module.exports = {
   getNotificationList,
@@ -248,5 +286,6 @@ module.exports = {
   getUnreadCount,
   markAsRead,
   markAsReadBatch,
-  deleteNotification
+  deleteNotification,
+  getStatus
 }; 

@@ -16,39 +16,171 @@
 
   <!-- 搜索框 -->
   <view class="search-box">
-    <icon type="search" size="14" color="#999"/>
-    <input type="text" placeholder="搜索话题" placeholder-class="search-placeholder"/>
+    <view class="search-bar full-width">
+      <icon type="search" size="14"></icon>
+      <input 
+        class="search-input" 
+        placeholder="搜索帖子" 
+        value="{{searchValue}}"
+        bindinput="onSearchInput"
+        bindconfirm="handleSearch"
+        confirm-type="search"
+      />
+      <icon wx:if="{{searchValue}}" type="clear" size="14" bindtap="clearSearch"></icon>
+    </view>
   </view>
 
   <!-- 功能导航 -->
   <view class="nav-grid">
-    <view class="nav-item">
-      <image src="/assets/icons/index/study.png" />
+    <view class="nav-item" bindtap="onNavItemTap" data-type="study">
+      <image src="/assets/icons/nav/study.png" />
       <text>学习交流</text>
     </view>
-    <view class="nav-item">
-      <image src="/assets/icons/index/campus.png" />
+    <view class="nav-item" bindtap="onNavItemTap" data-type="life">
+      <image src="/assets/icons/nav/life.png" />
       <text>校园生活</text>
     </view>
-    <view class="nav-item">
-      <image src="/assets/icons/index/career.png" />
+    <view class="nav-item" bindtap="onNavItemTap" data-type="job">
+      <image src="/assets/icons/nav/job.png" />
       <text>就业创业</text>
     </view>
-    <view class="nav-item">
-      <image src="/assets/icons/index/activity.png" />
+    <view class="nav-item" bindtap="onNavItemTap" data-type="club">
+      <image src="/assets/icons/nav/club.png" />
       <text>社团活动</text>
     </view>
-    <view class="nav-item">
-      <image src="/assets/icons/index/lost.png" />
+    <view class="nav-item" bindtap="onNavItemTap" data-type="lost">
+      <image src="/assets/icons/nav/lost.png" />
       <text>失物招领</text>
     </view>
   </view>
 
+  <!-- 搜索历史 -->
+  <view class="search-history" wx:if="{{!showSearchResult && searchHistory.length > 0}}">
+    <view class="history-header">
+      <text class="history-title">搜索历史</text>
+      <text class="clear-history" bindtap="clearSearchHistory">清空</text>
+    </view>
+    <view class="history-list">
+      <view class="history-item" 
+        wx:for="{{searchHistory}}" 
+        wx:key="*this" 
+        bindtap="onHistoryItemTap" 
+        data-keyword="{{item}}">
+        <icon type="search" size="12"></icon>
+        <text>{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索结果列表 -->
+  <view class="search-result" wx:if="{{showSearchResult}}">
+    <view class="result-header">
+      <text class="result-title">搜索结果</text>
+      <text class="clear-search" bindtap="clearSearch">清空</text>
+    </view>
+    
+    <view class="no-result" wx:if="{{searchResults.length === 0 && !searchLoading}}">
+      <text>暂无相关内容</text>
+    </view>
+
+    <view class="post-list">
+      <view class="post-item" wx:for="{{searchResults}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+        <!-- 用户信息 -->
+        <view class="post-header">
+          <image class="avatar" src="{{item.avatar || defaultAvatarUrl}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}"></image>
+          <view class="user-info">
+            <text class="nickname">{{item.nickname || '匿名用户'}}</text>
+            <text class="time">{{item.create_time_formatted}}</text>
+          </view>
+        </view>
+
+        <!-- 帖子内容 -->
+        <view class="post-content">
+          <text class="title">{{item.title}}</text>
+          <text class="content">{{item.content}}</text>
+        </view>
+
+        <!-- 图片列表 -->
+        <view class="image-list" wx:if="{{item.images && item.images.length > 0}}">
+          <image 
+            wx:for="{{item.images}}" 
+            wx:for-item="img" 
+            wx:key="*this" 
+            src="{{img}}" 
+            mode="aspectFill" 
+            catchtap="previewImage" 
+            data-urls="{{item.images}}" 
+            data-current="{{img}}"
+            binderror="onPostImageError"
+            data-post-index="{{index}}"
+            data-image-index="{{imgIndex}}"
+          ></image>
+        </view>
+
+        <!-- 标签列表 -->
+        <view class="tag-list" wx:if="{{item.tags && item.tags.length > 0}}">
+          <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">#{{tag}}</text>
+        </view>
+
+        <!-- 互动数据 -->
+        <view class="interaction-bar">
+          <view class="interaction-item" catchtap="handleLike" data-id="{{item.id}}" data-index="{{index}}">
+            <image class="icon" src="/assets/icons/index/{{item.isLiked ? 'liked' : 'like'}}.png"></image>
+            <text>{{item.like_count || 0}}</text>
+          </view>
+          <view class="interaction-item" catchtap="handleFavorite" data-id="{{item.id}}" data-index="{{index}}">
+            <image class="icon" src="/assets/icons/index/{{item.isFavorited ? 'favorite-active' : 'favorite'}}.png"></image>
+            <text>{{item.favorite_count || 0}}</text>
+          </view>
+          <view class="interaction-item" catchtap="showCommentInput" data-id="{{item.id}}" data-index="{{index}}">
+            <image class="icon" src="/assets/icons/index/comment.png"></image>
+            <text>{{item.comment_count || 0}}</text>
+          </view>
+        </view>
+
+        <!-- 评论预览 -->
+        <view class="comment-preview" wx:if="{{item.recent_comments && item.recent_comments.length > 0}}">
+          <view class="comment-item" wx:for="{{item.recent_comments}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id">
+            <text class="comment-user">{{comment.nickname || '匿名用户'}}</text>
+            <text class="comment-content">{{comment.content}}</text>
+            <!-- 评论图片 -->
+            <view class="comment-images" wx:if="{{comment.images && comment.images.length > 0}}">
+              <image 
+                wx:for="{{comment.images}}" 
+                wx:for-item="img" 
+                wx:key="*this" 
+                src="{{img}}" 
+                mode="aspectFill"
+                catchtap="previewImage"
+                data-urls="{{comment.images}}"
+                data-current="{{img}}"
+                binderror="onCommentImageError"
+                data-post-index="{{index}}"
+                data-comment-index="{{commentIndex}}"
+                data-image-index="{{imgIndex}}"
+              ></image>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="load-more" wx:if="{{searchResults.length > 0}}">
+      <text wx:if="{{searchHasMore && !searchLoading}}" bindtap="loadMoreSearchResults">点击加载更多</text>
+      <text wx:if="{{!searchHasMore && !searchLoading}}">没有更多了</text>
+      <view wx:if="{{searchLoading}}" class="loading">
+        <image class="loading-icon" src="/assets/icons/loading.gif"></image>
+        <text>加载中...</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 帖子列表 -->
-  <view class="post-list">
+  <view class="post-list" wx:if="{{!showSearchResult}}">
     <!-- 添加一个检查，确保有帖子数据时才显示列表 -->
     <block wx:if="{{posts && posts.length > 0}}">
-      <view class="post-item" wx:for="{{posts}}" wx:key="_id">
+      <view class="post-item" wx:for="{{posts}}" wx:key="id">
         <!-- 用户信息部分 -->
         <view class="post-header">
           <image 
@@ -114,162 +246,110 @@
         <!-- 添加分割线 -->
         <view class="divider"></view>
 
-        <!-- 评论预览部分 - 修改显示数量并添加图片处理 -->
+        <!-- 评论预览部分 -->
         <view class="comment-preview" wx:if="{{item.recent_comments && item.recent_comments.length > 0}}">
-          <!-- 修改评论数量限制为3条 -->
-          <view class="comment-preview-item" wx:for="{{item.recent_comments}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id" wx:if="{{commentIndex < 3}}">
-            <text class="comment-author">{{comment.nick_name}}:</text>
-
-            <!-- 判断评论内容类型 -->
-            <text class="comment-content" user-select="{{true}}" wx:if="{{!comment.images || comment.images.length === 0}}">{{comment.content}}</text>
-
-            <!-- 处理有图片的评论 -->
-            <block wx:elif="{{comment.images && comment.images.length > 0}}">
-              <text class="comment-content" user-select="{{true}}">
-                <!-- 如果既有文字内容又有图片 -->
-                <block wx:if="{{comment.content}}">{{comment.content}}</block>
-              </text>
-              
-              <!-- 评论图片展示 -->
-              <view class="comment-images-preview">
-                <view 
-                  class="comment-image-item" 
-                  wx:for="{{comment.images}}" 
-                  wx:for-item="image" 
-                  wx:for-index="imageIndex" 
-                  wx:key="*this"
-                  wx:if="{{imageIndex < 2}}"
-                  catchtap="previewImage" 
-                  data-urls="{{comment.images}}" 
-                  data-current="{{image}}"
-                >
-                  <image 
-                    src="{{image}}" 
-                    mode="aspectFill" 
-                    binderror="onCommentImageError" 
-                    data-post-index="{{index}}"
-                    data-comment-index="{{commentIndex}}"
-                    data-image-index="{{imageIndex}}"
-                  />
-                  <!-- 如果超过2张，在第2张上显示剩余数量 -->
-                  <view class="image-count" wx:if="{{imageIndex === 1 && comment.images.length > 2}}">+{{comment.images.length - 2}}</view>
-                </view>
-              </view>
-            </block>
+          <view class="comment-item" wx:for="{{item.recent_comments}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id" wx:if="{{commentIndex < 3}}">
+            <view class="comment-info">
+              <text class="comment-name">{{comment.nick_name || comment.nickname || '匿名用户'}}：</text>
+              <text class="comment-text">{{comment.content}}</text>
+            </view>
+            <!-- 评论图片 -->
+            <view class="comment-images" wx:if="{{comment.images && comment.images.length > 0}}">
+              <image 
+                wx:for="{{comment.images}}" 
+                wx:for-item="img" 
+                wx:for-index="imgIndex"
+                wx:key="*this" 
+                wx:if="{{imgIndex < 3}}"
+                src="{{img}}" 
+                mode="aspectFill"
+                catchtap="previewImage" 
+                data-urls="{{comment.images}}" 
+                data-current="{{img}}"
+                binderror="onCommentImageError"
+                data-post-index="{{index}}"
+                data-comment-index="{{commentIndex}}"
+                data-image-index="{{imgIndex}}"
+              />
+            </view>
           </view>
-
-          <!-- 查看全部评论链接 -->
-          <view class="view-more-comments" wx:if="{{item.comment_count > 3}}" bindtap="viewPostDetail" data-id="{{item.id}}">
-            查看全部 {{item.comment_count}} 条评论
+          <!-- 如果评论数超过预览显示的数量，显示查看更多 -->
+          <view class="view-more-comments" wx:if="{{item.comment_count > item.recent_comments.length}}" catchtap="viewAllComments" data-id="{{item.id}}">
+            查看全部{{item.comment_count}}条评论
           </view>
         </view>
 
-        <!-- 底部操作栏 -->
-        <view class="post-footer">
-          <view
-            class="action-item {{item.isLiked ? 'liked' : ''}}"
-            catch:tap="handleLike"
-            data-id="{{item.id}}"
-            data-index="{{index}}"
-          >
-            <image
-              class="action-icon"
-              src="{{item.isLiked ? '/assets/icons/index/liked.png' : '/assets/icons/index/like.png'}}"
-              mode="aspectFit"
-            ></image>
-            <text class="{{item.isLiked ? 'liked-text' : ''}}">{{item.like_count || 0}}</text>
+        <!-- 互动按钮区域 -->
+        <view class="post-actions">
+          <view class="action-item {{item.isLiked ? 'active' : ''}}" catchtap="handleLike" data-id="{{item.id}}" data-index="{{index}}">
+            <image src="/assets/icons/index/{{item.isLiked ? 'liked' : 'like'}}.png" />
+            <text>{{item.like_count || 0}}</text>
           </view>
-
-          <view class="action-item" bindtap="showCommentInput" data-id="{{item.id}}" data-index="{{index}}">
-            <image class="action-icon" src="/assets/icons/index/comment.png" mode="aspectFit"></image>
+          <view class="action-item" catchtap="showCommentInput" data-id="{{item.id}}" data-index="{{index}}">
+            <image src="/assets/icons/index/comment.png" />
             <text>{{item.comment_count || 0}}</text>
           </view>
-
-          <!-- 收藏按钮，放在评论按钮的右侧 -->
-          <view
-            class="action-item {{item.isFavorited ? 'favorited' : ''}}"
-            catch:tap="handleFavorite"
-            data-id="{{item.id}}"
-            data-index="{{index}}"
-          >
-            <image
-              class="action-icon"
-              src="{{item.isFavorited ? '/assets/icons/index/favorited.png' : '/assets/icons/index/favorite.png'}}"
-              mode="aspectFit"
-            ></image>
-            <text class="{{item.isFavorited ? 'favorited-text' : '' }}">{{item.favorite_count || 0}}</text>
+          <view class="action-item {{item.isFavorited ? 'active' : ''}}" catchtap="handleFavorite" data-id="{{item.id}}" data-index="{{index}}">
+            <image src="/assets/icons/index/{{item.isFavorited ? 'favorite-active' : 'favorite'}}.png" />
+            <text>{{item.favorite_count || 0}}</text>
           </view>
         </view>
       </view>
     </block>
 
-    <!-- 添加没有帖子时的提示 -->
-    <view wx:elif="{{!loading && posts.length === 0}}" class="empty-message">
-      <text>暂无内容，快去发布第一条帖子吧！</text>
+    <!-- 加载状态 -->
+    <view class="loading-status">
+      <view wx:if="{{loading}}" class="loading-more">
+        <image src="/assets/icons/loading.gif" mode="aspectFit" />
+        <text>加载中...</text>
+      </view>
+      <text wx:elif="{{!hasMore}}" class="no-more">没有更多内容了</text>
     </view>
   </view>
 
-  <!-- 加载状态 -->
-  <view class="loading-message" wx:if="{{loading}}">
-    <text>正在加载...</text>
-  </view>
-
-  <!-- 发布按钮 -->
-  <view class="publish-btn" bindtap="goToPost">
+  <!-- 发帖按钮 -->
+  <view class="post-btn" bindtap="goToPost">
     <image src="/assets/icons/index/plus.png" />
   </view>
 
-  <!-- 底部评论输入容器 -->
+  <!-- 评论输入框 -->
   <view class="comment-input-container" wx:if="{{showCommentInput}}">
     <view class="comment-input-mask" bindtap="hideCommentInput"></view>
-
-    <!-- 直接显示扩展编辑区 -->
-    <view class="expanded-editor">
-      <view class="editor-header">
-        <text>编辑评论</text>
-        <view class="editor-close" bindtap="hideCommentInput">×</view>
+    <view class="comment-input-box">
+      <view class="comment-input-header">
+        <text>添加评论</text>
+        <text class="close-btn" bindtap="hideCommentInput">×</text>
       </view>
-
-      <textarea
-        class="expanded-textarea"
-        value="{{commentText}}"
-        bindinput="onCommentInput"
-        maxlength="200"
-        focus="{{true}}"
-        auto-height
-        placeholder="写下你的评论(不超过200字)..."
+      <textarea 
+        placeholder="写下你的评论..." 
+        value="{{commentText}}" 
+        bindinput="onCommentInput" 
+        auto-height 
+        maxlength="500"
+        focus="{{showCommentInput}}"
+        show-confirm-bar="{{false}}"
       ></textarea>
 
-      <!-- 字数统计 -->
-      <view class="word-count {{commentText.length > 180 ? 'warning' : ''}}">
-        {{commentText.length}}/200
-      </view>
-
-      <!-- 图片上传区域 -->
-      <view class="comment-images-area">
-        <!-- 已选图片预览 -->
-        <view class="comment-images-preview" wx:if="{{commentImages && commentImages.length > 0}}">
-          <view class="image-preview" wx:for="{{commentImages}}" wx:key="index">
-            <image src="{{item.tempUrl}}" mode="aspectFill"></image>
-            <view class="delete-image" data-index="{{index}}" bindtap="removeCommentImage">×</view>
-          </view>
+      <!-- 已选图片预览 -->
+      <view class="selected-images" wx:if="{{commentImages && commentImages.length > 0}}">
+        <view class="image-item" wx:for="{{commentImages}}" wx:key="tempUrl">
+          <image src="{{item.tempUrl}}" mode="aspectFill" />
+          <view class="remove-image" bindtap="removeCommentImage" data-index="{{index}}">×</view>
         </view>
-
-        <!-- 添加图片按钮 -->
-        <view class="add-image-btn" bindtap="chooseCommentImage" wx:if="{{commentImages.length < 9}}">
-          <image src="/assets/icons/image.png" mode="aspectFit"></image>
-          <text>添加图片</text>
+        <view class="add-image" bindtap="chooseCommentImage" wx:if="{{commentImages.length < 9}}">
+          <text>+</text>
         </view>
       </view>
+      <view class="add-image-btn" bindtap="chooseCommentImage" wx:else>
+        <image src="/assets/icons/image.png" />
+        <text>添加图片</text>
+      </view>
 
-      <!-- 操作按钮 -->
-      <view class="editor-actions">
-        <button
-          class="comment-send-btn"
-          bindtap="submitComment"
-          disabled="{{!commentText && (!commentImages || commentImages.length === 0)}}">
-          发送
-        </button>
+      <view class="comment-submit-row">
+        <view class="expand-btn" bindtap="showExpandedEditor" wx:if="{{!showExpandedEditor}}">
+          <image src="/assets/icons/expand.png" />
+        </view>
+        <button class="submit-btn" bindtap="submitComment" disabled="{{!commentText && (!commentImages || commentImages.length === 0)}}">发送</button>
       </view>
     </view>
   </view>

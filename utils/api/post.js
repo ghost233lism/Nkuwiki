@@ -13,8 +13,8 @@ async function getPosts(params = {}) {
   try {
     // 提取查询参数
     const { 
-      limit = 20, 
-      offset = 0,
+      page = 1,
+      pageSize = 20,
       openid,
       category_id,
       tag,
@@ -24,8 +24,8 @@ async function getPosts(params = {}) {
     
     // 构建查询参数
     const queryParams = {
-      limit,
-      offset
+      limit: pageSize,
+      offset: (page - 1) * pageSize
     };
     
     // 添加可选参数
@@ -38,10 +38,16 @@ async function getPosts(params = {}) {
     // 更新API路径
     const result = await request.get('/api/wxapp/post/list', queryParams);
     
+    // 确保返回的格式符合预期
     return {
       success: true,
-      posts: result.data.data,
-      pagination: result.data.pagination
+      data: result.data || [],
+      pagination: result.pagination || {
+        total: 0,
+        page,
+        page_size: pageSize
+      },
+      message: result.message || '获取帖子列表成功'
     };
   } catch (err) {
     console.error('获取帖子列表失败:', err);
@@ -73,10 +79,7 @@ async function getPostDetail(postId, updateView = true) {
       update_view: updateView 
     });
     
-    return {
-      success: true,
-      post: result.data
-    };
+    return result;
   } catch (err) {
     console.error('获取帖子详情失败:', err);
     return {
@@ -111,6 +114,7 @@ async function getPostComments(postId, params = {}) {
     
     // 构建查询参数
     const queryParams = {
+      post_id: postId,
       limit: pageSize,
       offset: (page - 1) * pageSize
     };
@@ -118,14 +122,15 @@ async function getPostComments(postId, params = {}) {
     if (parent_id !== undefined) queryParams.parent_id = parent_id;
     if (sort_by) queryParams.sort_by = sort_by;
     
-    const result = await request.get(`/api/wxapp/posts/${postId}/comments`, queryParams);
+    // 使用正确的API接口路径
+    const result = await request.get('/api/wxapp/comment/list', queryParams);
     
     return {
       success: true,
-      comments: result.data.comments,
-      total: result.data.total,
-      limit: result.data.limit,
-      offset: result.data.offset
+      comments: result.data.data || [],
+      total: result.data.pagination?.total || 0,
+      limit: result.data.pagination?.limit || pageSize,
+      offset: result.data.pagination?.offset || ((page - 1) * pageSize)
     };
   } catch (err) {
     console.error('获取评论列表失败:', err);
@@ -176,11 +181,7 @@ async function createPost(postData) {
     // 更新API路径
     const result = await request.post('/api/wxapp/post', data);
     
-    return {
-      success: true,
-      post: result.data,
-      message: '发布成功'
-    };
+    return result;
   } catch (err) {
     console.error('创建帖子失败:', err);
     return {
@@ -225,11 +226,7 @@ async function updatePost(postId, postData) {
       openid
     });
     
-    return {
-      success: true,
-      post: result.data,
-      message: '更新成功'
-    };
+    return result;
   } catch (err) {
     console.error('更新帖子失败:', err);
     return {
@@ -260,10 +257,7 @@ async function deletePost(postId) {
     
     const result = await request.delete(`/api/wxapp/posts/${postId}`, {}, {}, { openid });
     
-    return {
-      success: true,
-      message: '删除成功'
-    };
+    return result;
   } catch (err) {
     console.error('删除帖子失败:', err);
     return {
@@ -294,14 +288,7 @@ async function favoritePost(postId) {
     
     const result = await request.post(`/api/wxapp/posts/${postId}/favorite`, {}, {}, { openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      favorite: result.data.favorite,
-      favorite_count: result.data.favorite_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
+    return result;
   } catch (err) {
     console.error('收藏操作失败:', err);
     return {
@@ -332,14 +319,7 @@ async function unfavoritePost(postId) {
     
     const result = await request.post(`/api/wxapp/posts/${postId}/unfavorite`, {}, {}, { openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      favorite: result.data.favorite,
-      favorite_count: result.data.favorite_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
+    return result;
   } catch (err) {
     console.error('取消收藏操作失败:', err);
     return {
@@ -429,14 +409,7 @@ async function likePost(postId) {
       openid
     });
     
-    return {
-      success: true,
-      message: result.data.message || '操作成功',
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
+    return result;
   } catch (err) {
     console.error('点赞操作失败:', err);
     return {
@@ -471,19 +444,49 @@ async function unlikePost(postId) {
       openid
     });
     
-    return {
-      success: true,
-      message: result.data.message || '取消点赞成功',
-      liked: false,
-      like_count: result.data.like_count,
-      post_id: result.data.post_id,
-      action: 'unlike'
-    };
+    return result;
   } catch (err) {
     console.error('取消点赞操作失败:', err);
     return {
       success: false,
       message: '取消点赞操作失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 创建评论
+ * @param {Object} commentData - 评论数据
+ * @returns {Promise} - 返回Promise对象
+ */
+async function createComment(commentData) {
+  try {
+    if (!commentData.post_id) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    if (!commentData.content || commentData.content.trim() === '') {
+      return {
+        success: false,
+        message: '评论内容不能为空'
+      };
+    }
+    
+    const result = await request.post('/api/wxapp/comment', commentData);
+    
+    return {
+      success: true,
+      comment: result.data,
+      message: '评论成功'
+    };
+  } catch (err) {
+    console.error('创建评论失败:', err);
+    return {
+      success: false,
+      message: '创建评论失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -500,5 +503,6 @@ module.exports = {
   unfavoritePost,
   getUserPosts,
   likePost,
-  unlikePost
+  unlikePost,
+  createComment
 }; 

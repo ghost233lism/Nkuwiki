@@ -19,15 +19,13 @@ App({
   },
 
   checkLoginStatus: function() {
-    const userInfo = wx.getStorageSync('userInfo');
-    if (userInfo) {
-      this.globalData.userInfo = userInfo;
-    } else {
-      // 跳转登录页面
-      wx.reLaunch({
-        url: '/pages/login/login'
-      });
-    }
+    // 强制进入登录页
+    // 无论用户是否有本地存储的信息，都需要走登录流程
+    // 这样确保每次启动应用都会调用sync接口将用户ID上传到服务器
+    console.log('强制跳转到登录页面，确保调用sync接口');
+    wx.reLaunch({
+      url: '/pages/login/login'
+    });
   },
 
   // 微信一键登录
@@ -37,16 +35,19 @@ App({
         const userApi = require('./utils/api/user');
         console.log('开始调用用户登录API');
         
+        // 避免系统默认弹窗
+        wx.hideLoading();
+        
         // 调用API模块中的login方法，不再使用云函数
         const result = await userApi.login(this.globalData.userInfo || {});
         
-        if (result.code === 0) {
+        if (result && (result.code === 0 || result.success === true)) {
           this.globalData.userInfo = result.data;
           console.log('登录成功，用户信息:', result.data);
           resolve(result);
         } else {
-          console.error('登录失败:', result.message);
-          reject(new Error(result.message || '登录失败'));
+          console.error('登录失败:', result?.message);
+          reject(new Error(result?.message || '登录失败'));
         }
       } catch (err) {
         console.error('登录过程发生异常:', err);
@@ -74,6 +75,7 @@ App({
           expires_in_seconds: 3600
         }
       }
-    }
+    },
+    isLogging: false // 添加登录状态全局变量
   }
 })

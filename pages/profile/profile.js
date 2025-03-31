@@ -60,7 +60,7 @@ Page({
       if (result && result.success) {
         // 更新本地用户信息中的帖子数量
         const userInfo = this.data.userInfo;
-        userInfo.posts = result.count;
+        userInfo.posts = result.data.count;
 
         // 更新页面显示和本地存储
         this.setData({ userInfo });
@@ -85,23 +85,14 @@ Page({
       const api = require('../../utils/api/index');
       
       // 使用用户API获取用户信息（包含统计数据）
-      const result = await api.user.getUserInfo({ isSelf: true });
+      const result = await api.user.getProfile({ isSelf: true });
       
       wx.hideLoading();
       console.log('获取用户信息完整结果:', result);
-      console.log('result.success:', result.success);
-      console.log('result.userInfo:', result.userInfo);
       
-      if (result.userInfo && typeof result.userInfo === 'object') {
-        console.log('result.userInfo字段详情:', Object.keys(result.userInfo));
-        console.log('likes_count值:', result.userInfo.likes_count);
-        console.log('posts_count值:', result.userInfo.posts_count);
-        console.log('头像和昵称:', result.userInfo.avatar, result.userInfo.nick_name);
-      }
-
-      if (result && result.success && result.userInfo) {
+      if (result && result.success && result.data) {
         // 提取用户统计数据
-        const userData = result.userInfo;
+        const userData = result.data;
         
         // 更新获赞总数
         const totalLikes = userData.likes_count || 0;
@@ -155,63 +146,6 @@ Page({
         // 更新本地存储
         wx.setStorageSync('userInfo', userInfo);
         console.log('已更新本地用户信息:', userInfo);
-      } else if (result && result.code === 200 && result.data) {
-        // 直接从result.data获取信息
-        const userData = result.data;
-        const totalLikes = userData.likes_count || 0;
-        
-        // 更新用户信息（包括头像、昵称和所有统计数据）
-        const userInfo = {
-          ...this.data.userInfo,
-          // 完全匹配后端返回的所有字段
-          id: userData.id,
-          openid: userData.openid,
-          unionid: userData.unionid,
-          nick_name: userData.nick_name,
-          avatar: userData.avatar,
-          gender: userData.gender,
-          bio: userData.bio,
-          country: userData.country,
-          province: userData.province,
-          city: userData.city,
-          language: userData.language,
-          birthday: userData.birthday,
-          wechatId: userData.wechatId,
-          qqId: userData.qqId,
-          token_count: userData.token_count,
-          likes_count: userData.likes_count || 0,
-          favorites_count: userData.favorites_count || 0,
-          posts_count: userData.posts_count || 0,
-          followers_count: userData.followers_count || 0,
-          following_count: userData.following_count || 0,
-          extra: userData.extra,
-          create_time: userData.create_time,
-          update_time: userData.update_time,
-          last_login: userData.last_login,
-          platform: userData.platform,
-          status: userData.status,
-          is_deleted: userData.is_deleted,
-          
-          // 兼容小程序使用的字段
-          avatarUrl: userData.avatar,
-          nickName: userData.nick_name,
-          posts: userData.posts_count || 0, // 兼容旧版字段
-          _id: userData.openid,
-        };
-        
-        // 更新页面显示
-        this.setData({ 
-          totalLikes,
-          userInfo 
-        });
-        
-        // 更新本地存储
-        wx.setStorageSync('userInfo', userInfo);
-        console.log('已更新本地用户信息:', userInfo);
-      } else {
-        // 如果无法获取用户信息，尝试获取用户帖子列表并手动计算
-        console.log('未能通过API获取用户数据，尝试备用方法', result);
-        this.calculateTotalLikes();
       }
     } catch (err) {
       console.error('获取用户统计数据失败：', err);
@@ -530,7 +464,7 @@ Page({
         avatarUrl
       });
 
-      if (result.code === 0) {
+      if (result.success) {
         // 更新本地存储的用户信息
         const userInfo = wx.getStorageSync('userInfo')
         userInfo.avatarUrl = avatarUrl
@@ -541,13 +475,18 @@ Page({
         })
 
         wx.showToast({
-          title: '头像更新成功',
+          title: result.message || '头像更新成功',
           icon: 'success'
+        })
+      } else {
+        wx.showToast({
+          title: result.message || '头像更新失败',
+          icon: 'none'
         })
       }
     } catch (err) {
       wx.showToast({
-        title: '头像更新失败',
+        title: err.message || '头像更新失败',
         icon: 'none'
       })
     }
