@@ -8,16 +8,16 @@ Page({
     post: {},
     postId: null,
     loading: true,
-    comments: [],
-    commentsLoading: false,
-    commentsPage: 1,
-    commentsPageSize: 20,
-    commentsHasMore: false,
-    commentsTotal: 0,
+    comment: [],
+    commentLoading: false,
+    commentPage: 1,
+    commentPageSize: 20,
+    commentHasMore: false,
+    commentTotal: 0,
     showCommentInput: false,
     isCommentExpanded: false,
     commentText: '',
-    commentImages: [],
+    commentImage: [],
     commentCount: 0,
     replyToCommentId: null, // 要回复的评论ID
     commentPlaceholder: '写下你的评论(不超过200字)...', // 评论输入框占位文本
@@ -386,21 +386,21 @@ Page({
   // 选择评论图片
   chooseCommentImage() {
     wx.chooseImage({
-      count: 9 - (this.data.commentImages ? this.data.commentImages.length : 0),
+      count: 9 - (this.data.commentImage ? this.data.commentImage.length : 0),
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
         // 构建标准格式的图片对象数组
-        const newImages = res.tempFilePaths.map(path => ({
+        const newImage = res.tempFilePaths.map(path => ({
           tempUrl: path,     // 用于预览显示
           tempFilePath: path // 用于上传的完整路径
         }));
         
         // 合并现有图片
-        const updatedImages = [...(this.data.commentImages || []), ...newImages];
+        const updatedImage = [...(this.data.commentImage || []), ...newImage];
         
         this.setData({
-          commentImages: updatedImages
+          commentImage: updatedImage
         });
       }
     });
@@ -409,10 +409,10 @@ Page({
   // 移除已选择的评论图片
   removeCommentImage(e) {
     const index = e.currentTarget.dataset.index;
-    const images = this.data.commentImages;
+    const images = this.data.commentImage;
     images.splice(index, 1);
     this.setData({
-      commentImages: images
+      commentImage: images
     });
   },
   
@@ -481,7 +481,7 @@ Page({
         // 清空评论输入
         this.setData({
           commentText: '',
-          commentImages: [],
+          commentImage: [],
           isCommentExpanded: false,
           replyToCommentId: null,
           commentPlaceholder: '写下你的评论(不超过200字)...'
@@ -580,13 +580,13 @@ Page({
 
   // 加载评论列表
   async loadComments(postId, refresh = false) {
-    if (this.data.commentsLoading) return;
+    if (this.data.commentLoading) return;
     
     try {
-      this.setData({ commentsLoading: true });
+      this.setData({ commentLoading: true });
       
-      const page = refresh ? 1 : (this.data.commentsPage || 1);
-      const pageSize = this.data.commentsPageSize || 20;
+      const page = refresh ? 1 : (this.data.commentPage || 1);
+      const pageSize = this.data.commentPageSize || 20;
       
       // 使用API模块获取评论列表
       const result = await api.post.getPostComments(postId, {
@@ -598,11 +598,11 @@ Page({
         throw new Error('获取评论失败');
       }
       
-      const comments = result.comments || [];
-      console.log("获取到的评论数据:", comments);
+      const comment = result.comment || [];
+      console.log("获取到的评论数据:", comment);
       
       // 处理评论数据
-      const processedComments = comments.map(comment => {
+      const processedComment = comment.map(comment => {
         return {
           ...comment,
           _id: comment.id, // 兼容旧代码
@@ -612,7 +612,7 @@ Page({
             nickName: comment.nick_name || '用户',
             avatarUrl: comment.avatar || '/assets/icons/default-avatar.png'
           },
-          hasImages: comment.images && comment.images.length > 0,
+          hasImages: comment.image && comment.image.length > 0,
           relativeTime: util.formatRelativeTime(comment.create_time || comment.createTime),
           // 处理回复预览
           reply_preview: comment.reply_preview || [],
@@ -621,17 +621,17 @@ Page({
       });
       
       this.setData({
-        comments: refresh ? processedComments : [...this.data.comments, ...processedComments],
-        commentsPage: page + 1,
-        commentsHasMore: comments.length === pageSize,
-        commentsLoading: false,
-        commentsTotal: result.total || 0
+        comment: refresh ? processedComment : [...this.data.comment, ...processedComment],
+        commentPage: page + 1,
+        commentHasMore: comment.length === pageSize,
+        commentLoading: false,
+        commentTotal: result.total || 0
       });
     } catch (err) {
       console.error("加载评论失败:", err);
       this.setData({ 
-        commentsLoading: false,
-        commentsLoadError: true
+        commentLoading: false,
+        commentLoadError: true
       });
     }
   },
@@ -681,7 +681,7 @@ Page({
     this.setData({
       showCommentInput: true,
       commentText: '',
-      commentImages: []
+      commentImage: []
     });
   },
 
@@ -690,7 +690,7 @@ Page({
     this.setData({
       showCommentInput: false,
       commentText: '',
-      commentImages: []
+      commentImage: []
     });
   },
 

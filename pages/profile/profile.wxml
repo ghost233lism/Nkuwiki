@@ -38,24 +38,24 @@
 
     <!-- 数据统计 -->
     <view class="stats-row">
-      <view class="stat-item" bindtap="viewMyPosts" data-type="posts">
-        <text class="stat-num">{{userInfo.posts || 0}}</text>
+      <view class="stat-item" bindtap="viewMyPosts" data-type="post">
+        <text class="stat-num">{{userInfo.post_count || 0}}</text>
         <text class="stat-label">帖子</text>
       </view>
       <view class="stat-item">
-        <text class="stat-num">{{totalLikes || 0}}</text>
+        <text class="stat-num">{{totalLike || 0}}</text>
         <text class="stat-label">获赞</text>
       </view>
       <view class="stat-item">
-        <text class="stat-num">{{userInfo.following || 0}}</text>
+        <text class="stat-num">{{userInfo.follow_count || 0}}</text>
         <text class="stat-label">关注</text>
       </view>
       <view class="stat-item">
-        <text class="stat-num">{{userInfo.followers || 0}}</text>
+        <text class="stat-num">{{userInfo.follower_count || 0}}</text>
         <text class="stat-label">粉丝</text>
       </view>
       <view class="stat-item">
-        <text class="stat-num">5w</text>
+        <text class="stat-num">{{userInfo.token_count || 0}}</text>
         <text class="stat-label">token</text>
       </view>
     </view>

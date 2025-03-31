@@ -8,9 +8,9 @@ const request = require('../request');
  * 获取分类列表
  * @returns {Promise} - 返回Promise对象
  */
-async function getCategories() {
+async function getCategoryList() {
   try {
-    const result = await request.get('/api/wxapp/categories');
+    const result = await request.get('/api/wxapp/category');
     
     return result;
   } catch (err) {
@@ -36,7 +36,7 @@ async function getCategoryDetail(categoryId) {
       };
     }
     
-    const result = await request.get(`/api/wxapp/categories/${categoryId}`);
+    const result = await request.get(`/api/wxapp/category/${categoryId}`);
     
     return result;
   } catch (err) {
@@ -53,9 +53,9 @@ async function getCategoryDetail(categoryId) {
  * @param {number} limit - 限制返回数量
  * @returns {Promise} - 返回Promise对象
  */
-async function getHotTags(limit = 20) {
+async function getHotTag(limit = 20) {
   try {
-    const result = await request.get(`/api/wxapp/tags/hot?limit=${limit}`);
+    const result = await request.get(`/api/wxapp/tag/hot?limit=${limit}`);
     
     return result;
   } catch (err) {
@@ -73,7 +73,7 @@ async function getHotTags(limit = 20) {
  * @param {number} limit - 限制返回数量
  * @returns {Promise} - 返回Promise对象
  */
-async function searchTags(keyword, limit = 10) {
+async function searchTag(keyword, limit = 10) {
   try {
     if (!keyword) {
       return {
@@ -82,7 +82,7 @@ async function searchTags(keyword, limit = 10) {
       };
     }
     
-    const result = await request.get(`/api/wxapp/tags/search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
+    const result = await request.get(`/api/wxapp/tag/search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
     
     return result;
   } catch (err) {
@@ -108,7 +108,7 @@ async function getTagDetail(tagId) {
       };
     }
     
-    const result = await request.get(`/api/wxapp/tags/${tagId}`);
+    const result = await request.get(`/api/wxapp/tag/${tagId}`);
     
     return result;
   } catch (err) {
@@ -183,10 +183,10 @@ async function unfollowTag(tagId) {
 }
 
 module.exports = {
-  getCategories,
+  getCategoryList,
   getCategoryDetail,
-  getHotTags,
-  searchTags,
+  getHotTag,
+  searchTag,
   getTagDetail,
   followTag,
   unfollowTag

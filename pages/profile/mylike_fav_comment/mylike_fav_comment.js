@@ -4,7 +4,7 @@ const api = require('../../../utils/api/index');
 Page({
   data: {
     userAvatar: "",
-    posts: [],
+    post: [],
     page: 1,
     pageSize: 10,
     loading: false,
@@ -73,23 +73,23 @@ Page({
       
       if (result && result.success) {
         // 处理帖子数据，添加格式化时间
-        const posts = result.posts.map(post => {
+        const post = result.post.map(post => {
           return {
             ...post,
             formattedTime: this.formatTime(post.createTime)
           }
         })
         
-        console.log('处理后的帖子数据:', posts)
+        console.log('处理后的帖子数据:', post)
         
         this.setData({
-          posts: refresh ? posts : [...this.data.posts, ...posts],
+          post: refresh ? post : [...this.data.post, ...post],
           page: page + 1,
-          hasMore: posts.length === this.data.pageSize,
+          hasMore: post.length === this.data.pageSize,
           loading: false
         })
         
-        console.log('更新页面数据完成, 总条数:', this.data.posts.length)
+        console.log('更新页面数据完成, 总条数:', this.data.post.length)
       } else {
         throw new Error(result?.message || '加载失败')
       }

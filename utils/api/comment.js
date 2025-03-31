@@ -6,54 +6,63 @@ const request = require('../request');
 
 /**
  * 创建评论
- * @param {Object} commentData - 评论数据
- * @returns {Promise} - 返回Promise对象
+ * @param {Object} data - 评论数据 
+ * @returns {Promise}
  */
-async function createComment(commentData) {
+async function createComment(data) {
   try {
     const openid = wx.getStorageSync('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
-    if (!commentData.post_id) {
+    if (!data.post_id) {
       return {
         success: false,
         message: '帖子ID不能为空'
       };
     }
     
-    if (!commentData.content && (!commentData.images || commentData.images.length === 0)) {
+    if (!data.content || data.content.trim() === '') {
       return {
         success: false,
         message: '评论内容不能为空'
       };
     }
     
-    // 获取用户信息
+    // 获取本地用户信息
     const userInfo = wx.getStorageSync('userInfo') || {};
     
-    // 准备评论数据
-    const data = {
-      ...commentData,
-      openid,
-      nick_name: userInfo.nick_name,
-      avatar: userInfo.avatar
+    // 准备评论数据，确保符合API要求的格式
+    const commentData = {
+      openid: openid,
+      post_id: data.post_id,
+      content: data.content,
+      parent_id: data.parent_id || null,
+      nickname: userInfo.nickName || userInfo.nickname,
+      avatar: userInfo.avatarUrl || userInfo.avatar,
+      image: data.image || []
     };
     
-    // 更新API路径
-    const result = await request.post('/api/wxapp/comment', data);
+    const result = await request.post('/api/wxapp/comment', commentData);
     
-    return {
-      success: result.data.code === 200,
-      data: result.data.data,
-      message: result.data.details?.message || '评论成功'
-    };
+    if (result.success) {
+      return {
+        success: true,
+        comment: result.data,
+        message: '评论成功'
+      };
+    } else {
+      return {
+        success: false,
+        message: result.message || '评论失败'
+      };
+    }
   } catch (err) {
-    console.error('发表评论失败:', err);
+    console.error('创建评论失败:', err);
     return {
       success: false,
-      message: '发表评论失败: ' + (err.message || '未知错误')
+      message: '创建评论失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -288,7 +297,7 @@ async function getCommentList(params = {}) {
     
     return {
       success: true,
-      comments: result.data.data,
+      comment: result.data.data,
       pagination: result.data.pagination
     };
   } catch (err) {

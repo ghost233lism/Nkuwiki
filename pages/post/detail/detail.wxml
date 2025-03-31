@@ -85,30 +85,30 @@
           <text class="section-title">评论 ({{commentCount || 0}})</text>
         </view>
         
-        <view wx:if="{{!comments || comments.length === 0}}" class="empty-comment">
+        <view wx:if="{{!comment || comment.length === 0}}" class="empty-comment">
           <text>暂无评论，快来抢沙发~</text>
         </view>
         
-        <view class="comment-list" wx:if="{{comments.length > 0}}">
-          <view class="comment-item" wx:for="{{comments}}" wx:key="_id">
-            <image class="avatar" src="{{item.author.avatarUrl || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
+        <view class="comment-list" wx:if="{{comment.length > 0}}">
+          <view class="comment-item" wx:for="{{comment}}" wx:key="_id">
+            <image class="avatar" src="{{item.author.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
             <view class="comment-content">
               <view class="comment-header">
-                <text class="comment-author">{{item.author.nickName}}</text>
+                <text class="comment-author">{{item.author.nickname}}</text>
                 <text class="comment-time">{{item.relativeTime}}</text>
               </view>
               <text class="comment-text" user-select="{{true}}">{{item.content}}</text>
               
               <!-- 评论图片显示 -->
-              <view class="comment-images" wx:if="{{item.images && item.images.length > 0}}">
+              <view class="comment-images" wx:if="{{item.image && item.image.length > 0}}">
                 <image 
-                  wx:for="{{item.images}}" 
+                  wx:for="{{item.image}}" 
                   wx:for-item="img" 
                   wx:key="index"
                   class="comment-image" 
                   src="{{img}}" 
                   mode="aspectFill"
-                  data-urls="{{item.images}}"
+                  data-urls="{{item.image}}"
                   data-current="{{img}}"
                   binderror="handleImageError"
                   bindtap="previewCommentImage"

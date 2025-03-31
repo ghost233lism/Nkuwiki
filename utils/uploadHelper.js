@@ -7,7 +7,7 @@
  * @param {Object} options - 选择图片配置
  * @returns {Promise<Array>} - 返回选择的图片临时路径数组
  */
-function chooseImages(options = {}) {
+function chooseImage(options = {}) {
   return new Promise((resolve, reject) => {
     wx.chooseMedia({
       count: options.count || 9,
@@ -15,9 +15,9 @@ function chooseImages(options = {}) {
       sourceType: options.sourceType || ['album', 'camera'],
       sizeType: options.sizeType || ['original', 'compressed'],
       success(res) {
-        const tempFiles = res.tempFiles;
-        const tempPaths = tempFiles.map(file => file.tempFilePath);
-        resolve(tempPaths);
+        const tempFile = res.tempFiles;
+        const tempPath = tempFile.map(file => file.tempFilePath);
+        resolve(tempPath);
       },
       fail(err) {
         reject(err);
@@ -76,17 +76,17 @@ function uploadImage(filePath, type = 'common') {
 
 /**
  * 批量上传图片
- * @param {Array} filePaths - 图片临时路径数组
+ * @param {Array} filePath - 图片临时路径数组
  * @param {string} type - 图片类型：post/comment/avatar
  * @returns {Promise<Array>} - 返回所有图片的上传结果
  */
-function uploadImages(filePaths, type = 'common') {
-  if (!filePaths || filePaths.length === 0) {
+function uploadImage(filePath, type = 'common') {
+  if (!filePath || filePath.length === 0) {
     return Promise.resolve([]);
   }
   
-  const uploadPromises = filePaths.map(path => uploadImage(path, type));
-  return Promise.all(uploadPromises);
+  const uploadPromise = filePath.map(path => uploadImage(path, type));
+  return Promise.all(uploadPromise);
 }
 
 /**
@@ -95,14 +95,14 @@ function uploadImages(filePaths, type = 'common') {
  * @param {string} type - 图片类型：post/comment/avatar
  * @returns {Promise<Array>} - 返回上传结果数组
  */
-function chooseAndUploadImages(options = {}, type = 'common') {
-  return chooseImages(options)
-    .then(paths => uploadImages(paths, type));
+function chooseAndUploadImage(options = {}, type = 'common') {
+  return chooseImage(options)
+    .then(path => uploadImage(path, type));
 }
 
 module.exports = {
-  chooseImages,
+  chooseImage,
   uploadImage,
-  uploadImages,
-  chooseAndUploadImages
+  uploadImage,
+  chooseAndUploadImage
 }; 

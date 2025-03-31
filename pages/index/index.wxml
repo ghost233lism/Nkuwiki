@@ -101,15 +101,15 @@
         </view>
 
         <!-- 图片列表 -->
-        <view class="image-list" wx:if="{{item.images && item.images.length > 0}}">
+        <view class="image-list" wx:if="{{item.image && item.image.length > 0}}">
           <image 
-            wx:for="{{item.images}}" 
+            wx:for="{{item.image}}" 
             wx:for-item="img" 
             wx:key="*this" 
             src="{{img}}" 
             mode="aspectFill" 
             catchtap="previewImage" 
-            data-urls="{{item.images}}" 
+            data-urls="{{item.image}}" 
             data-current="{{img}}"
             binderror="onPostImageError"
             data-post-index="{{index}}"
@@ -118,8 +118,8 @@
         </view>
 
         <!-- 标签列表 -->
-        <view class="tag-list" wx:if="{{item.tags && item.tags.length > 0}}">
-          <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">#{{tag}}</text>
+        <view class="tag-list" wx:if="{{item.tag && item.tag.length > 0}}">
+          <text class="tag" wx:for="{{item.tag}}" wx:for-item="tag" wx:key="*this">#{{tag}}</text>
         </view>
 
         <!-- 互动数据 -->
@@ -139,20 +139,22 @@
         </view>
 
         <!-- 评论预览 -->
-        <view class="comment-preview" wx:if="{{item.recent_comments && item.recent_comments.length > 0}}">
-          <view class="comment-item" wx:for="{{item.recent_comments}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id">
-            <text class="comment-user">{{comment.nickname || '匿名用户'}}</text>
-            <text class="comment-content">{{comment.content}}</text>
+        <view class="comment-preview" wx:if="{{item.recent_comment && item.recent_comment.length > 0}}">
+          <view class="comment-item" wx:for="{{item.recent_comment}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id">
+            <view class="comment-info">
+              <text class="comment-name">{{comment.nickname || '匿名用户'}}：</text>
+              <text class="comment-text">{{comment.content}}</text>
+            </view>
             <!-- 评论图片 -->
-            <view class="comment-images" wx:if="{{comment.images && comment.images.length > 0}}">
+            <view class="comment-images" wx:if="{{comment.image && comment.image.length > 0}}">
               <image 
-                wx:for="{{comment.images}}" 
+                wx:for="{{comment.image}}" 
                 wx:for-item="img" 
                 wx:key="*this" 
                 src="{{img}}" 
                 mode="aspectFill"
                 catchtap="previewImage"
-                data-urls="{{comment.images}}"
+                data-urls="{{comment.image}}"
                 data-current="{{img}}"
                 binderror="onCommentImageError"
                 data-post-index="{{index}}"
@@ -191,7 +193,7 @@
             data-index="{{index}}"
           />
           <view class="post-info">
-            <text class="author-name">{{item.nick_name || '匿名用户'}}</text>
+            <text class="author-name">{{item.nickname || '匿名用户'}}</text>
             <text class="post-time">{{item.create_time_formatted || '刚刚'}}</text>
           </view>
         </view>
@@ -210,18 +212,18 @@
           </view>
 
           <!-- 添加图片展示区域 -->
-          <view class="post-images" wx:if="{{item.images && item.images.length > 0}}">
-            <view class="post-images-grid {{item.images.length === 1 ? 'single-image' : ''}}">
+          <view class="post-images" wx:if="{{item.image && item.image.length > 0}}">
+            <view class="post-images-grid {{item.image.length === 1 ? 'single-image' : ''}}">
               <!-- 最多显示3张图片 -->
               <view
                 class="post-image-item"
-                wx:for="{{item.images}}"
+                wx:for="{{item.image}}"
                 wx:for-item="image"
                 wx:for-index="imageIndex"
                 wx:key="*this"
                 wx:if="{{imageIndex < 3}}"
                 catchtap="previewImage" 
-                data-urls="{{item.images}}" 
+                data-urls="{{item.image}}" 
                 data-current="{{image}}"
               >
                 <image 
@@ -232,31 +234,31 @@
                   data-image-index="{{imageIndex}}"
                 />
                 <!-- 如果超过3张，在第3张上显示剩余数量 -->
-                <view class="image-count" wx:if="{{imageIndex === 2 && item.images.length > 3}}">+{{item.images.length - 3}}</view>
+                <view class="image-count" wx:if="{{imageIndex === 2 && item.image.length > 3}}">+{{item.image.length - 3}}</view>
               </view>
             </view>
           </view>
         </view>
 
         <!-- 如果有标签就显示 -->
-        <view class="post-tags" wx:if="{{item.tags && item.tags.length}}">
-          <text class="post-tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">#{{tag}}#</text>
+        <view class="post-tags" wx:if="{{item.tag && item.tag.length}}">
+          <text class="post-tag" wx:for="{{item.tag}}" wx:for-item="tag" wx:key="*this">#{{tag}}#</text>
         </view>
 
         <!-- 添加分割线 -->
         <view class="divider"></view>
 
         <!-- 评论预览部分 -->
-        <view class="comment-preview" wx:if="{{item.recent_comments && item.recent_comments.length > 0}}">
-          <view class="comment-item" wx:for="{{item.recent_comments}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id" wx:if="{{commentIndex < 3}}">
+        <view class="comment-preview" wx:if="{{item.recent_comment && item.recent_comment.length > 0}}">
+          <view class="comment-item" wx:for="{{item.recent_comment}}" wx:for-item="comment" wx:for-index="commentIndex" wx:key="id" wx:if="{{commentIndex < 3}}">
             <view class="comment-info">
-              <text class="comment-name">{{comment.nick_name || comment.nickname || '匿名用户'}}：</text>
+              <text class="comment-name">{{comment.nickname || '匿名用户'}}：</text>
               <text class="comment-text">{{comment.content}}</text>
             </view>
             <!-- 评论图片 -->
-            <view class="comment-images" wx:if="{{comment.images && comment.images.length > 0}}">
+            <view class="comment-images" wx:if="{{comment.image && comment.image.length > 0}}">
               <image 
-                wx:for="{{comment.images}}" 
+                wx:for="{{comment.image}}" 
                 wx:for-item="img" 
                 wx:for-index="imgIndex"
                 wx:key="*this" 
@@ -264,7 +266,7 @@
                 src="{{img}}" 
                 mode="aspectFill"
                 catchtap="previewImage" 
-                data-urls="{{comment.images}}" 
+                data-urls="{{comment.image}}" 
                 data-current="{{img}}"
                 binderror="onCommentImageError"
                 data-post-index="{{index}}"
@@ -274,7 +276,7 @@
             </view>
           </view>
           <!-- 如果评论数超过预览显示的数量，显示查看更多 -->
-          <view class="view-more-comments" wx:if="{{item.comment_count > item.recent_comments.length}}" catchtap="viewAllComments" data-id="{{item.id}}">
+          <view class="view-more-comments" wx:if="{{item.comment_count > item.recent_comment.length}}" catchtap="viewAllComments" data-id="{{item.id}}">
             查看全部{{item.comment_count}}条评论
           </view>
         </view>
@@ -291,7 +293,7 @@
           </view>
           <view class="action-item {{item.isFavorited ? 'active' : ''}}" catchtap="handleFavorite" data-id="{{item.id}}" data-index="{{index}}">
             <image src="/assets/icons/index/{{item.isFavorited ? 'favorite-active' : 'favorite'}}.png" />
-            <text>{{item.favorite_count || 0}}</text>
+            <text class="{{item.isFavorited ? 'active-text' : ''}}">{{item.favorite_count || 0}}</text>
           </view>
         </view>
       </view>

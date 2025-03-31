@@ -15,8 +15,8 @@
   <!-- 消息列表 -->
   <scroll-view class="notification-list" scroll-y="true">
     <block wx:if="{{activeTab==='like'}}">
-      <block wx:if="{{like.likesUsersInfo.length > 0}}">
-        <view class="notification-item" wx:for="{{like.likesUsersInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
+      <block wx:if="{{like.likeUserInfo.length > 0}}">
+        <view class="notification-item" wx:for="{{like.likeUserInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
           <view class="notification-avatar">
             <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}"></image>
           </view>
@@ -37,8 +37,8 @@
       </view>
     </block>
     <block wx:if="{{activeTab==='favourite'}}">
-      <block wx:if="{{favourite.favouriteUsersInfo.length > 0}}">
-        <view class="notification-item" wx:for="{{favourite.favouriteUsersInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
+      <block wx:if="{{favourite.favoriteUserInfo.length > 0}}">
+        <view class="notification-item" wx:for="{{favourite.favoriteUserInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
           <view class="notification-avatar">
             <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}"></image>
           </view>
@@ -59,8 +59,8 @@
       </view>
     </block>
     <block wx:if="{{activeTab==='comment'}}">
-      <block wx:if="{{comments.commentsUsersInfo.length > 0}}">
-        <view class="notification-item" wx:for="{{comments.commentsUsersInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
+      <block wx:if="{{comment.commentUserInfo.length > 0}}">
+        <view class="notification-item" wx:for="{{comment.commentUserInfo}}" wx:key="id" bindtap="goToPost" data-post-id="{{item.postId}}">
           <view class="notification-avatar">
             <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}"></image>
           </view>

@@ -31,12 +31,12 @@ async function login(userData = {}) {
       };
     }
     
-    // 准备用户数据
+    // 准备用户数据，转换字段名以符合后端API要求
     const syncData = {
-      openid: openid,  // 使用获取到的openid
+      openid: openid,
       unionid: userData.unionid || '',
-      nick_name: userData.nickName || '',
-      avatar: userData.avatarUrl || '',
+      nickname: userData.nickName || '', // 转换字段名
+      avatar: userData.avatarUrl || '', // 转换字段名
       gender: userData.gender || 0,
       bio: userData.bio || '',
       country: userData.country || '',
@@ -62,14 +62,19 @@ async function login(userData = {}) {
       // 获取用户信息
       const profileResult = await getProfile({ openid });
       if (profileResult.success && profileResult.data) {
-        // 存储用户信息
-        wx.setStorageSync('userInfo', profileResult.data);
+        // 存储用户信息，转换为微信原生字段名
+        const userInfo = {
+          ...profileResult.data,
+          nickName: profileResult.data.nickname, // 转换字段名
+          avatarUrl: profileResult.data.avatar, // 转换字段名
+        };
+        wx.setStorageSync('userInfo', userInfo);
         console.log('用户信息已存储到本地');
         
         return {
           success: true,
           code: 0,
-          data: profileResult.data,
+          data: userInfo,
           message: '登录成功'
         };
       }
@@ -78,25 +83,22 @@ async function login(userData = {}) {
     // 存储用户信息
     if (result.success && result.data) {
       // 确保用户信息有默认的昵称和头像
-      const userData = result.data;
-      
-      // 仅设置默认昵称
-      if (!userData.nickname) {
-        userData.nickname = '南开Wiki用户';
-      }
-      
-      // 如果头像为null，设置默认头像
-      if (!userData.avatar) {
-        userData.avatar = '/assets/icons/default-avatar.png';
-      }
-      
-      // 设置前端需要的头像URL格式和ID字段
-      userData.avatarUrl = userData.avatar;
-      userData._id = userData.openid;
+      const userInfo = {
+        ...result.data,
+        nickName: result.data.nickname || '南开Wiki用户', // 转换字段名
+        avatarUrl: result.data.avatar || '/assets/icons/default-avatar.png', // 转换字段名
+      };
       
       // 存储更新后的用户信息
-      wx.setStorageSync('userInfo', userData);
-      console.log('处理后的用户信息已存储到本地:', userData);
+      wx.setStorageSync('userInfo', userInfo);
+      console.log('处理后的用户信息已存储到本地:', userInfo);
+      
+      return {
+        success: true,
+        code: 0,
+        data: userInfo,
+        message: '登录成功'
+      };
     }
     
     return {
@@ -209,17 +211,18 @@ async function updateUser(userData = {}) {
     
     console.log('更新用户信息:', userData);
     
-    // 构建更新数据对象
+    // 构建更新数据对象，转换字段名以符合后端API要求
     const requestData = {
       openid: openid,
-      ...userData
+      ...userData,
+      // 如果有微信原生字段名，转换为后端API要求的字段名
+      ...(userData.nickName && { nickname: userData.nickName }),
+      ...(userData.avatarUrl && { avatar: userData.avatarUrl })
     };
     
-    // 如果有nick_name字段(API文档错误)，转换为nickname
-    if (requestData.nick_name !== undefined) {
-      requestData.nickname = requestData.nick_name;
-      delete requestData.nick_name;
-    }
+    // 删除原始字段
+    delete requestData.nickName;
+    delete requestData.avatarUrl;
     
     // 确保不为空
     if (Object.keys(requestData).length <= 1) {
@@ -233,6 +236,18 @@ async function updateUser(userData = {}) {
     
     // 调用更新用户API
     const result = await request.post('/api/wxapp/user/update', requestData);
+    
+    if (result.success && result.data) {
+      // 更新本地存储的用户信息，保持微信原生字段名
+      const userInfo = wx.getStorageSync('userInfo') || {};
+      const newUserInfo = {
+        ...userInfo,
+        ...result.data,
+        nickName: result.data.nickname, // 转换字段名
+        avatarUrl: result.data.avatar, // 转换字段名
+      };
+      wx.setStorageSync('userInfo', newUserInfo);
+    }
     
     return result;
   } catch (err) {
@@ -249,7 +264,7 @@ async function updateUser(userData = {}) {
  * @param {string} openid - 用户openid
  * @returns {Promise} - 返回Promise对象
  */
-async function getFollowStats(openid) {
+async function getFollowStat(openid) {
   try {
     if (!openid) {
       openid = wx.getStorageSync('openid');
@@ -258,12 +273,12 @@ async function getFollowStats(openid) {
       }
     }
     
-    const result = await request.get('/api/wxapp/user/follow-stats', { openid });
+    const result = await request.get('/api/wxapp/user/follow-stat', { openid });
     
     return {
       success: true,
-      followers: result.data.followers,
-      following: result.data.following,
+      follower_count: result.data.follower_count,
+      follow_count: result.data.follow_count,
       message: '获取关注统计成功'
     };
   } catch (err) {
@@ -396,7 +411,7 @@ async function checkFollow(params = {}) {
  * @param {number} params.offset - 分页偏移量，默认0
  * @returns {Promise} - 返回Promise对象
  */
-async function getFollowingList(params = {}) {
+async function getFollowList(params = {}) {
   try {
     const openid = params.openid || wx.getStorageSync('openid');
     if (!openid) {
@@ -409,7 +424,7 @@ async function getFollowingList(params = {}) {
       offset: params.offset || 0
     };
     
-    const result = await request.get('/api/wxapp/user/followings', queryParams);
+    const result = await request.get('/api/wxapp/user/follow', queryParams);
     
     return {
       success: true,
@@ -434,7 +449,7 @@ async function getFollowingList(params = {}) {
  * @param {number} params.offset - 分页偏移量，默认0
  * @returns {Promise} - 返回Promise对象
  */
-async function getFollowersList(params = {}) {
+async function getFollowerList(params = {}) {
   try {
     const openid = params.openid || wx.getStorageSync('openid');
     if (!openid) {
@@ -447,7 +462,7 @@ async function getFollowersList(params = {}) {
       offset: params.offset || 0
     };
     
-    const result = await request.get('/api/wxapp/user/followers', queryParams);
+    const result = await request.get('/api/wxapp/user/follower', queryParams);
     
     return {
       success: true,
@@ -498,7 +513,7 @@ async function getToken(openid) {
  * @param {Object} params - 请求参数
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserLikes(params = {}) {
+async function getUserLike(params = {}) {
   try {
     const openid = wx.getStorageSync('openid');
     if (!openid) {
@@ -542,7 +557,7 @@ async function getUserLikes(params = {}) {
  * @param {string} postId - 帖子ID
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserLikesDetail(postId) {
+async function getUserLikeDetail(postId) {
   try {
     const openid = wx.getStorageSync('openid');
     if (!openid) {
@@ -577,7 +592,7 @@ async function getUserLikesDetail(postId) {
  * @param {Object} params - 请求参数
  * @returns {Promise} - 返回Promise对象
  */
-async function fixUserLikes(params = {}) {
+async function fixUserLike(params = {}) {
   try {
     const openid = wx.getStorageSync('openid');
     if (!openid) {
@@ -622,7 +637,7 @@ async function uploadUserAvatar(filePath) {
     console.debug('开始上传用户头像:', { openid, filePath });
     
     // 上传文件到微信云存储
-    const cloudPath = `avatars/${openid}_${Date.now()}.jpg`;
+    const cloudPath = `avatar/${openid}_${Date.now()}.jpg`;
     
     console.debug('准备上传到云存储路径:', cloudPath);
     
@@ -652,18 +667,20 @@ async function uploadUserAvatar(filePath) {
     
     // 构建更新数据对象
     const updateData = {
+      openid: openid,
       avatar: uploadResult.fileID  // 服务器端使用avatar字段
     };
     
     // 调用更新用户API
-    const result = await request.put(`/api/wxapp/users/${openid}`, updateData);
+    const result = await request.post('/api/wxapp/user/update', updateData);
     console.debug('更新用户头像成功:', result);
     
     // 更新本地存储的用户信息
     if (result.data) {
       const newUserInfo = {
         ...userInfo,
-        avatarUrl: uploadResult.fileID  // 本地使用avatarUrl字段
+        avatarUrl: uploadResult.fileID, // 使用微信原生字段名
+        avatar: uploadResult.fileID, // 保留后端字段名以兼容
       };
       wx.setStorageSync('userInfo', newUserInfo);
     }
@@ -691,23 +708,14 @@ async function uploadUserAvatar(filePath) {
  * @param {number} params.pageSize - 每页数量
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserInteractionPosts(params = {}) {
+async function getUserInteractionPost(params = {}) {
   try {
-    // 优先使用传入的openid，否则从存储中获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = wx.getStorageSync('openid');
     if (!openid) {
-      throw new Error('未提供openid且未登录');
+      throw new Error('用户未登录');
     }
     
-    console.debug('获取用户交互帖子:', { openid, type: params.type, params });
-    
-    // 构建请求参数
-    const limit = params.pageSize || 10;
-    const offset = ((params.page || 1) - 1) * limit;
-    
-    // 根据API文档，目前没有直接获取用户交互帖子的接口
-    // 最佳方案是使用帖子列表接口并添加过滤条件，或自己维护本地收藏/点赞列表
-    // 这里给出一个临时实现
+    const { limit = 20, offset = 0 } = params;
     let result;
     
     switch (params.type) {
@@ -717,7 +725,7 @@ async function getUserInteractionPosts(params = {}) {
           openid: openid,
           limit: limit,
           offset: offset,
-          interaction: 'liked' // 这是假设的参数，API可能不支持
+          interaction: 'liked'
         });
         break;
         
@@ -728,20 +736,17 @@ async function getUserInteractionPosts(params = {}) {
           openid: openid,
           limit: limit,
           offset: offset,
-          interaction: 'favorited' // 这是假设的参数，API可能不支持
+          interaction: 'favorited'
         });
         break;
         
       case 'comment':
         // 获取用户评论的帖子，使用评论列表API
-        result = await request.get('/api/wxapp/comments', {
+        result = await request.get('/api/wxapp/comment', {
           openid: openid,
           limit: limit,
           offset: offset
         });
-        
-        // 评论结果可能需要额外处理，将评论关联的帖子信息提取出来
-        // 这里简化处理，假设评论数据中包含帖子信息
         break;
         
       default:
@@ -753,7 +758,7 @@ async function getUserInteractionPosts(params = {}) {
     // 处理结果
     return {
       success: true,
-      posts: result.data.posts || [],
+      post: result.data.post || [],
       total: result.data.total || 0,
       message: `获取${params.type}列表成功`
     };
@@ -761,7 +766,7 @@ async function getUserInteractionPosts(params = {}) {
     console.error('获取用户交互帖子失败:', err);
     return {
       success: false,
-      message: '获取用户交互帖子失败: ' + (err.message || '未知错误') + ' (请联系开发者完善API)'
+      message: '获取用户交互帖子失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -772,16 +777,16 @@ module.exports = {
   getProfile,
   getUserList,
   updateUser,
-  getFollowStats,
+  getFollowStat,
   followUser,
   unfollowUser,
   checkFollow,
-  getFollowingList,
-  getFollowersList,
+  getFollowList,
+  getFollowerList,
   getToken,
-  getUserLikes,
-  getUserLikesDetail,
-  fixUserLikes,
+  getUserLike,
+  getUserLikeDetail,
+  fixUserLike,
   uploadUserAvatar,
-  getUserInteractionPosts
+  getUserInteractionPost
 }; 

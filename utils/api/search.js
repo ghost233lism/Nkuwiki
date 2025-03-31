@@ -27,7 +27,7 @@ function search(keyword, searchType = 'all', page = 1, limit = 10) {
  * @param {string} keyword - 搜索关键词
  * @returns {Promise<object>} - 搜索建议列表
  */
-function getSuggestions(keyword) {
+function getSuggestion(keyword) {
   return request('/api/wxapp/suggestion', 'GET', {}, {}, {
     keyword
   });
@@ -39,11 +39,28 @@ function getSuggestions(keyword) {
  * @param {number} limit - 返回结果数量，默认10
  * @returns {Promise<object>} - 搜索历史列表
  */
-function getSearchHistory(openid, limit = 10) {
-  return request('/api/wxapp/history', 'GET', {}, {}, {
-    openid,
-    limit
-  });
+async function getSearchHistory(params = {}) {
+  try {
+    const openid = wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    const queryParams = {
+      openid,
+      limit: params.limit || 10
+    };
+    
+    const result = await request.get('/api/wxapp/history', queryParams);
+    
+    return {
+      success: true,
+      history: result.data,
+      message: '获取搜索历史成功'
+    };
+  } catch (err) {
+    // ... existing code ...
+  }
 }
 
 /**
@@ -62,16 +79,28 @@ function clearSearchHistory(openid) {
  * @param {number} limit - 返回结果数量，默认10
  * @returns {Promise<object>} - 热门搜索关键词列表
  */
-function getHotSearches(limit = 10) {
-  return request('/api/wxapp/hot', 'GET', {}, {}, {
-    limit
-  });
+async function getHotSearch(params = {}) {
+  try {
+    const queryParams = {
+      limit: params.limit || 10
+    };
+    
+    const result = await request.get('/api/wxapp/hot', queryParams);
+    
+    return {
+      success: true,
+      hot: result.data,
+      message: '获取热门搜索成功'
+    };
+  } catch (err) {
+    // ... existing code ...
+  }
 }
 
 module.exports = {
   search,
-  getSuggestions,
+  getSuggestion,
   getSearchHistory,
   clearSearchHistory,
-  getHotSearches
+  getHotSearch
 }; 

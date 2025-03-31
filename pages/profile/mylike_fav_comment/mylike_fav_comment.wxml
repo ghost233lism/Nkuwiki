@@ -17,10 +17,15 @@
         <view class="post-text">{{item.content}}</view>
         
         <!-- 如果有图片，显示第一张 -->
-        <view class="post-image" wx:if="{{item.images && item.images.length > 0}}">
-          <image src="{{item.images[0]}}" mode="aspectFill"></image>
-          <view class="image-count" wx:if="{{item.images.length > 1}}">+{{item.images.length - 1}}</view>
+        <view class="post-image" wx:if="{{item.image && item.image.length > 0}}">
+          <image src="{{item.image[0]}}" mode="aspectFill"></image>
+          <view class="image-count" wx:if="{{item.image.length > 1}}">+{{item.image.length - 1}}</view>
         </view>
+      </view>
+      
+      <!-- 标签列表 -->
+      <view class="tag-list" wx:if="{{item.tag && item.tag.length > 0}}">
+        <text class="tag" wx:for="{{item.tag}}" wx:for-item="tag" wx:key="*this">#{{tag}}</text>
       </view>
       
       <!-- 帖子统计信息 -->

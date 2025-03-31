@@ -16,7 +16,6 @@ const request = require('../request');
  */
 async function getNotificationList(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
     const openid = params.openid || wx.getStorageSync('openid');
     if (!openid) {
       throw new Error('用户未登录');
@@ -24,21 +23,18 @@ async function getNotificationList(params = {}) {
     
     // 构建查询参数
     const queryParams = {
-      openid: openid,
+      openid,
+      type: params.type || null,
+      is_read: params.is_read,
       limit: params.limit || 20,
       offset: params.offset || 0
     };
     
-    // 可选参数
-    if (params.type) queryParams.type = params.type;
-    if (params.is_read !== undefined) queryParams.is_read = params.is_read;
-    
-    // 请求通知列表
     const result = await request.get('/api/wxapp/notification/list', queryParams);
     
     return {
       success: true,
-      data: result.data.data,
+      notification: result.data.data,
       pagination: result.data.pagination,
       message: '获取通知列表成功'
     };
@@ -162,34 +158,31 @@ async function markAsRead(params = {}) {
 /**
  * 批量标记通知已读
  * @param {Object} params - 请求参数
- * @param {Array<number>} params.notification_ids - 通知ID列表
+ * @param {Array<number>} params.notification_id - 通知ID列表
  * @param {string} params.openid - 用户openid（可选，默认当前登录用户）
  * @returns {Promise} - 返回Promise对象
  */
-async function markAsReadBatch(params = {}) {
+async function markReadBatch(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = wx.getStorageSync('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
-    if (!params.notification_ids || !Array.isArray(params.notification_ids) || params.notification_ids.length === 0) {
+    if (!params.notification_id || !Array.isArray(params.notification_id)) {
       throw new Error('通知ID列表不能为空');
     }
     
-    // 请求体
     const data = {
-      notification_ids: params.notification_ids,
-      openid: openid
+      openid,
+      notification_id: params.notification_id
     };
     
-    // 批量标记通知已读
     const result = await request.post('/api/wxapp/notification/mark-read-batch', data);
     
     return {
       success: true,
-      message: result.details?.message || '批量标记已读成功'
+      message: result.details?.message || '标记已读成功'
     };
   } catch (err) {
     console.error('批量标记通知已读失败:', err);
@@ -285,7 +278,7 @@ module.exports = {
   getNotificationDetail,
   getUnreadCount,
   markAsRead,
-  markAsReadBatch,
+  markReadBatch,
   deleteNotification,
   getStatus
 }; 

@@ -2,7 +2,7 @@ const app = getApp()
 const config = app.globalData.config || {};
 const API_BASE_URL = config.services?.app?.base_url || 'https://nkuwiki.com';
 const towxml = require('../../wxcomponents/towxml/index');
-const api = require('../../utils/api');
+const api = require('../../utils/api/index');
 
 // 简单的Markdown解析函数
 function parseMarkdown(markdown) {

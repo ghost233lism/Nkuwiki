@@ -595,3 +595,14 @@ textarea {
   background: #ccc;
   color: #fff;
 }
+
+/* 已激活的操作按钮 */
+.action-item.active image {
+  filter: brightness(1.2) drop-shadow(0 0 2px rgba(76, 175, 80, 0.3));
+}
+
+/* 激活状态下的文本 */
+.active-text {
+  color: #4CAF50 !important;
+  font-weight: bold;
+}

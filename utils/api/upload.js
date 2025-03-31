@@ -14,7 +14,7 @@ function uploadImage(filePath, cloudPath) {
   return new Promise((resolve, reject) => {
     // 调用云函数，上传文件到云存储
     wx.cloud.uploadFile({
-      cloudPath: cloudPath || `images/${Date.now()}-${Math.floor(Math.random() * 10000)}.${filePath.match(/\.([^\.]+)$/)[1]}`,
+      cloudPath: cloudPath || `image/${Date.now()}-${Math.floor(Math.random() * 10000)}.${filePath.match(/\.([^\.]+)$/)[1]}`,
       filePath: filePath,
       success: res => {
         console.debug('上传图片成功:', res);
@@ -38,12 +38,12 @@ function uploadImage(filePath, cloudPath) {
 
 /**
  * 批量上传图片到云存储
- * @param {Array<string>} filePaths - 临时文件路径数组
+ * @param {Array<string>} filePath - 临时文件路径数组
  * @param {string} cloudPathPrefix - 云存储路径前缀
  * @returns {Promise} - 返回Promise对象
  */
-async function uploadImages(filePaths, cloudPathPrefix = 'images') {
-  if (!filePaths || !filePaths.length) {
+async function uploadImageBatch(filePath, cloudPathPrefix = 'image') {
+  if (!filePath || !filePath.length) {
     return {
       success: false,
       message: '没有要上传的图片'
@@ -51,16 +51,16 @@ async function uploadImages(filePaths, cloudPathPrefix = 'images') {
   }
 
   try {
-    const uploadPromises = filePaths.map((filePath, index) => {
-      const ext = filePath.match(/\.([^\.]+)$/)[1] || 'png';
+    const uploadPromises = filePath.map((path, index) => {
+      const ext = path.match(/\.([^\.]+)$/)[1] || 'png';
       const cloudPath = `${cloudPathPrefix}/${Date.now()}-${index}-${Math.floor(Math.random() * 10000)}.${ext}`;
-      return uploadImage(filePath, cloudPath);
+      return uploadImage(path, cloudPath);
     });
 
     const results = await Promise.all(uploadPromises);
     return {
       success: true,
-      fileIDs: results.map(r => r.fileID),
+      fileID: results.map(r => r.fileID),
       message: '批量上传成功'
     };
   } catch (err) {
@@ -148,12 +148,12 @@ function uploadFileToServer(filePath, type = 'attachment') {
 
 /**
  * 批量上传文件到服务器
- * @param {Array<string>} filePaths - 临时文件路径数组
+ * @param {Array<string>} filePath - 临时文件路径数组
  * @param {string} type - 文件类型，如avatar, post_image
  * @returns {Promise} - 返回Promise对象
  */
-async function uploadFilesToServer(filePaths, type = 'attachment') {
-  if (!filePaths || !filePaths.length) {
+async function uploadFileToServerBatch(filePath, type = 'attachment') {
+  if (!filePath || !filePath.length) {
     return {
       success: false,
       message: '没有要上传的文件'
@@ -161,15 +161,15 @@ async function uploadFilesToServer(filePaths, type = 'attachment') {
   }
 
   try {
-    const uploadPromises = filePaths.map(filePath => {
-      return uploadFileToServer(filePath, type);
+    const uploadPromises = filePath.map(path => {
+      return uploadFileToServer(path, type);
     });
 
     const results = await Promise.all(uploadPromises);
     return {
       success: true,
-      urls: results.map(r => r.url),
-      fileIDs: results.map(r => r.fileID),
+      url: results.map(r => r.url),
+      fileID: results.map(r => r.fileID),
       message: '批量上传成功'
     };
   } catch (err) {
@@ -183,7 +183,7 @@ async function uploadFilesToServer(filePaths, type = 'attachment') {
 
 module.exports = {
   uploadImage,
-  uploadImages,
+  uploadImageBatch,
   uploadFileToServer,
-  uploadFilesToServer
+  uploadFileToServerBatch
 }; 
