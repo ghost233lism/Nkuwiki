@@ -208,16 +208,16 @@ Page({
       // 使用API模块获取用户通知状态
       const result = await api.notification.getStatus();
       
-      if (result && result.success) {
+      if (result && result.code === 200) {
         this.setData({
-          isRead: result.data.isRead
+          isRead: !result.data.has_unread
         });
-        console.log("获取通知状态成功:", this.data.isRead);
+        console.debug("获取通知状态成功:", this.data.isRead);
       } else {
-        console.error("获取通知状态失败:", result?.message);
+        console.debug("获取通知状态失败:", result?.message);
       }
     } catch (err) {
-      console.error("获取通知状态失败:", err);
+      console.debug("获取通知状态失败:", err);
     }
   },
 

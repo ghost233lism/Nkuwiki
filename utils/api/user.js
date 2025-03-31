@@ -207,9 +207,18 @@ async function updateUser(userData = {}) {
     // 确保有openid
     userData.openid = openid;
     
-    return await post(API_PREFIXES.wxapp + '/user/update', userData);
+    const result = await post(API_PREFIXES.wxapp + '/user/update', userData);
+    
+    // 如果更新成功，同时更新本地存储的用户信息
+    if (result.code === 200) {
+      // 获取最新的用户信息
+      const userInfo = await getProfile({ openid, isSelf: true });
+      // 不需要处理结果，getProfile已经更新了本地存储
+    }
+    
+    return result;
   } catch (err) {
-    console.error('更新用户信息失败:', err);
+    console.debug('更新用户信息失败:', err);
     return processResponse({
       code: err.code || 500,
       message: '更新用户信息失败',
@@ -313,7 +322,7 @@ async function unfollowUser(followedId) {
  */
 async function checkFollow(params = {}) {
   try {
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
       throw new Error('缺少用户openid');
     }
@@ -429,7 +438,7 @@ async function getToken(openid) {
  */
 async function getUserLike(params = {}) {
   try {
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
       throw new Error('缺少用户openid');
     }

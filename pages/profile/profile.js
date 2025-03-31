@@ -24,7 +24,23 @@ Page({
 
   async onShow() {
     console.debug('个人信息页面显示');
-    await this.getUserProfile();
+    try {
+      // 检查是否需要刷新
+      const needRefresh = getStorage('needRefreshProfile') || false;
+      
+      if (needRefresh) {
+        // 清除缓存以确保获取最新数据
+        removeStorage('userInfo');
+        
+        // 清除刷新标记
+        removeStorage('needRefreshProfile');
+      }
+      
+      // 获取最新用户信息
+      await this.getUserProfile();
+    } catch (err) {
+      console.debug('刷新个人信息失败:', err);
+    }
   },
 
   async getUserProfile() {
@@ -33,11 +49,10 @@ Page({
     try {
       wx.showLoading({ title: '加载中...' });
       const result = await api.user.getProfile({ isSelf: true });
-      wx.hideLoading();
       
       console.debug('获取用户信息:', result);
       
-      if (result?.success && result.data) {
+      if (result?.code === 200 && result.data) {
         const userData = result.data;
         
         // 处理头像
@@ -46,19 +61,23 @@ Page({
         // 更新页面数据
         this.setData({
           userInfo: userData,
-          totalLikes: userData.likes_count || 0
+          totalLikes: userData.like_count || 0
         });
         
         // 更新存储
         setStorage('userInfo', userData);
+        console.debug('用户信息已更新:', userData);
+      } else {
+        console.debug('获取用户信息失败:', result?.message);
       }
     } catch (err) {
       console.debug('加载用户信息失败:', err);
-      wx.hideLoading();
       wx.showToast({
         title: '加载失败',
         icon: 'none'
       });
+    } finally {
+      wx.hideLoading();
     }
   },
 
