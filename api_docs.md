@@ -1739,10 +1739,28 @@ API接口的参数类型规范如下：
 }
 ```
 
-### 6.4 清空搜索历史
+## 六、错误代码
 
-**接口**：`POST /api/wxapp/history/clear`  
-**描述**：清空指定用户的所有搜索历史记录  
+| 状态码 | 说明 |
+|--------|------|
+| 200    | 成功 |
+| 400    | 请求参数错误 |
+| 401    | 未授权，需要登录 |
+| 403    | 禁止访问，无权限 |
+| 404    | 资源不存在 |
+| 422    | 请求验证失败 |
+| 429    | 请求过于频繁 |
+| 500    | 服务器内部错误 |
+| 502    | 网关错误 |
+| 503    | 服务不可用 |
+| 504    | 网关超时 |
+
+## 七、Agent智能体API
+
+### 7.1 与Agent对话
+
+**接口**：`POST /api/agent/chat`  
+**描述**：与AI智能体进行对话，支持普通对话和流式返回  
 **请求体**：
 
 ```json
@@ -1755,75 +1773,99 @@ API接口的参数类型规范如下：
 
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": null,
-  "details": {
-    "message": "清空搜索历史成功"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 6.5 获取热门搜索
-
-**接口**：`GET /api/wxapp/hot`  
-**描述**：获取平台热门搜索关键词  
-**参数**：
-- `limit` - 查询参数，返回结果数量，默认值：10
-
-**响应**：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "keyword": "测试帖子",
-      "count": 100
-    },
-    {
-      "keyword": "测试用户",
-      "count": 80
-    },
-    {
-      "keyword": "测试内容",
-      "count": 50
-    }
+  "query": "南开大学的校训是什么？",
+  "messages": [
+    {"role": "user", "content": "你好"},
+    {"role": "assistant", "content": "你好！我是南开Wiki智能助手，有什么可以帮助你的吗？"}
   ],
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
+  "stream": false,
+  "format": "markdown",
+  "openid": "user_openid"
 }
 ```
 
-## 七、智能体接口
+**参数说明**：
+- `query` - 必填，用户当前的问题
+- `messages` - 可选，对话历史消息列表，按时间顺序排列
+- `stream` - 可选，是否使用流式返回，默认为 false
+- `format` - 可选，返回格式，支持 "text"、"markdown" 或 "html"，默认为 "markdown"
+- `openid` - 可选，用户标识符
 
-本章描述了南开Wiki平台的智能体相关接口，包括状态查询、聊天和RAG（检索增强生成）功能。
-
-### 7.1 获取智能体状态
-
-**接口**：`GET /api/agent/status`  
-**描述**：获取智能体服务运行状态，用于检查智能体服务是否正常运行  
-**参数**：无
-
-**响应**：
+**普通响应**（`stream=false`）：
 
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "status": "ok"
+    "response": "南开大学的校训是"允公允能，日新月异"。这八个字出自《论语》，体现了南开大学追求公能日新的办学理念。",
+    "sources": [
+      {
+        "type": "小程序帖子",
+        "title": "南开大学简介",
+        "content": "南开大学校训为"允公允能，日新月异"，出自《论语》...",
+        "author": "南开百科"
+      }
+    ],
+    "suggested_questions": [
+      "南开大学的校徽有什么含义？",
+      "南开大学是什么时候创立的？",
+      "南开大学的创始人是谁？"
+    ],
+    "format": "markdown"
   },
-  "details": {
-    "message": "获取agent状态成功"
-  },
-  "timestamp": "2023-01-01 12:00:00"
+  "details": null,
+  "timestamp": "2025-03-27 16:47:42"
 }
 ```
 
-### 7.2 智能体聊天
+**流式响应**（`stream=true`）：
+
+当 `stream` 参数设置为 `true` 时，服务器将返回 `text/event-stream` 格式的数据流，客户端需要按照 Server-Sent Events (SSE) 的标准解析响应。每个事件以 `data: ` 开头，最后以 `data: [DONE]` 标记结束。
+
+```
+data: 南开
+data: 大学
+data: 的
+data: 校训
+data: 是
+data: "
+data: 允公
+data: 允能
+data: ，
+data: 日新月异
+data: "
+data: 。
+data: 这
+data: 八个
+data: 字
+data: 出自
+data: 《
+data: 论语
+data: 》
+data: ，
+data: 体现
+data: 了
+data: 南开大学
+data: 追求
+data: 公能
+data: 日新
+data: 的
+data: 办学
+data: 理念
+data: 。
+data: [DONE]
+```
+
+客户端可以累积这些片段以重建完整响应，或实时显示打字效果。
+
+**注意**：
+1. 流式响应会考虑历史消息的上下文，但为了性能考虑，会以更高效的方式处理历史记录
+2. 流式响应不会返回知识源和推荐问题，这些信息只在非流式响应中提供
+3. 流式响应有 90 秒的超时设置，超时后会自动结束流
+4. 在出现错误时，流式响应会返回相应错误信息并结束流
+
+### 7.2 知识库搜索
 
 **接口**：`POST /api/agent/chat`  
 **描述**：与智能体进行自由对话，获取回答  
