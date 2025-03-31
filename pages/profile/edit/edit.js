@@ -8,14 +8,53 @@ Page({
     newStatus: ''     // 用于存储修改后的个性签名
   },
 
-  onLoad() {
-    const userInfo = wx.getStorageSync('userInfo')
-    // 初始化时，将现有信息填入输入框
-    this.setData({ 
-      userInfo,
-      newNickName: userInfo.nickName || '',  // 显示现有昵称
-      newStatus: userInfo.status || ''        // 显示现有个性签名
-    })
+  async onLoad() {
+    wx.showLoading({ title: '加载中...' });
+    
+    try {
+      // 从API获取最新的用户信息
+      const result = await api.user.getProfile({ isSelf: true });
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.message || '获取用户信息失败');
+      }
+      
+      const userInfo = result.data;
+      
+      // 确保头像字段有默认值
+      if (!userInfo.avatar && !userInfo.avatarUrl) {
+        userInfo.avatarUrl = '/assets/icons/default-avatar.png';
+      } else if (userInfo.avatar && !userInfo.avatarUrl) {
+        userInfo.avatarUrl = userInfo.avatar;
+      }
+      
+      // 初始化时，将最新信息填入输入框
+      this.setData({ 
+        userInfo,
+        newNickName: userInfo.nickname || '',  // 使用nickname而不是nickName
+        newStatus: userInfo.bio || ''        // 使用bio而不是status
+      });
+      
+      wx.hideLoading();
+    } catch (err) {
+      console.error('加载用户信息失败：', err);
+      wx.hideLoading();
+      
+      // 发生错误时，尝试使用本地存储的数据作为备用
+      const localUserInfo = wx.getStorageSync('userInfo');
+      if (localUserInfo) {
+        this.setData({ 
+          userInfo: localUserInfo,
+          newNickName: localUserInfo.nickname || '',
+          newStatus: localUserInfo.bio || ''
+        });
+      }
+      
+      wx.showToast({
+        title: '获取用户信息失败',
+        icon: 'none'
+      });
+    }
   },
 
   // 微信用户的头像选择处理
@@ -80,7 +119,7 @@ Page({
 
       // 2. 调用API更新用户信息
       const updateData = {
-        avatarUrl: uploadResult.fileID // 服务器使用avatar字段
+        avatar: uploadResult.fileID // 使用avatar字段，与API文档一致
       };
       
       console.debug('准备调用API更新用户头像URL:', updateData);
@@ -92,10 +131,9 @@ Page({
       
       console.debug('用户头像更新成功');
 
-      // 3. 更新本地存储和页面数据
+      // 3. 只更新页面数据，不更新本地存储
       const userInfo = this.data.userInfo;
       userInfo.avatarUrl = uploadResult.fileID;
-      wx.setStorageSync('userInfo', userInfo);
       this.setData({ userInfo });
 
       wx.hideLoading();
@@ -136,12 +174,12 @@ Page({
       const updateData = {};
       
       // 只有当内容真正发生变化时才更新
-      if (this.data.newNickName !== this.data.userInfo.nickName) {
-        updateData.nickName = this.data.newNickName;
+      if (this.data.newNickName !== this.data.userInfo.nickname) {
+        updateData.nickname = this.data.newNickName; // 使用nickname，API文档有误
       }
 
-      if (this.data.newStatus !== this.data.userInfo.status) {
-        updateData.status = this.data.newStatus;
+      if (this.data.newStatus !== this.data.userInfo.bio) {
+        updateData.bio = this.data.newStatus; // 使用bio而不是status
       }
 
       // 如果没有任何字段需要更新，直接返回
@@ -162,12 +200,7 @@ Page({
       wx.hideLoading();
       
       if (result.success) {
-        // 更新本地存储中已修改的字段
-        const userInfo = this.data.userInfo;
-        if (updateData.nickName) userInfo.nickName = updateData.nickName;
-        if (updateData.status) userInfo.status = updateData.status;
-        wx.setStorageSync('userInfo', userInfo);
-
+        // 成功后刷新个人资料页面
         wx.showToast({
           title: '保存成功',
           icon: 'success'

@@ -29,9 +29,9 @@
         <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
       </view>
       <view class="info-content">
-        <text class="nickname">{{userInfo.nickName}}</text>
+        <text class="nickname">{{userInfo.nickname}}</text>
         <text class="university">{{userInfo.university}}</text>
-        <text class="status">{{userInfo.bio}}</text>
+        <text class="status" wx:if="{{userInfo.bio}}">{{userInfo.bio}}</text>
       </view>
       <view class="edit-btn" bindtap="goToEdit">编辑资料</view>
     </view>

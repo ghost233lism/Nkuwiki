@@ -77,8 +77,26 @@ async function login(userData = {}) {
     
     // 存储用户信息
     if (result.success && result.data) {
-      wx.setStorageSync('userInfo', result.data);
-      console.log('用户信息已存储到本地');
+      // 确保用户信息有默认的昵称和头像
+      const userData = result.data;
+      
+      // 仅设置默认昵称
+      if (!userData.nickname) {
+        userData.nickname = '南开Wiki用户';
+      }
+      
+      // 如果头像为null，设置默认头像
+      if (!userData.avatar) {
+        userData.avatar = '/assets/icons/default-avatar.png';
+      }
+      
+      // 设置前端需要的头像URL格式和ID字段
+      userData.avatarUrl = userData.avatar;
+      userData._id = userData.openid;
+      
+      // 存储更新后的用户信息
+      wx.setStorageSync('userInfo', userData);
+      console.log('处理后的用户信息已存储到本地:', userData);
     }
     
     return {
@@ -108,12 +126,36 @@ async function getProfile(params = {}) {
   try {
     // 如果没有提供openid，则使用本地存储的openid
     const openid = params.openid || wx.getStorageSync('openid');
+    const isSelf = params.isSelf === true;
+    
     if (!openid) {
       throw new Error('缺少用户openid');
     }
     
     // 调用获取用户信息API
     const result = await request.get('/api/wxapp/user/profile', { openid });
+    
+    // 确保用户数据有默认值
+    if (result.success && result.data) {
+      // 如果昵称为null，设置默认昵称
+      if (!result.data.nickname) {
+        result.data.nickname = '南开Wiki用户';
+      }
+      
+      // 如果头像为null，设置默认头像
+      if (!result.data.avatar) {
+        result.data.avatar = '/assets/icons/default-avatar.png';
+      }
+      
+      // 设置前端需要的头像URL格式和ID字段
+      result.data.avatarUrl = result.data.avatar;
+      result.data._id = result.data.openid;
+      
+      // 如果是查询自己的信息，更新本地存储
+      if (isSelf) {
+        wx.setStorageSync('userInfo', result.data);
+      }
+    }
     
     return result;
   } catch (err) {
@@ -168,41 +210,36 @@ async function updateUser(userData = {}) {
     console.log('更新用户信息:', userData);
     
     // 构建更新数据对象
-    const updateData = {
-      openid: openid // 添加openid到请求体
+    const requestData = {
+      openid: openid,
+      ...userData
     };
     
-    // 只包含需要更新的字段，根据API文档映射字段名
-    if (userData.nickName !== undefined) updateData.nick_name = userData.nickName;
-    if (userData.status !== undefined) updateData.bio = userData.status;
-    if (userData.avatarUrl !== undefined) updateData.avatar = userData.avatarUrl;
-    if (userData.gender !== undefined) updateData.gender = userData.gender;
-    if (userData.country !== undefined) updateData.country = userData.country;
-    if (userData.province !== undefined) updateData.province = userData.province;
-    if (userData.city !== undefined) updateData.city = userData.city;
-    if (userData.language !== undefined) updateData.language = userData.language;
-    if (userData.birthday !== undefined) updateData.birthday = userData.birthday;
-    if (userData.wechatId !== undefined) updateData.wechatId = userData.wechatId;
-    if (userData.qqId !== undefined) updateData.qqId = userData.qqId;
-    if (userData.status !== undefined) updateData.status = userData.status;
-    if (userData.extra !== undefined) updateData.extra = userData.extra;
+    // 如果有nick_name字段(API文档错误)，转换为nickname
+    if (requestData.nick_name !== undefined) {
+      requestData.nickname = requestData.nick_name;
+      delete requestData.nick_name;
+    }
+    
+    // 确保不为空
+    if (Object.keys(requestData).length <= 1) {
+      return {
+        success: false,
+        message: '未提供任何更新数据'
+      };
+    }
+    
+    console.log('最终请求数据:', requestData);
     
     // 调用更新用户API
-    const result = await request.post('/api/wxapp/user/update', updateData);
-    
-    // 更新成功后，更新本地存储的用户信息
-    if (result.success && result.data) {
-      const userInfo = wx.getStorageSync('userInfo') || {};
-      wx.setStorageSync('userInfo', { ...userInfo, ...result.data });
-    }
+    const result = await request.post('/api/wxapp/user/update', requestData);
     
     return result;
   } catch (err) {
     console.error('更新用户信息失败:', err);
     return {
-      code: -1,
       success: false,
-      message: '更新失败: ' + (err.message || '未知错误')
+      message: '更新用户信息失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -676,7 +713,7 @@ async function getUserInteractionPosts(params = {}) {
     switch (params.type) {
       case 'like':
         // 获取用户点赞的帖子，使用帖子列表API
-        result = await request.get('/api/wxapp/posts', {
+        result = await request.get('/api/wxapp/post/list', {
           openid: openid,
           limit: limit,
           offset: offset,
@@ -687,7 +724,7 @@ async function getUserInteractionPosts(params = {}) {
       case 'star':
       case 'favorite':
         // 获取用户收藏的帖子，使用帖子列表API
-        result = await request.get('/api/wxapp/posts', {
+        result = await request.get('/api/wxapp/post/list', {
           openid: openid,
           limit: limit,
           offset: offset,

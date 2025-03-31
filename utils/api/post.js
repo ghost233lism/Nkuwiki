@@ -255,7 +255,7 @@ async function deletePost(postId) {
       };
     }
     
-    const result = await request.delete(`/api/wxapp/posts/${postId}`, {}, {}, { openid });
+    const result = await request.delete(`/api/wxapp/post/delete`, { post_id: postId, openid });
     
     return result;
   } catch (err) {
@@ -286,7 +286,7 @@ async function favoritePost(postId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/posts/${postId}/favorite`, {}, {}, { openid });
+    const result = await request.post(`/api/wxapp/post/favorite`, { post_id: postId, openid });
     
     return result;
   } catch (err) {
@@ -317,7 +317,7 @@ async function unfavoritePost(postId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/posts/${postId}/unfavorite`, {}, {}, { openid });
+    const result = await request.post(`/api/wxapp/post/unfavorite`, { post_id: postId, openid });
     
     return result;
   } catch (err) {
@@ -356,22 +356,26 @@ async function getUserPosts(params = {}) {
       offset: ((params.page || 1) - 1) * (params.pageSize || 10)
     };
     
-    // 实际接口只有GET /api/wxapp/posts，通过查询参数筛选用户
-    const result = await request.get('/api/wxapp/posts', requestParams);
+    // 修正API路径为 /api/wxapp/post/list 
+    const result = await request.get('/api/wxapp/post/list', requestParams);
     console.debug('获取用户帖子列表成功:', result);
     
     // 如果只需要数量
     if (params.countOnly) {
       return {
         success: true,
-        count: result.data.total || 0,
+        data: {
+          count: result.data.total || 0
+        },
         message: '获取帖子数量成功'
       };
     } else {
       return {
         success: true,
-        posts: result.data.posts || [],
-        total: result.data.total || 0,
+        data: {
+          posts: result.data.posts || [],
+          total: result.data.total || 0
+        },
         message: '获取帖子列表成功'
       };
     }

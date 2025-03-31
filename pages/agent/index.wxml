@@ -121,7 +121,7 @@
 
     <!-- 默认提示 -->
     <view class="empty-state" wx:if="{{ !loading && !textContent }}">
-      <image class="empty-icon" src="/assets/icons/agent.png" mode="aspectFit" />
+      <image class="empty-icon" src="/assets/icons/default-avatar.png" mode="aspectFit" />
       <text class="empty-text">南开知识助手</text>
       <text class="empty-sub-text">我可以回答关于南开大学的各种问题</text>
       <view class="sample-questions">
