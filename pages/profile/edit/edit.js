@@ -161,23 +161,27 @@ Page({
       }
 
       const result = await api.user.updateProfile(updateData);
-      if (!result?.success) {
+      if (!result?.success && result?.code !== 200) {
         throw new Error(result?.message || '保存失败');
       }
 
-      const userInfo = this.data.userInfo;
-      Object.assign(userInfo, updateData);
-      setStorage('userInfo', userInfo);
-
+      // 设置需要刷新个人资料页面的标记
+      setStorage('needRefreshProfile', true);
+      
       wx.showToast({
         title: '保存成功',
-        icon: 'success',
-        success: () => {
-          setTimeout(() => {
-            wx.navigateBack();
-          }, 1500);
-        }
+        icon: 'success'
       });
+      
+      // 延迟返回上一页，确保提示能显示
+      setTimeout(() => {
+        wx.navigateBack({
+          delta: 1,
+          fail: (err) => {
+            console.debug('返回上一页失败:', err);
+          }
+        });
+      }, 1000);
     } catch (err) {
       console.debug('保存失败:', err);
       wx.showToast({
