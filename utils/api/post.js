@@ -455,6 +455,41 @@ async function unlikePost(postId) {
 }
 
 /**
+ * 获取帖子状态（点赞、收藏等）
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getPostStatus(postId) {
+  try {
+    const openid = wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    // 调用API获取帖子状态
+    const result = await request.get('/api/wxapp/post/status', {
+      post_id: postId,
+      openid
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('获取帖子状态失败:', err);
+    return {
+      success: false,
+      message: '获取帖子状态失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
  * 创建评论
  * @param {Object} commentData - 评论数据
  * @returns {Promise} - 返回Promise对象
@@ -504,5 +539,6 @@ module.exports = {
   getUserPosts,
   likePost,
   unlikePost,
+  getPostStatus,
   createComment
 }; 
