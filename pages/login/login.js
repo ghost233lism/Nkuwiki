@@ -30,11 +30,11 @@ Page({
       wx.hideLoading(); // 确保隐藏任何系统loading
       const res = await app.wxLogin();
       
-      // 判断登录成功
-      if (res && (res.code === 0 || res.success === true)) {
+      // 判断登录成功 - 修复条件，使用code===200判断成功
+      if (res && res.code === 200) {
         // 保存用户信息到本地
         wx.setStorageSync('userInfo', res.data);
-        console.log('登录成功，准备跳转到首页');
+        console.debug('登录成功，准备跳转到首页');
         
         // 显示成功状态
         this.setData({ loginSuccess: true });
@@ -52,7 +52,7 @@ Page({
         throw new Error(res?.message || '登录失败，请重试');
       }
     } catch (err) {
-      console.error('登录失败:', err);
+      console.debug('登录失败:', err);
       getApp().globalData.isLogging = false;
       this.setData({ loginLoading: false, loginSuccess: false });
       

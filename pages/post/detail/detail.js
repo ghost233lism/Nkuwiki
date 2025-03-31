@@ -1,5 +1,14 @@
 const app = getApp()
-const util = require('../../../utils/util');
+const {
+  formatTime,
+  formatRelativeTime,
+  getStorage,
+  setStorage,
+  removeStorage,
+  processCloudUrl,
+  processPostData,
+  getOpenID
+} = require('../../../utils/util');
 // 引入API模块
 const api = require('../../../utils/api/index');
 
@@ -58,46 +67,43 @@ Page({
 
   // 强化加载帖子详情函数
   async loadPostDetail(postId) {
-    console.log("开始加载帖子详情，ID:", postId);
+    console.debug("开始加载帖子详情，ID:", postId);
     
     this.setData({ loading: true });
     
     try {
-      // 使用API模块获取帖子详情
       const result = await api.post.getPostDetail(postId);
       
-      if (!result || !result.success) {
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (!result || result.code !== 200) {
         throw new Error(result?.message || '获取帖子详情失败');
       }
       
-      const post = result.data;  // 修改这里，使用 result.data
-      console.log("获取到的帖子数据:", post);
+      const post = processPostData(result.data);
+      console.debug("获取到的帖子数据:", post);
       
       if (!post) {
         throw new Error('帖子不存在');
       }
       
       // 处理相对时间
-      post.relativeTime = util.formatRelativeTime(post.create_time || post.createTime);
+      post.relativeTime = formatRelativeTime(post.create_time);
       
       // 处理兼容字段
-      post._id = post.id; // 兼容旧代码
-      post.createTime = post.create_time || post.createTime;
-      post.updateTime = post.update_time || post.updateTime;
+      post._id = post.id;
+      post.createTime = post.create_time;
+      post.updateTime = post.update_time;
       post.authorId = post.openid;
-      post.authorName = post.nick_name || '用户';
+      post.authorName = post.nickname || '用户';
       post.authorAvatar = post.avatar || '/assets/icons/default-avatar.png';
       post.likes = post.like_count || 0;
       post.commentCount = post.comment_count || 0;
       post.favoriteCounts = post.favorite_count || 0;
       
       // 处理点赞和收藏状态
-      const OPENID = wx.getStorageSync('openid') || '';
-      post.isLiked = OPENID ? (post.liked_users || []).includes(OPENID) : false;
-      post.isFavorited = OPENID ? (post.favorite_users || []).includes(OPENID) : false;
-      
-      // 加载评论
-      await this.loadComments(postId);
+      const OPENID = getStorage('openid') || '';
+      post.isLiked = post.liked || false;
+      post.isFavorited = post.favorited || false;
       
       this.setData({
         post: post,
@@ -109,7 +115,7 @@ Page({
         title: post.title || '帖子详情'
       });
     } catch (err) {
-      console.error("加载帖子详情失败:", err);
+      console.debug("加载帖子详情失败:", err);
       this.setData({
         loading: false,
         loadError: true,
@@ -148,92 +154,99 @@ Page({
     }
   },
 
+  // 检查登录状态
+  async checkLogin() {
+    const openid = await getOpenID();
+    if (!openid) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return false;
+    }
+    return true;
+  },
+
   // 处理点赞，增加安全检查
   async handleLike() {
     if (!this.data.post || !this.data.post._id) {
       return;
     }
     
-    // 添加重复点击保护
+    // 检查登录状态
+    if (!await this.checkLogin()) {
+      return;
+    }
+    
     if (this.data.isLiking) return;
     this.setData({ isLiking: true });
     
     try {
-      // 立即更新UI，给用户即时反馈
       const newIsLiked = !this.data.post.isLiked;
       const newLikes = this.data.post.likes + (newIsLiked ? 1 : -1);
       
       this.setData({
         'post.isLiked': newIsLiked,
-        'post.likes': newLikes
+        'post.likes': newLikes,
+        'post.like_count': newLikes
       });
       
-      // 立即更新本地存储的点赞状态 - 确保刷新页面后依然记住
-      const likedPosts = wx.getStorageSync('likedPosts') || {};
-      
-      if (newIsLiked) {
-        likedPosts[this.data.post._id] = true;
-      } else {
-        delete likedPosts[this.data.post._id];
-      }
-      
-      wx.setStorageSync('likedPosts', likedPosts);
-      console.log("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", this.data.post._id);
-      
-      // 根据操作类型调用不同的API
       let result;
       if (newIsLiked) {
-        // 点赞操作
         result = await api.post.likePost(this.data.post._id);
       } else {
-        // 取消点赞操作
         result = await api.post.unlikePost(this.data.post._id);
       }
       
-      // 处理API返回结果
-      if (!result || !result.success) {
-        // 请求失败处理
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (!result || result.code !== 200) {
         if (result && result.message && (
           result.message.includes('已经点赞') || 
           result.message.includes('未点赞')
         )) {
-          // 状态不一致，需要刷新帖子状态
-          console.log('点赞状态不一致，重新获取帖子状态');
+          console.debug('点赞状态不一致，重新获取帖子状态');
           this.checkPostStatus();
-        } else {
-          // 一般错误，回滚UI状态
+        } else if (result && result.message && (
+          result.message.includes('未登录') || 
+          result.message.includes('登录状态') ||
+          result.message.includes('token') ||
+          result.message.includes('认证')
+        )) {
+          // 登录状态失效，重新检查登录
+          if (!await this.checkLogin()) {
+            return;
+          }
+          
           this.setData({
             'post.isLiked': !newIsLiked,
-            'post.likes': this.data.post.likes - (newIsLiked ? 1 : -1)
+            'post.likes': this.data.post.likes - (newIsLiked ? 1 : -1),
+            'post.like_count': this.data.post.likes - (newIsLiked ? 1 : -1)
           });
-          
-          // 回滚本地存储
-          if (!newIsLiked) {
-            likedPosts[this.data.post._id] = true;
-          } else {
-            delete likedPosts[this.data.post._id];
-          }
-          wx.setStorageSync('likedPosts', likedPosts);
+        } else {
+          this.setData({
+            'post.isLiked': !newIsLiked,
+            'post.likes': this.data.post.likes - (newIsLiked ? 1 : -1),
+            'post.like_count': this.data.post.likes - (newIsLiked ? 1 : -1)
+          });
           
           throw new Error(result?.message || '操作失败');
         }
       } else {
-        // 成功时显示轻量级提示
         wx.showToast({
           title: newIsLiked ? '已点赞' : '已取消',
           icon: 'none',
           duration: 1000
         });
         
-        // 如果API返回了点赞数，使用API返回的数据更新UI
-        if (result.data && result.data.like_count !== undefined) {
+        if (result.details && result.details.like_count !== undefined) {
           this.setData({
-            'post.likes': result.data.like_count
+            'post.likes': result.details.like_count,
+            'post.like_count': result.details.like_count
           });
         }
       }
     } catch (err) {
-      console.error('点赞操作失败:', err);
+      console.debug('点赞操作失败:', err);
       wx.showToast({
         title: '操作失败',
         icon: 'none'
@@ -249,7 +262,8 @@ Page({
       if (!this.data.post || !this.data.post._id) return;
       
       const result = await api.post.getPostStatus(this.data.post._id);
-      if (result && result.success && result.data) {
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (result && result.code === 200 && result.data) {
         this.setData({
           'post.isLiked': result.data.is_liked,
           'post.likes': result.data.like_count,
@@ -258,8 +272,8 @@ Page({
         });
         
         // 更新本地存储
-        const likedPosts = wx.getStorageSync('likedPosts') || {};
-        const favoritePosts = wx.getStorageSync('favoritePosts') || {};
+        const likedPosts = getStorage('likedPosts') || {};
+        const favoritePosts = getStorage('favoritePosts') || {};
         
         if (result.data.is_liked) {
           likedPosts[this.data.post._id] = true;
@@ -273,11 +287,11 @@ Page({
           delete favoritePosts[this.data.post._id];
         }
         
-        wx.setStorageSync('likedPosts', likedPosts);
-        wx.setStorageSync('favoritePosts', favoritePosts);
+        setStorage('likedPosts', likedPosts);
+        setStorage('favoritePosts', favoritePosts);
       }
     } catch (err) {
-      console.error('获取帖子状态失败:', err);
+      console.debug('获取帖子状态失败:', err);
     }
   },
 
@@ -287,86 +301,80 @@ Page({
       return;
     }
     
-    // 添加重复点击保护
+    // 检查登录状态
+    if (!await this.checkLogin()) {
+      return;
+    }
+    
     if (this.data.isFavoriting) return;
     this.setData({ isFavoriting: true });
     
     try {
-      // 立即更新UI，给用户即时反馈
       const newIsFavorited = !this.data.post.isFavorited;
       const newFavoriteCount = this.data.post.favoriteCounts + (newIsFavorited ? 1 : -1);
       
       this.setData({
         'post.isFavorited': newIsFavorited,
-        'post.favoriteCounts': newFavoriteCount
+        'post.favoriteCounts': newFavoriteCount,
+        'post.favorite_count': newFavoriteCount
       });
       
-      // 立即更新本地存储的收藏状态 - 确保刷新页面后依然记住
-      const favoritePosts = wx.getStorageSync('favoritePosts') || {};
-      
-      if (newIsFavorited) {
-        favoritePosts[this.data.post._id] = true;
-      } else {
-        delete favoritePosts[this.data.post._id];
-      }
-      
-      wx.setStorageSync('favoritePosts', favoritePosts);
-      console.log("更新本地收藏状态:", newIsFavorited ? "已收藏" : "取消收藏", this.data.post._id);
-      
-      // 根据操作类型调用不同的API
       let result;
       if (newIsFavorited) {
-        // 收藏操作
         result = await api.post.favoritePost(this.data.post._id);
       } else {
-        // 取消收藏操作
         result = await api.post.unfavoritePost(this.data.post._id);
       }
       
-      // 处理API返回结果
-      if (!result || !result.success) {
-        // 请求失败处理
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (!result || result.code !== 200) {
         if (result && result.message && (
           result.message.includes('已收藏') || 
           result.message.includes('未收藏')
         )) {
-          // 状态不一致，需要刷新帖子状态
-          console.log('收藏状态不一致，重新获取帖子状态');
+          console.debug('收藏状态不一致，重新获取帖子状态');
           this.checkPostStatus();
-        } else {
-          // 一般错误，回滚UI状态
+        } else if (result && result.message && (
+          result.message.includes('未登录') || 
+          result.message.includes('登录状态') ||
+          result.message.includes('token') ||
+          result.message.includes('认证')
+        )) {
+          // 登录状态失效，重新检查登录
+          if (!await this.checkLogin()) {
+            return;
+          }
+          
           this.setData({
             'post.isFavorited': !newIsFavorited,
-            'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
+            'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1),
+            'post.favorite_count': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
           });
-          
-          // 恢复本地存储
-          if (newIsFavorited) {
-            delete favoritePosts[this.data.post._id];
-          } else {
-            favoritePosts[this.data.post._id] = true;
-          }
-          wx.setStorageSync('favoritePosts', favoritePosts);
+        } else {
+          this.setData({
+            'post.isFavorited': !newIsFavorited,
+            'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1),
+            'post.favorite_count': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
+          });
           
           throw new Error(result?.message || '操作失败');
         }
       } else {
-        // 成功时显示轻量级提示
         wx.showToast({
           title: newIsFavorited ? '已收藏' : '已取消收藏',
           icon: 'none',
           duration: 1000
         });
         
-        // 如果API返回了收藏数，使用API返回的数据更新UI
-        if (result.data && result.data.favorite_count !== undefined) {
+        if (result.details && result.details.favorite_count !== undefined) {
           this.setData({
-            'post.favoriteCounts': result.data.favorite_count
+            'post.favoriteCounts': result.details.favorite_count,
+            'post.favorite_count': result.details.favorite_count
           });
         }
       }
     } catch (err) {
-      console.error('收藏操作失败:', err);
+      console.debug('收藏操作失败:', err);
       wx.showToast({
         title: '操作失败',
         icon: 'none'
@@ -520,12 +528,7 @@ Page({
     }
     
     // 检查登录状态
-    const openid = wx.getStorageSync('openid');
-    if (!openid) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
+    if (!await this.checkLogin()) {
       return;
     }
     
@@ -541,30 +544,30 @@ Page({
     this.setData({ isSubmitting: true });
     
     try {
-      // 准备评论数据
       const commentData = {
-        openid: openid,
+        openid: await getOpenID(),
         post_id: this.data.postId,
         content: content
       };
       
-      // 如果是回复评论，添加parent_id
       if (this.data.replyToCommentId) {
         commentData.parent_id = this.data.replyToCommentId;
       }
       
-      // 获取用户信息
-      const userInfo = wx.getStorageSync('userInfo');
+      const userInfo = getStorage('userInfo');
       if (userInfo) {
-        commentData.nick_name = userInfo.nickName || userInfo.nick_name;
+        commentData.nickname = userInfo.nickName || userInfo.nickname;
         commentData.avatar = userInfo.avatarUrl || userInfo.avatar;
       }
       
-      // 上传评论
+      console.debug('提交评论数据:', commentData);
+      
       const result = await api.post.createComment(commentData);
       
-      if (result && result.success) {
-        // 清空评论输入
+      console.debug('评论提交结果:', result);
+      
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (result && result.code === 200) {
         this.setData({
           commentText: '',
           commentImage: [],
@@ -573,21 +576,39 @@ Page({
           commentPlaceholder: '写下你的评论(不超过200字)...'
         });
         
-        // 刷新评论列表
         await this.loadComments(this.data.postId, true);
+        
+        this.setData({
+          'post.commentCount': (this.data.post.commentCount || 0) + 1,
+          'post.comment_count': (this.data.post.comment_count || 0) + 1
+        });
         
         wx.showToast({
           title: '评论成功',
           icon: 'success'
         });
+        
+        console.debug('评论成功，已刷新评论列表');
       } else {
-        wx.showToast({
-          title: result.message || '评论失败，请重试',
-          icon: 'none'
-        });
+        if (result && result.message && (
+          result.message.includes('未登录') || 
+          result.message.includes('登录状态') ||
+          result.message.includes('token') ||
+          result.message.includes('认证')
+        )) {
+          // 登录状态失效，重新检查登录
+          if (!await this.checkLogin()) {
+            return;
+          }
+        } else {
+          wx.showToast({
+            title: result.message || '评论失败，请重试',
+            icon: 'none'
+          });
+        }
       }
     } catch (err) {
-      console.error('提交评论失败:', err);
+      console.debug('提交评论失败:', err);
       wx.showToast({
         title: '提交评论失败，请重试',
         icon: 'none'
@@ -615,20 +636,21 @@ Page({
   // 获取用户信息
   async getUserInfo() {
     try {
-      const userInfo = wx.getStorageSync('userInfo');
+      const userInfo = getStorage('userInfo');
       if (userInfo) {
         return userInfo;
       }
       
       // 使用API模块获取用户信息
       const loginResult = await api.user.login();
-      if (loginResult.code === 0 && loginResult.data) {
+      // 修改判断条件，使用code === 200检查成功
+      if (loginResult.code === 200 && loginResult.data) {
         return loginResult.data;
       }
       
       return {};
     } catch (err) {
-      console.error('获取用户信息失败:', err);
+      console.debug('获取用户信息失败:', err);
       return {};
     }
   },
@@ -671,53 +693,55 @@ Page({
     try {
       this.setData({ commentLoading: true });
       
-      const page = refresh ? 1 : (this.data.commentPage || 1);
-      const pageSize = this.data.commentPageSize || 20;
+      // 分页参数
+      const limit = 20;
+      const offset = refresh ? 0 : (this.data.comment?.length || 0);
+      
+      console.debug(`加载评论，参数: postId=${postId}, limit=${limit}, offset=${offset}`);
       
       // 使用API模块获取评论列表
-      const result = await api.post.getPostComments(postId, {
-        page: page,
-        pageSize: pageSize
-      });
+      const result = await api.post.getPostCommentList(postId, { limit, offset });
       
-      if (!result || !result.success) {
-        throw new Error('获取评论失败');
+      console.debug("评论列表API返回结果:", result);
+      
+      // 修改判断条件，使用result.code检查，200表示成功
+      if (!result || result.code !== 200) {
+        throw new Error(result?.message || '获取评论失败');
       }
       
-      const comment = result.comment || [];
-      console.log("获取到的评论数据:", comment);
-      
       // 处理评论数据
-      const processedComment = comment.map(comment => {
-        return {
-          ...comment,
-          _id: comment.id, // 兼容旧代码
-          createTime: comment.create_time || comment.createTime,
-          author: {
-            openid: comment.openid,
-            nickName: comment.nick_name || '用户',
-            avatarUrl: comment.avatar || '/assets/icons/default-avatar.png'
-          },
-          hasImages: comment.image && comment.image.length > 0,
-          relativeTime: util.formatRelativeTime(comment.create_time || comment.createTime),
-          // 处理回复预览
-          reply_preview: comment.reply_preview || [],
-          reply_count: comment.reply_count || 0
-        };
+      const processedComments = (result.data || []).map(comment => ({
+        ...comment,
+        _id: comment.id,
+        createTime: comment.create_time,
+        relativeTime: formatRelativeTime(comment.create_time),
+        reply_preview: comment.reply_preview || [],
+        reply_count: comment.reply_count || 0,
+        liked: comment.liked || false,
+        nickname: comment.nickname || '用户',
+        avatar: comment.avatar || '/assets/icons/default-avatar.png'
+      }));
+      
+      // 更新UI
+      this.setData({
+        comment: refresh ? processedComments : [...(this.data.comment || []), ...processedComments],
+        commentHasMore: result.pagination.has_more,
+        commentLoading: false,
+        commentTotal: result.pagination.total
       });
       
-      this.setData({
-        comment: refresh ? processedComment : [...this.data.comment, ...processedComment],
-        commentPage: page + 1,
-        commentHasMore: comment.length === pageSize,
-        commentLoading: false,
-        commentTotal: result.total || 0
-      });
+      console.debug(`评论列表已更新，当前共有${this.data.comment.length}条评论，总共${result.pagination.total}条`);
     } catch (err) {
-      console.error("加载评论失败:", err);
+      console.debug("加载评论失败:", err);
       this.setData({ 
         commentLoading: false,
         commentLoadError: true
+      });
+      
+      wx.showToast({
+        title: err.message || '加载评论失败',
+        icon: 'none',
+        duration: 2000
       });
     }
   },

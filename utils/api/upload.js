@@ -1,189 +1,110 @@
 /**
- * 上传相关API封装
+ * 统一上传功能封装
+ * 合并原upload.js和uploadHelper.js功能
  */
 
-const request = require('../request');
+const { post, get, API_PREFIXES } = require('../request');
+const { getStorage } = require('../util');
 
-/**
- * 上传图片到云存储
- * @param {string} filePath - 临时文件路径
- * @param {string} cloudPath - 云存储路径
- * @returns {Promise} - 返回Promise对象
- */
-function uploadImage(filePath, cloudPath) {
-  return new Promise((resolve, reject) => {
-    // 调用云函数，上传文件到云存储
-    wx.cloud.uploadFile({
-      cloudPath: cloudPath || `image/${Date.now()}-${Math.floor(Math.random() * 10000)}.${filePath.match(/\.([^\.]+)$/)[1]}`,
-      filePath: filePath,
-      success: res => {
-        console.debug('上传图片成功:', res);
-        resolve({
-          success: true,
-          fileID: res.fileID,
-          cloudPath: cloudPath,
-          message: '上传成功'
-        });
-      },
-      fail: err => {
-        console.error('上传图片失败:', err);
-        reject({
-          success: false,
-          message: '上传失败: ' + (err.errMsg || '未知错误')
-        });
-      }
+// 核心上传方法
+const core = {
+  /**
+   * 选择媒体文件
+   * @param {Object} options - 配置项 {count, type, source}
+   * @returns {Promise<Array>} 临时文件路径数组
+   */
+  choose: (options = {}) => new Promise((resolve, reject) => {
+    wx.chooseMedia({
+      count: options.count || 9,
+      mediaType: [options.type === 'video' ? 'video' : 'image'],
+      sourceType: options.source || ['album', 'camera'],
+      sizeType: ['original', 'compressed'],
+      success: res => resolve(res.tempFiles.map(f => f.tempFilePath)),
+      fail: reject
     });
-  });
-}
+  }),
 
-/**
- * 批量上传图片到云存储
- * @param {Array<string>} filePath - 临时文件路径数组
- * @param {string} cloudPathPrefix - 云存储路径前缀
- * @returns {Promise} - 返回Promise对象
- */
-async function uploadImageBatch(filePath, cloudPathPrefix = 'image') {
-  if (!filePath || !filePath.length) {
-    return {
-      success: false,
-      message: '没有要上传的图片'
-    };
-  }
+  /**
+   * 服务器上传（带token验证）
+   * @param {string} filePath 临时路径
+   * @param {string} type 文件类型
+   * @returns {Promise<{url: string}>}
+   */
+  serverUpload: async (filePath, type = 'image') => {
+    const openid = getStorage('openid');
+    if (!openid) throw new Error('USER_NOT_LOGIN');
 
-  try {
-    const uploadPromises = filePath.map((path, index) => {
-      const ext = path.match(/\.([^\.]+)$/)[1] || 'png';
-      const cloudPath = `${cloudPathPrefix}/${Date.now()}-${index}-${Math.floor(Math.random() * 10000)}.${ext}`;
-      return uploadImage(path, cloudPath);
-    });
+    // 获取上传token
+    const tokenRes = await get(API_PREFIXES.wxapp + '/upload/token');
+    if (!tokenRes.success) throw new Error('GET_TOKEN_FAIL');
 
-    const results = await Promise.all(uploadPromises);
-    return {
-      success: true,
-      fileID: results.map(r => r.fileID),
-      message: '批量上传成功'
-    };
-  } catch (err) {
-    console.error('批量上传图片失败:', err);
-    return {
-      success: false,
-      message: '批量上传失败: ' + (err.message || '未知错误')
-    };
-  }
-}
-
-/**
- * 上传文件到服务器
- * @param {string} filePath - 临时文件路径
- * @param {string} type - 文件类型，如avatar, post_image
- * @returns {Promise} - 返回Promise对象
- */
-function uploadFileToServer(filePath, type = 'attachment') {
-  return new Promise((resolve, reject) => {
-    const openid = wx.getStorageSync('openid');
-    if (!openid) {
-      reject({
-        success: false,
-        message: '用户未登录'
-      });
-      return;
-    }
-
-    // 获取服务器上传token
-    request.get('/api/wxapp/upload/token', { openid }).then(tokenRes => {
-      const uploadToken = tokenRes.data.token;
-      
-      // 上传文件到服务器
+    // 执行上传
+    return new Promise((resolve, reject) => {
       wx.uploadFile({
-        url: 'https://nkuwiki.com/api/wxapp/upload',
+        url: `${API_BASE_URL}/api${buildApiPath(WXAPP_PREFIX, '/upload')}`,
         filePath,
         name: 'file',
-        formData: {
-          type,
-          token: uploadToken
-        },
-        header: {
-          'X-User-OpenID': openid
-        },
+        formData: { type, token: tokenRes.data.token },
+        header: { 'X-User-OpenID': openid },
         success: res => {
           try {
-            const result = JSON.parse(res.data);
-            if (result.success) {
-              resolve({
-                success: true,
-                url: result.url,
-                fileID: result.fileID,
-                message: '上传成功'
-              });
-            } else {
-              reject({
-                success: false,
-                message: result.message || '上传失败'
-              });
-            }
-          } catch (error) {
-            reject({
-              success: false,
-              message: '解析上传结果失败: ' + error.message
-            });
+            const data = JSON.parse(res.data);
+            data.success ? resolve(data) : reject(data);
+          } catch(e) {
+            reject(new Error('INVALID_JSON_RESPONSE'));
           }
         },
-        fail: err => {
-          console.error('上传文件失败:', err);
-          reject({
-            success: false,
-            message: '上传失败: ' + (err.errMsg || '未知错误')
-          });
-        }
-      });
-    }).catch(err => {
-      console.error('获取上传token失败:', err);
-      reject({
-        success: false,
-        message: '获取上传token失败: ' + (err.message || '未知错误')
+        fail: err => reject(new Error(`UPLOAD_FAIL: ${err.errMsg}`))
       });
     });
-  });
-}
+  },
 
-/**
- * 批量上传文件到服务器
- * @param {Array<string>} filePath - 临时文件路径数组
- * @param {string} type - 文件类型，如avatar, post_image
- * @returns {Promise} - 返回Promise对象
- */
-async function uploadFileToServerBatch(filePath, type = 'attachment') {
-  if (!filePath || !filePath.length) {
-    return {
-      success: false,
-      message: '没有要上传的文件'
-    };
-  }
-
-  try {
-    const uploadPromises = filePath.map(path => {
-      return uploadFileToServer(path, type);
+  /**
+   * 云存储直传（优化版）
+   * @param {string} filePath 临时路径
+   * @param {string} cloudPath 云路径
+   * @returns {Promise<{fileID: string}>}
+   */
+  cloudUpload: (filePath, cloudPath) => new Promise((resolve, reject) => {
+    const extMatch = filePath.match(/\.([^\.]+)$/);
+    const ext = extMatch ? extMatch[1] : 'jpg';
+    const finalCloudPath = cloudPath || `direct_upload/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+    
+    wx.cloud.uploadFile({
+      cloudPath: finalCloudPath,
+      filePath,
+      success: res => resolve({ 
+        fileID: res.fileID, 
+        cloudPath: finalCloudPath,
+        url: `https://${res.fileID}.tcb.qcloud.la/${finalCloudPath}`
+      }),
+      fail: err => reject(new Error(`云上传失败: ${err.errMsg}`))
     });
+  }),
+};
 
-    const results = await Promise.all(uploadPromises);
-    return {
-      success: true,
-      url: results.map(r => r.url),
-      fileID: results.map(r => r.fileID),
-      message: '批量上传成功'
-    };
-  } catch (err) {
-    console.error('批量上传文件失败:', err);
-    return {
-      success: false,
-      message: '批量上传失败: ' + (err.message || '未知错误')
-    };
-  }
-}
+// 高级封装方法
+const uploader = {
+  // 选择并上传（类型自动判断）
+  chooseAndUpload: async (options = {}) => {
+    const paths = await core.choose(options);
+    return this.server.batch(paths, options.type);
+  },
+
+  // 服务器上传相关
+  server: {
+    single: (path, type) => core.serverUpload(path, type),
+    batch: (paths, type) => Promise.all(paths.map(p => core.serverUpload(p, type))),
+    getToken: () => get(buildApiPath('wxapp', '/upload/token'))
+  },
+
+  // 添加云存储上传方式
+  cloud: {
+    single: core.cloudUpload,
+    batch: (paths) => Promise.all(paths.map(p => core.cloudUpload(p)))
+  },
+};
 
 module.exports = {
-  uploadImage,
-  uploadImageBatch,
-  uploadFileToServer,
-  uploadFileToServerBatch
+  uploader
 }; 

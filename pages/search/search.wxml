@@ -1,88 +1,163 @@
 <!-- 美化的搜索页面 -->
 <view class="page-container">
+	<!-- 搜索区域 -->
 	<view class="search-container">
 		<view class="search-box" hover-class="search-box-hover">
-			<image class="search-icon" src="/assets/icons/index/plus.png" mode="aspectFit" bindtap="uploadFile" />
+			<image class="search-icon" src="/assets/icons/search/search.png" mode="aspectFit" />
 			<input
 				class="search-input"
-				placeholder="探索关于南开的一切，或者贡献您的资料"
+				placeholder="探索关于南开的一切"
 				placeholder-style="color: #999;"
 				value="{{ searchValue }}"
-				bindinput="onInputChange"
+				bindinput="onSearchInput"
 				bindconfirm="handleSearch"
 				focus="{{ false }}"
 			/>
-			<image class="mic-icon" src="/assets/icons/search/voice.png" mode="aspectFit" bindtap="startVoiceSearch" />
-		</view>
-		<!-- 分类按钮区域 -->
-		<view class="category-buttons">
-			<view class="category-item">
-				<image class="category-icon" src="/assets/icons/search/website.png" mode="aspectFit" />
-				<text class="category-text">网站</text>
-			</view>
-			<view class="category-item">
-				<image class="category-icon" src="/assets/icons/search/wechat.png" mode="aspectFit" />
-				<text class="category-text">微信</text>
-			</view>
-			<view class="category-item">
-				<image class="category-icon" src="/assets/icons/search/market.png" mode="aspectFit" />
-				<text class="category-text">集市</text>
-			</view>
-			<view class="category-item">
-				<image class="category-icon" src="/assets/icons/search/douyin.png" mode="aspectFit" />
-				<text class="category-text">抖音</text>
+			<view class="search-actions">
+				<image 
+					wx:if="{{ searchValue }}" 
+					class="clear-icon" 
+					src="/assets/icons/close.png" 
+					mode="aspectFit" 
+					bindtap="clearSearchInput"
+				/>
+				<image 
+					class="voice-icon {{ isRecording ? 'recording' : '' }}" 
+					src="/assets/icons/search/voice.png" 
+					mode="aspectFit"
+					bindtouchstart="startVoiceSearch"
+					bindtouchend="stopVoiceSearch"
+				/>
 			</view>
 		</view>
-		<!-- 贡献提示区域 -->
-		<view class="contribution-tip">
-			<image class="token-icon" src="/assets/icons/search/token.png" mode="aspectFit" />
-			<text class="tip-text">今日您已贡献了10条知识，获取1000token!</text>
+
+		<!-- 分类切换 -->
+		<scroll-view class="category-list" scroll-x enable-flex>
+			<view 
+				class="category-item {{ currentCategory === item.id ? 'active' : '' }}"
+				wx:for="{{ categories }}"
+				wx:key="id"
+				bindtap="switchCategory"
+				data-category="{{ item.id }}"
+			>
+				<image class="category-icon" src="{{ item.icon }}" mode="aspectFit" />
+				<text class="category-name">{{ item.name }}</text>
+			</view>
+		</scroll-view>
+
+		<!-- 搜索历史 -->
+		<view class="search-history" wx:if="{{ !searchValue && searchHistory.length > 0 }}">
+			<view class="history-header">
+				<text class="history-title">搜索历史</text>
+				<text class="clear-history" bindtap="clearSearchHistory">清空</text>
+			</view>
+			<view class="history-list">
+				<view 
+					class="history-item"
+					wx:for="{{ searchHistory }}"
+					wx:key="*this"
+					bindtap="onHistoryItemTap"
+					data-keyword="{{ item }}"
+				>
+					<image class="history-icon" src="/assets/icons/search/history.png" mode="aspectFit" />
+					<text class="history-text">{{ item }}</text>
+				</view>
+			</view>
 		</view>
 	</view>
-	<!-- 结果区域 -->
+
+	<!-- 搜索结果区域 -->
 	<view class="content-area">
-		<!-- 加载指示器 -->
-		<view class="loading-wrapper" wx:if="{{ loading && !textContent }}">
+		<!-- 加载中 -->
+		<view class="loading-wrapper" wx:if="{{ loading }}">
 			<view class="loading-dots">
 				<view class="loading-dot"></view>
 				<view class="loading-dot"></view>
 				<view class="loading-dot"></view>
 			</view>
-			<text class="loading-text">南开小知正在思考</text>
+			<text class="loading-text">搜索中...</text>
 		</view>
-		<!-- 流式响应结果 -->
-		<view class="result-container" wx:if="{{ textContent }}">
-			<!-- 纯文本内容 -->
-			<scroll-view scroll-y class="text-content" wx:if="{{ usePlainText }}">
-				<text selectable="true">{{ textContent }}</text>
-				<view wx:if="{{ isStreaming }}" class="typing-cursor"></view>
-			</scroll-view>
-			<!-- 美化的富文本内容 -->
-			<scroll-view scroll-y class="text-content" wx:else>
-				<towxml nodes="{{ richTextContent }}" openTyper="{{ true }}" speed="{{ 20 }}" />
-				<view wx:if="{{ isStreaming && !enableTyper }}" class="typing-cursor"></view>
-			</scroll-view>
-			<!-- 底部操作按钮 -->
-			<view class="result-actions">
-				<view class="action-btn" hover-class="action-btn-hover" bindtap="clearResult">
-					<image class="action-icon" src="/assets/icons/eraser.png" mode="aspectFit" />
-					<text>清空</text>
-				</view>
-				<view class="action-btn" hover-class="action-btn-hover" bindtap="copyResult">
-					<image class="action-icon" src="/assets/icons/copy.png" mode="aspectFit" />
-					<text>复制内容</text>
-				</view>
-				<view class="action-btn" hover-class="action-btn-hover" bindtap="togglePlainTextMode">
-					<image class="action-icon" src="/assets/icons/txt.png" mode="aspectFit" />
-					<text>{{ usePlainText ? '富文本模式' : '纯文本模式' }}</text>
+
+		<!-- 搜索结果列表 -->
+		<block wx:elif="{{ searchResults.length > 0 }}">
+			<view class="result-list">
+				<view 
+					class="result-item"
+					wx:for="{{ searchResults }}"
+					wx:key="id"
+					bindtap="goToDetail"
+					data-post="{{ item }}"
+				>
+					<!-- 来源标签 -->
+					<view class="result-header">
+						<view class="source-tag {{ item.category }}-tag">
+							<image class="source-icon" src="/assets/icons/search/{{ item.category }}.png" mode="aspectFit" />
+							<text>{{ item.category_name }}</text>
+						</view>
+						<text class="result-time">{{ item.created_at }}</text>
+					</view>
+
+					<!-- 标题和摘要 -->
+					<view class="result-title">{{ item.title }}</view>
+					<view class="result-excerpt">{{ item.excerpt }}</view>
+
+					<!-- 图片预览 -->
+					<view class="image-preview" wx:if="{{ item.images.length > 0 }}">
+						<image 
+							class="preview-img"
+							wx:for="{{ item.images }}"
+							wx:key="*this"
+							wx:for-item="image"
+							src="{{ image }}"
+							mode="aspectFill"
+						/>
+					</view>
+
+					<!-- 底部信息 -->
+					<view class="result-footer">
+						<view class="result-stats">
+							<text class="stat-item">
+								<text class="stat-count">{{ item.view_count }}</text> 浏览
+							</text>
+							<text class="stat-item">
+								<text class="stat-count">{{ item.like_count }}</text> 点赞
+							</text>
+						</view>
+						<view class="result-badges" wx:if="{{ item.badges.length > 0 }}">
+							<text 
+								class="badge {{ badge.type }}-badge"
+								wx:for="{{ item.badges }}"
+								wx:key="type"
+								wx:for-item="badge"
+							>{{ badge.text }}</text>
+						</view>
+					</view>
 				</view>
 			</view>
+
+			<!-- 加载更多 -->
+			<view class="load-more" wx:if="{{ pagination.hasMore }}">
+				<text wx:if="{{ !loading }}">上拉加载更多</text>
+				<view wx:else class="loading-dots">
+					<view class="loading-dot"></view>
+					<view class="loading-dot"></view>
+					<view class="loading-dot"></view>
+				</view>
+			</view>
+		</block>
+
+		<!-- 无搜索结果 -->
+		<view class="empty-state" wx:elif="{{ searchValue && !loading }}">
+			<image class="empty-icon" src="/assets/icons/search/empty.png" mode="aspectFit" />
+			<text class="empty-text">暂无相关内容</text>
+			<text class="empty-sub-text">换个关键词试试吧</text>
 		</view>
-		<!-- 默认提示 -->
-		<view class="empty-state" wx:if="{{ !loading && !textContent }}">
+
+		<!-- 默认状态 -->
+		<view class="empty-state" wx:elif="{{ !searchValue && !loading }}">
 			<image class="empty-icon" src="/assets/icons/search/search.png" mode="aspectFit" />
-			<text class="empty-text">有问题随时探索</text>
-			<text class="empty-sub-text">南开百科随时为您解答</text>
+			<text class="empty-text">探索南开</text>
+			<text class="empty-sub-text">输入关键词开始搜索</text>
 		</view>
 	</view>
 </view>

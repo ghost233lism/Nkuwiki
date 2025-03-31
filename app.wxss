@@ -9,12 +9,6 @@
   box-sizing: border-box;
 } 
 
-/* 添加以下样式来控制底部导航栏图标大小 */
-.tab-bar-icon {
-  width: 48rpx;
-  height: 48rpx;
-} 
-
 /* 通用图标样式基础类 */
 .icon {
   width: 40rpx;

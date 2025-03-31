@@ -1,4 +1,8 @@
 // 我的帖子页面
+const {
+  getStorage,
+  formatRelativeTime
+} = require('../../../utils/util');
 const api = require('../../../utils/api/index');
 
 Page({
@@ -11,76 +15,64 @@ Page({
   },
 
   onLoad() {
-    console.log('myPosts页面onLoad触发')
-    this.loadPosts()
+    console.debug('加载我的帖子页面');
+    this.loadPosts();
   },
   
   // 加载我的帖子列表
   async loadPosts(refresh = false) {
-    if (this.data.loading) return
+    if (this.data.loading) return;
     
     try {
-      this.setData({ loading: true })
+      this.setData({ loading: true });
       
-      const page = refresh ? 1 : this.data.page
-      const userInfo = wx.getStorageSync('userInfo')
-      
-      console.log('当前用户信息:', userInfo)
+      const page = refresh ? 1 : this.data.page;
+      const userInfo = getStorage('userInfo');
+      if (!userInfo) throw new Error('未登录');
       
       const result = await api.post.getUserPosts({
         page,
         pageSize: this.data.pageSize,
-        // 传入用户ID以确保查询正确
-        openid: userInfo._id || userInfo.openid
+        openid: userInfo.openid
       });
       
-      console.log('API返回结果:', result)
+      console.debug('获取帖子列表:', result);
       
-      if (result && result.success) {
-        // 处理帖子数据，添加格式化时间
-        const posts = result.posts.map(post => {
-          return {
-            ...post,
-            formattedTime: this.formatTime(post.createTime)
-          }
-        })
-        
-        console.log('处理后的帖子数据:', posts)
+      if (result?.success) {
+        const posts = result.posts.map(post => ({
+          ...post,
+          formattedTime: formatRelativeTime(post.createTime)
+        }));
         
         this.setData({
           posts: refresh ? posts : [...this.data.posts, ...posts],
           page: page + 1,
-          hasMore: posts.length === this.data.pageSize,
-          loading: false
-        })
-        
-        console.log('更新页面数据完成, 总条数:', this.data.posts.length)
+          hasMore: posts.length === this.data.pageSize
+        });
       } else {
-        throw new Error(result?.message || '加载失败')
+        throw new Error(result?.message || '加载失败');
       }
     } catch (err) {
-      console.error('加载帖子失败：', err)
+      console.debug('加载失败:', err);
       wx.showToast({
-        title: '加载失败',
+        title: err.message || '加载失败',
         icon: 'none'
-      })
-      this.setData({ loading: false })
+      });
+    } finally {
+      this.setData({ loading: false });
     }
   },
   
   // 下拉刷新
-  onPullDownRefresh() {
-    this.setData({ page: 1 })
-    this.loadPosts(true)
-      .then(() => {
-        wx.stopPullDownRefresh()
-      })
+  async onPullDownRefresh() {
+    await this.loadPosts(true);
+    wx.stopPullDownRefresh();
   },
   
   // 上拉加载更多
   onReachBottom() {
     if (this.data.hasMore) {
-      this.loadPosts()
+      this.loadPosts();
     }
   },
   
@@ -91,42 +83,30 @@ Page({
   
   // 跳转到帖子详情
   goToPostDetail(e) {
-    const id = e.currentTarget.dataset.id
+    const { id } = e.currentTarget.dataset;
     wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${id}`
-    })
+      url: `/pages/post/detail/detail?id=${id}`,
+      fail: err => {
+        console.debug('跳转失败:', err);
+        wx.showToast({
+          title: '页面跳转失败',
+          icon: 'none'
+        });
+      }
+    });
   },
   
   // 创建新帖子
   createNewPost() {
     wx.navigateTo({
-      url: '/pages/post/post'
-    })
-  },
-  
-  // 格式化时间显示
-  formatTime(dateStr) {
-    if (!dateStr) return ''
-    
-    const date = new Date(dateStr)
-    const now = new Date()
-    
-    const diffMs = now - date
-    const diffSec = Math.floor(diffMs / 1000)
-    const diffMin = Math.floor(diffSec / 60)
-    const diffHour = Math.floor(diffMin / 60)
-    const diffDay = Math.floor(diffHour / 24)
-    
-    if (diffSec < 60) {
-      return '刚刚'
-    } else if (diffMin < 60) {
-      return `${diffMin}分钟前`
-    } else if (diffHour < 24) {
-      return `${diffHour}小时前`
-    } else if (diffDay < 30) {
-      return `${diffDay}天前`
-    } else {
-      return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
-    }
+      url: '/pages/post/post',
+      fail: err => {
+        console.debug('跳转失败:', err);
+        wx.showToast({
+          title: '页面跳转失败',
+          icon: 'none'
+        });
+      }
+    });
   }
 }) 

@@ -5,7 +5,7 @@
       <!-- 标题部分 -->
       <view class="header">
         <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-        <text class="title">南开Wiki</text>
+        <text class="title">nkuwiki</text>
         <text class="subtitle">校园知识共享平台</text>
       </view>
       
@@ -25,7 +25,7 @@
   <block wx:if="{{!loginLoading}}">
     <view class="header">
       <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-      <text class="title">南开Wiki</text>
+      <text class="title">nkuwiki</text>
       <text class="subtitle">校园知识共享平台</text>
     </view>
 

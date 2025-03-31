@@ -1,8 +1,13 @@
 const app = getApp()
-const config = app.globalData.config || {};
-const API_BASE_URL = config.services?.app?.base_url || 'https://nkuwiki.com';
+const {get, post, processResponse} = require('../../utils/request');
 const towxml = require('../../wxcomponents/towxml/index');
 const api = require('../../utils/api/index');
+const {
+  formatRelativeTime,
+  getStorage,
+  setStorage,
+  removeStorage
+} = require('../../utils/util');
 
 // 简单的Markdown解析函数
 function parseMarkdown(markdown) {
@@ -54,88 +59,223 @@ Page({
     searchValue: '',
     searchHistory: [],
     searchResults: [],
-    markdownHtml: '',
+    currentCategory: 'all', // 当前选中的分类
+    categories: [
+      { id: 'all', name: '全部', icon: '/assets/icons/search/all.png' },
+      { id: 'website', name: '网站', icon: '/assets/icons/search/website.png' },
+      { id: 'wechat', name: '微信', icon: '/assets/icons/search/wechat.png' },
+      { id: 'market', name: '集市', icon: '/assets/icons/search/market.png' },
+      { id: 'douyin', name: '抖音', icon: '/assets/icons/search/douyin.png' }
+    ],
     loading: false,
-    currentPage: 1,
-    pageSize: 10,
-    hasMore: true,
-    baseUrl: app.globalData.config.services.app.base_url,
-    isStreaming: false,
-    typingText: '',
+    pagination: {
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      hasMore: true
+    },
+    isRecording: false, // 是否正在录音
+    textContent: '',
+    richTextContent: null,
+    usePlainText: false,
+    enableTyper: true,
+    typerSpeed: 20,
+    markdownHtml: '',
     fullResponse: '',
     sources: [],
     // 记录所有会话
     chatHistory: [],
     _lastMarkdown: '',
     _lastMarkdownHtml: '',
-    usePlainText: false,  // 是否使用纯文本模式（不使用富文本渲染）
-    textContent: '',  // 存储纯文本内容
-    richTextContent: null,  // 存储美化后的文本内容
-    enableTyper: true,  // 打字机效果始终开启
-    typerSpeed: 20,  // 打字机速度，值越小速度越快
+    typingText: '',
     requestTask: null, // 存储请求任务，用于取消请求
   },
 
   // 输入框内容变化
-  onSearchInput: function(e) {
-    this.setData({
-      searchValue: e.detail.value
-    });
+  onSearchInput(e) {
+    this.setData({ searchValue: e.detail.value });
   },
 
   // 清空搜索框
-  clearSearchInput: function() {
+  clearSearchInput() {
     this.setData({
       searchValue: '',
       searchResults: [],
-      currentPage: 1,
-      hasMore: true
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
     });
   },
 
   // 加载搜索历史
-  loadSearchHistory: function() {
-    const searchHistory = wx.getStorageSync('searchHistory') || [];
-    this.setData({ searchHistory });
+  loadSearchHistory() {
+    try {
+      const searchHistory = getStorage('searchHistory') || [];
+      this.setData({ searchHistory });
+    } catch (err) {
+      console.debug('加载搜索历史失败:', err);
+    }
   },
 
   // 保存搜索历史
-  saveSearchHistory: function(keyword) {
-    let searchHistory = this.data.searchHistory;
-    
-    // 如果已存在相同关键词，先删除
-    searchHistory = searchHistory.filter(item => item !== keyword);
-    
-    // 添加到开头
-    searchHistory.unshift(keyword);
-    
-    // 限制历史记录数量，保留最新10条
-    if (searchHistory.length > 10) {
-      searchHistory = searchHistory.slice(0, 10);
+  saveSearchHistory(keyword) {
+    try {
+      let searchHistory = this.data.searchHistory;
+      // 如果已存在相同关键词，先删除
+      searchHistory = searchHistory.filter(item => item !== keyword);
+      // 添加到开头
+      searchHistory.unshift(keyword);
+      // 限制历史记录数量，保留最新10条
+      if (searchHistory.length > 10) {
+        searchHistory = searchHistory.slice(0, 10);
+      }
+      this.setData({ searchHistory });
+      setStorage('searchHistory', searchHistory);
+    } catch (err) {
+      console.debug('保存搜索历史失败:', err);
     }
-    
-    this.setData({ searchHistory });
-    wx.setStorageSync('searchHistory', searchHistory);
   },
 
   // 清空搜索历史
-  clearSearchHistory: function() {
-    this.setData({ searchHistory: [] });
-    wx.removeStorageSync('searchHistory');
+  clearSearchHistory() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要清空搜索历史吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({ searchHistory: [] });
+          removeStorage('searchHistory');
+          wx.showToast({
+            title: '已清空搜索历史',
+            icon: 'success'
+          });
+        }
+      }
+    });
   },
 
   // 点击历史记录
-  onHistoryItemTap: function(e) {
+  onHistoryItemTap(e) {
     const keyword = e.currentTarget.dataset.keyword;
-    this.setData({
-      searchValue: keyword
-    });
+    this.setData({ searchValue: keyword });
     this.handleSearch();
   },
 
+  // 切换分类
+  switchCategory(e) {
+    const category = e.currentTarget.dataset.category;
+    if (category === this.data.currentCategory) return;
+    
+    this.setData({
+      currentCategory: category,
+      searchResults: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
+    });
+    
+    if (this.data.searchValue) {
+      this.handleSearch();
+    }
+  },
+
+  // 开始语音搜索
+  startVoiceSearch() {
+    // 检查是否有录音权限
+    wx.authorize({
+      scope: 'scope.record',
+      success: () => {
+        this.setData({ isRecording: true });
+        const recorderManager = wx.getRecorderManager();
+        
+        recorderManager.onStart(() => {
+          wx.showToast({
+            title: '开始录音',
+            icon: 'none'
+          });
+        });
+        
+        recorderManager.onStop((res) => {
+          this.setData({ isRecording: false });
+          if (res.duration < 1000) {
+            wx.showToast({
+              title: '说话时间太短',
+              icon: 'none'
+            });
+            return;
+          }
+          
+          wx.showLoading({ title: '识别中...' });
+          
+          // 调用语音识别API
+          wx.uploadFile({
+            url: `${API_BASE_URL}/api/voice/recognize`,
+            filePath: res.tempFilePath,
+            name: 'file',
+            success: (uploadRes) => {
+              const result = JSON.parse(uploadRes.data);
+              if (result.code === 200 && result.data) {
+                this.setData({ searchValue: result.data.text });
+                this.handleSearch();
+              } else {
+                wx.showToast({
+                  title: '识别失败',
+                  icon: 'none'
+                });
+              }
+            },
+            fail: () => {
+              wx.showToast({
+                title: '识别失败',
+                icon: 'none'
+              });
+            },
+            complete: () => {
+              wx.hideLoading();
+            }
+          });
+        });
+        
+        recorderManager.start({
+          duration: 10000, // 最长录音时间，单位ms
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          encodeBitRate: 48000,
+          format: 'mp3'
+        });
+      },
+      fail: () => {
+        wx.showModal({
+          title: '提示',
+          content: '需要您的录音权限才能使用语音搜索功能',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting();
+            }
+          }
+        });
+      }
+    });
+  },
+
+  // 停止语音搜索
+  stopVoiceSearch() {
+    if (this.data.isRecording) {
+      const recorderManager = wx.getRecorderManager();
+      recorderManager.stop();
+    }
+  },
+
   // 处理搜索事件
-  handleSearch: function() {
-    const { searchValue } = this.data;
+  async handleSearch() {
+    const { searchValue, currentCategory, pagination } = this.data;
     if (!searchValue.trim()) {
       wx.showToast({
         title: '请输入搜索内容',
@@ -144,85 +284,72 @@ Page({
       return;
     }
 
-    this.setData({
-      loading: true,
-      currentPage: 1,
-      searchResults: []
-    });
+    this.setData({ loading: true });
 
-    // 调用搜索API
-    api.search.searchPosts({
-      keyword: searchValue,
-      page: 1,
-      pageSize: this.data.pageSize
-    }).then(result => {
-      if (result.success) {
+    try {
+      const params = {
+        keyword: searchValue,
+        category: currentCategory,
+        page: pagination.page,
+        pageSize: pagination.pageSize
+      };
+      
+      const result = await api.search.searchPosts(params);
+      
+      if (result.code === 200) {
+        // 处理搜索结果，添加相对时间
+        const processedResults = result.data.list.map(item => ({
+          ...item,
+          created_at: formatRelativeTime(item.created_at)
+        }));
+
+        // 更新搜索结果和分页信息
         this.setData({
-          searchResults: result.data,
-          hasMore: result.data.length === this.data.pageSize,
+          searchResults: pagination.page === 1 
+            ? processedResults 
+            : [...this.data.searchResults, ...processedResults],
+          'pagination.total': result.data.total,
+          'pagination.hasMore': result.data.list.length === pagination.pageSize,
           loading: false
         });
 
         // 保存搜索历史
-        this.saveSearchHistory(searchValue);
+        if (pagination.page === 1) {
+          this.saveSearchHistory(searchValue);
+        }
       } else {
         wx.showToast({
           title: result.message || '搜索失败',
           icon: 'none'
         });
-        this.setData({ loading: false });
       }
-    }).catch(err => {
-      console.error('搜索失败:', err);
+    } catch (err) {
+      console.debug('搜索失败:', err);
       wx.showToast({
-        title: err.message || '搜索失败',
+        title: '搜索失败',
         icon: 'none'
       });
+    } finally {
       this.setData({ loading: false });
-    });
+    }
   },
 
   // 加载更多
-  loadMore: function() {
-    if (!this.data.hasMore || this.data.loading) return;
-
-    this.setData({ loading: true });
-
-    const nextPage = this.data.currentPage + 1;
-    api.search.searchPosts({
-      keyword: this.data.searchValue,
-      page: nextPage,
-      pageSize: this.data.pageSize
-    }).then(result => {
-      if (result.success) {
-        this.setData({
-          searchResults: [...this.data.searchResults, ...result.data],
-          currentPage: nextPage,
-          hasMore: result.data.length === this.data.pageSize,
-          loading: false
-        });
-      } else {
-        wx.showToast({
-          title: result.message || '加载更多失败',
-          icon: 'none'
-        });
-        this.setData({ loading: false });
-      }
-    }).catch(err => {
-      console.error('加载更多失败:', err);
-      wx.showToast({
-        title: err.message || '加载更多失败',
-        icon: 'none'
-      });
-      this.setData({ loading: false });
+  loadMore() {
+    if (!this.data.pagination.hasMore || this.data.loading) return;
+    
+    this.setData({
+      'pagination.page': this.data.pagination.page + 1
     });
+    
+    this.handleSearch();
   },
 
   // 跳转到详情页
-  goToDetail: function(e) {
+  goToDetail(e) {
     const post = e.currentTarget.dataset.post;
-    if (!post || !post.id) {
-      console.error('跳转详情页失败：未提供帖子ID', post);
+    if (!post?.id) {
+      console.debug('跳转详情页失败：未提供帖子ID', post);
       wx.showToast({
         title: '无法打开帖子',
         icon: 'none'
@@ -233,7 +360,7 @@ Page({
     wx.navigateTo({
       url: `/pages/post/detail/detail?id=${post.id}`,
       fail: (err) => {
-        console.error('跳转详情页失败:', err);
+        console.debug('跳转详情页失败:', err);
         wx.showToast({
           title: '跳转失败',
           icon: 'none'
@@ -247,22 +374,15 @@ Page({
     this.setData({
       usePlainText: !this.data.usePlainText
     }, () => {
-      // 如果已有内容，重新渲染
       if (this.data.fullResponse) {
         if (this.data.usePlainText) {
-          this.setData({
-            markdownHtml: '' // 清空markdown以便显示纯文本
-          });
+          this.setData({ markdownHtml: '' });
         } else {
-          // 重新生成markdown
           const markdownHtml = parseMarkdown(this.data.fullResponse);
-          this.setData({
-            markdownHtml: markdownHtml
-          });
+          this.setData({ markdownHtml });
         }
       }
       
-      // 提示用户
       wx.showToast({
         title: this.data.usePlainText ? '已切换到纯文本模式' : '已切换到富文本模式',
         icon: 'none'
@@ -458,9 +578,10 @@ Page({
     }
   },
 
-  // 复制结果
+  // 复制搜索结果
   copyResult() {
-    if (!this.data.textContent) {
+    const content = this.data.usePlainText ? this.data.textContent : this.data.fullResponse;
+    if (!content) {
       wx.showToast({
         title: '没有可复制的内容',
         icon: 'none'
@@ -468,22 +589,12 @@ Page({
       return;
     }
     
-    // 使用纯文本内容进行复制，确保格式正确
-    const textToCopy = this.data.textContent;
-    
     wx.setClipboardData({
-      data: textToCopy,
-      success() {
+      data: content,
+      success: () => {
         wx.showToast({
-          title: '复制成功',
+          title: '已复制到剪贴板',
           icon: 'success'
-        });
-      },
-      fail(err) {
-        console.error('复制失败:', err);
-        wx.showToast({
-          title: '复制失败',
-          icon: 'none'
         });
       }
     });
@@ -502,8 +613,14 @@ Page({
     this.setData({
       textContent: '',
       richTextContent: null,
-      isStreaming: false,
-      fullResponse: ''
+      fullResponse: '',
+      searchResults: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
     });
   },
   
@@ -531,7 +648,7 @@ Page({
   onShareAppMessage: function() {
     const query = this.data.searchValue;
     return {
-      title: `南开wiki - ${query}`,
+      title: `nkuwiki - ${query}`,
       path: `/pages/search/search?query=${encodeURIComponent(query)}`
     };
   },
@@ -573,7 +690,7 @@ Page({
   },
 
   onReachBottom: function() {
-    if (this.data.hasMore) {
+    if (this.data.pagination.hasMore) {
       this.loadMore();
     }
   }

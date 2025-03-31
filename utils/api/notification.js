@@ -2,7 +2,8 @@
  * 通知相关API封装
  */
 
-const request = require('../request');
+const { get, post, API_PREFIXES, processResponse } = require('../request');
+const { getStorage } = require('../util');
 
 /**
  * 获取用户通知列表
@@ -16,9 +17,14 @@ const request = require('../request');
  */
 async function getNotificationList(params = {}) {
   try {
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     // 构建查询参数
@@ -30,20 +36,23 @@ async function getNotificationList(params = {}) {
       offset: params.offset || 0
     };
     
-    const result = await request.get('/api/wxapp/notification/list', queryParams);
-    
-    return {
-      success: true,
-      notification: result.data.data,
-      pagination: result.data.pagination,
-      message: '获取通知列表成功'
-    };
+    return await get(API_PREFIXES.wxapp + '/notification/list', queryParams);
   } catch (err) {
     console.error('获取通知列表失败:', err);
-    return {
-      success: false,
-      message: '获取通知列表失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取通知列表失败',
+      data: [],
+      details: { 
+        message: err.message || '未知错误',
+        pagination: {
+          total: 0,
+          limit: params.limit || 20,
+          offset: params.offset || 0,
+          has_more: false
+        }
+      }
+    });
   }
 }
 
@@ -55,23 +64,23 @@ async function getNotificationList(params = {}) {
 async function getNotificationDetail(notificationId) {
   try {
     if (!notificationId) {
-      throw new Error('通知ID不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '通知ID不能为空' }
+      });
     }
     
-    // 请求通知详情
-    const result = await request.get('/api/wxapp/notification/detail', { notification_id: notificationId });
-    
-    return {
-      success: true,
-      data: result.data,
-      message: '获取通知详情成功'
-    };
+    return await get(API_PREFIXES.wxapp + '/notification/detail', { notification_id: notificationId });
   } catch (err) {
     console.error('获取通知详情失败:', err);
-    return {
-      success: false,
-      message: '获取通知详情失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取通知详情失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -84,33 +93,29 @@ async function getNotificationDetail(notificationId) {
  */
 async function getUnreadCount(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     // 构建查询参数
     const queryParams = { openid };
-    
-    // 可选参数
     if (params.type) queryParams.type = params.type;
     
-    // 请求未读通知数量
-    const result = await request.get('/api/wxapp/notification/count', queryParams);
-    
-    return {
-      success: true,
-      count: result.data.count,
-      message: '获取未读通知数量成功'
-    };
+    return await get(API_PREFIXES.wxapp + '/notification/count', queryParams);
   } catch (err) {
     console.error('获取未读通知数量失败:', err);
-    return {
-      success: false,
-      count: 0,
-      message: '获取未读通知数量失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取未读通知数量失败',
+      data: { count: 0 },
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -123,35 +128,39 @@ async function getUnreadCount(params = {}) {
  */
 async function markAsRead(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
-    
+
     if (!params.notification_id) {
-      throw new Error('通知ID不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '通知ID不能为空' }
+      });
     }
     
-    // 请求体
     const data = {
       notification_id: params.notification_id,
       openid: openid
     };
     
-    // 标记通知已读
-    const result = await request.post('/api/wxapp/notification/mark-read', data);
-    
-    return {
-      success: true,
-      message: '标记已读成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/notification/read', data);
   } catch (err) {
     console.error('标记通知已读失败:', err);
-    return {
-      success: false,
-      message: '标记已读失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '标记通知已读失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -164,13 +173,23 @@ async function markAsRead(params = {}) {
  */
 async function markReadBatch(params = {}) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!params.notification_id || !Array.isArray(params.notification_id)) {
-      throw new Error('通知ID列表不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '通知ID列表不能为空或格式错误' }
+      });
     }
     
     const data = {
@@ -178,18 +197,15 @@ async function markReadBatch(params = {}) {
       notification_id: params.notification_id
     };
     
-    const result = await request.post('/api/wxapp/notification/mark-read-batch', data);
-    
-    return {
-      success: true,
-      message: result.details?.message || '标记已读成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/notification/read/batch', data);
   } catch (err) {
     console.error('批量标记通知已读失败:', err);
-    return {
-      success: false,
-      message: '批量标记已读失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '批量标记通知已读失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -202,35 +218,39 @@ async function markReadBatch(params = {}) {
  */
 async function deleteNotification(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!params.notification_id) {
-      throw new Error('通知ID不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '通知ID不能为空' }
+      });
     }
     
-    // 请求体
     const data = {
       notification_id: params.notification_id,
       openid: openid
     };
     
-    // 删除通知
-    const result = await request.post('/api/wxapp/notification/delete', data);
-    
-    return {
-      success: true,
-      message: result.details?.message || '删除通知成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/notification/delete', data);
   } catch (err) {
     console.error('删除通知失败:', err);
-    return {
-      success: false,
-      message: '删除通知失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '删除通知失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -242,37 +262,28 @@ async function deleteNotification(params = {}) {
  */
 async function getStatus(params = {}) {
   try {
-    // 使用传入的openid或从本地获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
-
-    // 获取未读通知数量作为状态判断依据
-    const result = await getUnreadCount({ openid });
     
-    return {
-      success: true,
-      data: {
-        isRead: result.count === 0, // 如果未读数量为0，则标记为已读
-        unreadCount: result.count
-      },
-      message: '获取通知状态成功'
-    };
+    return await get(API_PREFIXES.wxapp + '/notification/status', { openid });
   } catch (err) {
     console.error('获取通知状态失败:', err);
-    return {
-      success: false,
-      data: {
-        isRead: true, // 出错时默认为已读，避免显示红点
-        unreadCount: 0
-      },
-      message: '获取通知状态失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取通知状态失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
-// 导出所有通知相关API方法
 module.exports = {
   getNotificationList,
   getNotificationDetail,

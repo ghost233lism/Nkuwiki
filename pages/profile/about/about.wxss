@@ -78,6 +78,59 @@
   background-color: #f8f8f8;
 }
 
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 6rpx solid #f3f3f3;
+  border-top: 6rpx solid #007AFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 30rpx;
+  color: #666;
+}
+
+/* 错误状态样式 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+}
+
+.error-text {
+  font-size: 32rpx;
+  color: #666;
+  margin: 20rpx 0 40rpx;
+}
+
+.refresh-btn {
+  padding: 16rpx 40rpx;
+  background-color: #007AFF;
+  color: white;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+/* 正常内容区域样式 */
 .logo-section {
   display: flex;
   flex-direction: column;
@@ -133,6 +186,28 @@
   display: block;
 }
 
+/* 点击效果 */
+.info-item[bindtap] {
+  position: relative;
+}
+
+.info-item[bindtap]:active {
+  background-color: #f9f9f9;
+}
+
+.info-item[bindtap]::after {
+  content: "";
+  position: absolute;
+  right: 10rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16rpx;
+  height: 16rpx;
+  border-top: 2rpx solid #ccc;
+  border-right: 2rpx solid #ccc;
+  transform: translateY(-50%) rotate(45deg);
+}
+
 .company-intro {
   background: #fff;
   border-radius: 16rpx;
@@ -152,56 +227,6 @@
   font-size: 28rpx;
   color: #666;
   line-height: 1.8;
-}
-
-/* 新增的富文本样式 */
-.intro-content .section-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin: 40rpx 0 20rpx;
-  padding-bottom: 10rpx;
-  border-bottom: 2rpx solid #eee;
-}
-
-.intro-content .subtitle {
-  font-size: 26rpx;
-  color: #999;
-  margin-top: -10rpx;
-  margin-bottom: 20rpx;
-}
-
-.intro-content h3 {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #444;
-  margin: 30rpx 0 15rpx;
-}
-
-.intro-content .platform-item,
-.intro-content .contribution-item {
-  margin-bottom: 30rpx;
-  padding-left: 20rpx;
-}
-
-.intro-content ul {
-  list-style-type: disc;
-  padding-left: 40rpx;
-  margin: 10rpx 0;
-}
-
-.intro-content li {
-  margin: 10rpx 0;
-}
-
-.intro-content p {
-  margin: 10rpx 0;
-  line-height: 1.6;
-}
-
-.intro-content .highlight {
-  color: #ff4d4f;
-  font-weight: bold;
 }
 
 .section {
@@ -250,4 +275,17 @@
 .highlight {
   color: #ff4d4f;
   font-weight: bold;
+}
+
+.copyright {
+  text-align: center;
+  padding: 30rpx 0;
+  margin-top: 20rpx;
+}
+
+.copyright text {
+  display: block;
+  font-size: 26rpx;
+  color: #999;
+  line-height: 1.8;
 } 

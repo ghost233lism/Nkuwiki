@@ -1,132 +1,189 @@
 /**
  * 后端API请求工具类
  */
+const { API_CONFIG } = require('./config');
 
-// API基础路径
-const BASE_URL = 'https://nkuwiki.com';
+const API_BASE_URL = API_CONFIG.base_url;
+const API_PREFIXES = API_CONFIG.prefixes;
+const API_PREFIX = API_CONFIG.api_prefix;
+const getStorage = require('./util').getStorage;
 
 /**
- * 封装微信请求方法
+ * 处理请求URL
  * @param {string} url - 接口路径
- * @param {string} method - 请求方法
- * @param {object} data - 请求数据
- * @param {object} header - 请求头
- * @param {object} query - URL查询参数
- * @returns {Promise} - 返回Promise对象
+ * @returns {string} - 返回处理后的URL
  */
-function request(url, method = 'GET', data = {}, header = {}, query = {}) {
-  // 获取存储的openid
-  const openid = wx.getStorageSync('openid') || '';
-  
-  // 默认请求头
-  const defaultHeader = {
-    'content-type': 'application/json',
-  };
-  
-  // 若有openid则添加到请求头
-  if (openid) {
-    defaultHeader['X-User-OpenID'] = openid;
-    
-    // 如果是 GET 请求，可以考虑添加openid作为查询参数
-    if (method === 'GET' && data && !data.openid) {
-      data.openid = openid;
-    }
+function processUrl(url) {
+  // 确保URL以/开头
+  let finalUrl = url.startsWith('/') ? url : '/' + url;
+  // 添加API前缀
+  if (!finalUrl.startsWith(API_PREFIX)) {
+    finalUrl = API_PREFIX + finalUrl;
+  }
+  return finalUrl;
+}
+
+/**
+ * 处理响应结果
+ * @param {object} res - 响应对象
+ * @returns {object} - 标准化的响应结果
+ */
+function processResponse(res) {
+  // 如果已经是标准格式就直接返回
+  if (res && typeof res === 'object' && 'code' in res && 'message' in res) {
+    return res;
   }
 
-  // 合并请求头
-  const finalHeader = {...defaultHeader, ...header};
+  // 转换为标准格式
+  return {
+    code: res?.code || 200,
+    message: res?.message || 'success',
+    data: res?.data || res || null,
+    details: res?.details || null,
+    timestamp: res?.timestamp || new Date().toISOString()
+  };
+}
+
+/**
+ * 处理错误响应
+ * @param {Error} err - 错误对象
+ * @returns {object} - 标准化的错误响应
+ */
+function processError(err) {
+  return {
+    code: err.code || 500,
+    message: err.message || 'error',
+    data: null,
+    details: {
+      message: err.details?.message || err.message || '未知错误'
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+/**
+ * GET请求方法
+ * @param {string} url - 接口路径
+ * @param {object} params - 请求参数
+ * @returns {Promise} - 返回Promise对象
+ */
+async function get(url, params = {}) {
+  const openid = getStorage('openid') || '';
   
-  // 处理查询参数
-  let finalUrl = url;
-  if (query && Object.keys(query).length > 0) {
-    const queryString = Object.keys(query)
-      .filter(key => query[key] !== undefined && query[key] !== null)
-      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(query[key])}`)
-      .join('&');
-    
-    if (queryString) {
-      finalUrl += (url.includes('?') ? '&' : '?') + queryString;
-    }
+  // 处理URL
+  const finalUrl = processUrl(url);
+  
+  // 过滤有效的查询参数
+  const validParams = { ...params };
+  
+  // 如果有openid但params没有，添加到params
+  if (openid && !validParams.openid) {
+    validParams.openid = openid;
   }
   
-  // 调试输出
-  console.debug(`请求: ${method} ${finalUrl}`, {
-    method: method,
-    url: `${BASE_URL}${finalUrl}`,
-    data: data,
-    header: finalHeader
-  });
+  // 构建查询字符串
+  const queryParams = Object.entries(validParams)
+    .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  
+  const requestUrl = queryParams ? 
+    `${API_BASE_URL}${finalUrl}${finalUrl.includes('?') ? '&' : '?'}${queryParams}` : 
+    `${API_BASE_URL}${finalUrl}`;
+  
+  console.debug(`GET请求: ${requestUrl}`);
   
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${BASE_URL}${finalUrl}`,
-      method,
-      data,
-      header: finalHeader,
+      url: requestUrl,
+      method: 'GET',
+      header: {
+        'content-type': 'application/json',
+        ...(openid ? {'X-User-OpenID': openid} : {})
+      },
       success(res) {
-        console.debug(`响应: ${method} ${finalUrl}`, {
-          statusCode: res.statusCode,
-          data: res.data
-        });
+        console.debug(`GET响应:`, res.data);
         
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          // 统一返回格式
-          resolve({
-            success: res.data.code === 200,
-            data: res.data.data,
-            message: res.data.details?.message || res.data.message,
-            pagination: res.data.pagination,
-            timestamp: res.data.timestamp,
-            details: res.data.details
-          });
+          resolve(processResponse(res.data));
         } else {
-          // HTTP请求成功，但业务状态失败
-          console.error('请求失败:', {
-            url: `${BASE_URL}${finalUrl}`,
-            method: method,
-            requestData: data,
-            statusCode: res.statusCode,
-            response: res.data
-          });
-          reject({
-            success: false,
-            message: res.data.details?.message || res.data.message || '请求失败',
-            code: res.data.code || res.statusCode
-          });
+          reject(processError({
+            code: res.data.code || res.statusCode,
+            message: res.data.message || '请求失败',
+            details: res.data.details || { message: res.data.message || '请求失败' }
+          }));
         }
       },
       fail(err) {
-        // 请求失败
-        console.error('网络请求失败:', {
-          url: `${BASE_URL}${finalUrl}`,
-          method: method,
-          requestData: data,
-          error: err
-        });
-        reject({
-          success: false,
-          message: '网络请求失败: ' + (err.errMsg || '未知错误'),
-          code: -1
-        });
+        console.error('网络请求失败:', err);
+        reject(processError({
+          code: -1,
+          message: '网络请求失败',
+          details: { message: err.errMsg || '未知错误' }
+        }));
       }
     });
   });
 }
 
-// 导出请求方法
+/**
+ * POST请求方法
+ * @param {string} url - 接口路径
+ * @param {object} data - 请求数据
+ * @returns {Promise} - 返回Promise对象
+ */
+async function post(url, data = {}) {
+  const openid = wx.getStorageSync('openid') || '';
+  
+  // 处理URL
+  const finalUrl = processUrl(url);
+  
+  // 如果有openid但data没有，添加到data
+  const postData = { ...data };
+  if (openid && !postData.openid) {
+    postData.openid = openid;
+  }
+  
+  console.debug(`POST请求: ${finalUrl}`, postData);
+  
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${API_BASE_URL}${finalUrl}`,
+      method: 'POST',
+      data: postData,
+      header: {
+        'content-type': 'application/json',
+        ...(openid ? {'X-User-OpenID': openid} : {})
+      },
+      success(res) {
+        console.debug(`POST响应:`, res.data);
+        
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(processResponse(res.data));
+        } else {
+          reject(processError({
+            code: res.data.code || res.statusCode,
+            message: res.data.message || '请求失败',
+            details: res.data.details || { message: res.data.message || '请求失败' }
+          }));
+        }
+      },
+      fail(err) {
+        console.error('网络请求失败:', err);
+        reject(processError({
+          code: -1,
+          message: '网络请求失败',
+          details: { message: err.errMsg || '未知错误' }
+        }));
+      }
+    });
+  });
+}
+
 module.exports = {
-  // 导出基础URL
-  BASE_URL,
-  
-  // 获取基础URL（兼容性方法）
-  getBaseUrl: () => BASE_URL,
-  
-  // GET请求
-  get: (url, data = {}, header = {}, query = {}) => request(url, 'GET', data, header, query),
-  
-  // POST请求
-  post: (url, data = {}, header = {}, query = {}) => request(url, 'POST', data, header, query),
-  
-  // 基础请求方法
-  request
+  get,
+  post,
+  API_PREFIXES,
+  processResponse,
+  processError
 }; 

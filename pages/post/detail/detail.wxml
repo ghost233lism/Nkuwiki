@@ -82,7 +82,7 @@
       <!-- 评论区域 -->
       <view class="comment-section">
         <view class="section-header">
-          <text class="section-title">评论 ({{commentCount || 0}})</text>
+          <text class="section-title">评论 ({{commentTotal || 0}})</text>
         </view>
         
         <view wx:if="{{!comment || comment.length === 0}}" class="empty-comment">
@@ -90,11 +90,11 @@
         </view>
         
         <view class="comment-list" wx:if="{{comment.length > 0}}">
-          <view class="comment-item" wx:for="{{comment}}" wx:key="_id">
-            <image class="avatar" src="{{item.author.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
+          <view class="comment-item" wx:for="{{comment}}" wx:key="id">
+            <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
             <view class="comment-content">
               <view class="comment-header">
-                <text class="comment-author">{{item.author.nickname}}</text>
+                <text class="comment-author">{{item.nickname || '用户'}}</text>
                 <text class="comment-time">{{item.relativeTime}}</text>
               </view>
               <text class="comment-text" user-select="{{true}}">{{item.content}}</text>
@@ -118,7 +118,7 @@
               <!-- 回复预览区域 -->
               <view class="reply-preview" wx:if="{{item.reply_preview && item.reply_preview.length > 0}}">
                 <view class="reply-item" wx:for="{{item.reply_preview}}" wx:for-item="reply" wx:key="id">
-                  <text class="reply-author">{{reply.nick_name}}：</text>
+                  <text class="reply-author">{{reply.nickname || '用户'}}：</text>
                   <text class="reply-text">{{reply.content}}</text>
                 </view>
                 <view class="view-more-replies" wx:if="{{item.reply_count > item.reply_preview.length}}" 
