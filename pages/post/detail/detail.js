@@ -180,33 +180,58 @@ Page({
       wx.setStorageSync('likedPosts', likedPosts);
       console.log("更新本地点赞状态:", newIsLiked ? "已点赞" : "取消点赞", this.data.post._id);
       
-      // 使用API模块点赞
-      const result = await api.post.likePost(this.data.post._id);
-      
-      if (!result || !result.success) {
-        // 如果失败，回滚UI状态和本地存储
-        this.setData({
-          'post.isLiked': !newIsLiked,
-          'post.likes': this.data.post.likes - (newIsLiked ? 1 : -1)
-        });
-        
-        // 回滚本地存储
-        if (!newIsLiked) {
-          likedPosts[this.data.post._id] = true;
-        } else {
-          delete likedPosts[this.data.post._id];
-        }
-        wx.setStorageSync('likedPosts', likedPosts);
-        
-        throw new Error(result?.message || '操作失败');
+      // 根据操作类型调用不同的API
+      let result;
+      if (newIsLiked) {
+        // 点赞操作
+        result = await api.post.likePost(this.data.post._id);
+      } else {
+        // 取消点赞操作
+        result = await api.post.unlikePost(this.data.post._id);
       }
       
-      // 成功时显示轻量级提示
-      wx.showToast({
-        title: newIsLiked ? '已点赞' : '已取消',
-        icon: 'none',
-        duration: 1000
-      });
+      // 处理API返回结果
+      if (!result || !result.success) {
+        // 请求失败处理
+        if (result && result.message && (
+          result.message.includes('已经点赞') || 
+          result.message.includes('未点赞')
+        )) {
+          // 状态不一致，需要刷新帖子状态
+          console.log('点赞状态不一致，重新获取帖子状态');
+          this.checkPostStatus();
+        } else {
+          // 一般错误，回滚UI状态
+          this.setData({
+            'post.isLiked': !newIsLiked,
+            'post.likes': this.data.post.likes - (newIsLiked ? 1 : -1)
+          });
+          
+          // 回滚本地存储
+          if (!newIsLiked) {
+            likedPosts[this.data.post._id] = true;
+          } else {
+            delete likedPosts[this.data.post._id];
+          }
+          wx.setStorageSync('likedPosts', likedPosts);
+          
+          throw new Error(result?.message || '操作失败');
+        }
+      } else {
+        // 成功时显示轻量级提示
+        wx.showToast({
+          title: newIsLiked ? '已点赞' : '已取消',
+          icon: 'none',
+          duration: 1000
+        });
+        
+        // 如果API返回了点赞数，使用API返回的数据更新UI
+        if (result.data && result.data.like_count !== undefined) {
+          this.setData({
+            'post.likes': result.data.like_count
+          });
+        }
+      }
     } catch (err) {
       console.error('点赞操作失败:', err);
       wx.showToast({
@@ -215,6 +240,44 @@ Page({
       });
     } finally {
       this.setData({ isLiking: false });
+    }
+  },
+  
+  // 检查帖子状态（点赞、收藏等）
+  async checkPostStatus() {
+    try {
+      if (!this.data.post || !this.data.post._id) return;
+      
+      const result = await api.post.getPostStatus(this.data.post._id);
+      if (result && result.success && result.data) {
+        this.setData({
+          'post.isLiked': result.data.is_liked,
+          'post.likes': result.data.like_count,
+          'post.isFavorited': result.data.is_favorited,
+          'post.favoriteCounts': result.data.favorite_count
+        });
+        
+        // 更新本地存储
+        const likedPosts = wx.getStorageSync('likedPosts') || {};
+        const favoritePosts = wx.getStorageSync('favoritePosts') || {};
+        
+        if (result.data.is_liked) {
+          likedPosts[this.data.post._id] = true;
+        } else {
+          delete likedPosts[this.data.post._id];
+        }
+        
+        if (result.data.is_favorited) {
+          favoritePosts[this.data.post._id] = true;
+        } else {
+          delete favoritePosts[this.data.post._id];
+        }
+        
+        wx.setStorageSync('likedPosts', likedPosts);
+        wx.setStorageSync('favoritePosts', favoritePosts);
+      }
+    } catch (err) {
+      console.error('获取帖子状态失败:', err);
     }
   },
 
@@ -250,35 +313,58 @@ Page({
       wx.setStorageSync('favoritePosts', favoritePosts);
       console.log("更新本地收藏状态:", newIsFavorited ? "已收藏" : "取消收藏", this.data.post._id);
       
-      // 使用API模块收藏/取消收藏
-      const result = newIsFavorited 
-        ? await api.post.favoritePost(this.data.post._id)
-        : await api.post.unfavoritePost(this.data.post._id);
-      
-      if (!result || !result.success) {
-        // 如果失败，恢复UI状态
-        this.setData({
-          'post.isFavorited': !newIsFavorited,
-          'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
-        });
-        
-        // 恢复本地存储
-        if (newIsFavorited) {
-          delete favoritePosts[this.data.post._id];
-        } else {
-          favoritePosts[this.data.post._id] = true;
-        }
-        wx.setStorageSync('favoritePosts', favoritePosts);
-        
-        throw new Error(result?.message || '操作失败');
+      // 根据操作类型调用不同的API
+      let result;
+      if (newIsFavorited) {
+        // 收藏操作
+        result = await api.post.favoritePost(this.data.post._id);
+      } else {
+        // 取消收藏操作
+        result = await api.post.unfavoritePost(this.data.post._id);
       }
       
-      // 成功时显示轻量级提示
-      wx.showToast({
-        title: newIsFavorited ? '已收藏' : '已取消收藏',
-        icon: 'none',
-        duration: 1000
-      });
+      // 处理API返回结果
+      if (!result || !result.success) {
+        // 请求失败处理
+        if (result && result.message && (
+          result.message.includes('已收藏') || 
+          result.message.includes('未收藏')
+        )) {
+          // 状态不一致，需要刷新帖子状态
+          console.log('收藏状态不一致，重新获取帖子状态');
+          this.checkPostStatus();
+        } else {
+          // 一般错误，回滚UI状态
+          this.setData({
+            'post.isFavorited': !newIsFavorited,
+            'post.favoriteCounts': this.data.post.favoriteCounts - (newIsFavorited ? 1 : -1)
+          });
+          
+          // 恢复本地存储
+          if (newIsFavorited) {
+            delete favoritePosts[this.data.post._id];
+          } else {
+            favoritePosts[this.data.post._id] = true;
+          }
+          wx.setStorageSync('favoritePosts', favoritePosts);
+          
+          throw new Error(result?.message || '操作失败');
+        }
+      } else {
+        // 成功时显示轻量级提示
+        wx.showToast({
+          title: newIsFavorited ? '已收藏' : '已取消收藏',
+          icon: 'none',
+          duration: 1000
+        });
+        
+        // 如果API返回了收藏数，使用API返回的数据更新UI
+        if (result.data && result.data.favorite_count !== undefined) {
+          this.setData({
+            'post.favoriteCounts': result.data.favorite_count
+          });
+        }
+      }
     } catch (err) {
       console.error('收藏操作失败:', err);
       wx.showToast({
