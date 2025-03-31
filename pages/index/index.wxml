@@ -11,7 +11,7 @@
     <image class="icon" src="/assets/icons/index/notification-unread.png" bindtap="goToNotification"/>
     </block>
     <image class="icon" src="/assets/icons/index/message.png" />
-    <image class="icon" src="/assets/icons/agent.png" bindtap="goToAgent"/>
+    <image class="icon" src="/assets/icons/default-avatar.png" bindtap="goToAgent"/>
   </view>
 
   <!-- 搜索框 -->
@@ -170,7 +170,7 @@
       <text wx:if="{{searchHasMore && !searchLoading}}" bindtap="loadMoreSearchResults">点击加载更多</text>
       <text wx:if="{{!searchHasMore && !searchLoading}}">没有更多了</text>
       <view wx:if="{{searchLoading}}" class="loading">
-        <image class="loading-icon" src="/assets/icons/loading.gif"></image>
+        <image class="loading-icon" src="/assets/icons/home.png"></image>
         <text>加载中...</text>
       </view>
     </view>
@@ -300,7 +300,7 @@
     <!-- 加载状态 -->
     <view class="loading-status">
       <view wx:if="{{loading}}" class="loading-more">
-        <image src="/assets/icons/loading.gif" mode="aspectFit" />
+        <image src="/assets/icons/home.png" mode="aspectFit" />
         <text>加载中...</text>
       </view>
       <text wx:elif="{{!hasMore}}" class="no-more">没有更多内容了</text>

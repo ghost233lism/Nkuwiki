@@ -18,21 +18,45 @@ Page({
     }
   },
 
-  onShow() {
-    // 每次显示页面时，从本地存储获取最新的用户信息
-    const userInfo = wx.getStorageSync('userInfo')
-    console.log('当前用户信息:', userInfo)
-
-    if (userInfo) {
-      this.setData({
-        userInfo: userInfo
-      })
-
-      // 获取最新的帖子数量
-      this.getUserPostsCount()
+  async onShow() {
+    console.log('个人信息页面显示');
+    
+    try {
+      // 每次显示页面时，从API获取最新的用户信息
+      const api = require('../../utils/api/index');
       
-      // 获取最新的获赞总数
-      this.getUserTotalLikes()
+      wx.showLoading({ title: '加载中...' });
+      const result = await api.user.getProfile({ isSelf: true });
+      wx.hideLoading();
+      
+      console.log('从API获取的最新用户信息:', result);
+      
+      if (result && result.success && result.data) {
+        const userData = result.data;
+        
+        // 确保头像有默认值
+        if (!userData.avatar && !userData.avatarUrl) {
+          userData.avatarUrl = '/assets/icons/default-avatar.png';
+        } else if (userData.avatar && !userData.avatarUrl) {
+          userData.avatarUrl = userData.avatar;
+        }
+        
+        // 获取用户的获赞总数
+        const totalLikes = userData.likes_count || 0;
+        
+        // 更新页面显示
+        this.setData({
+          userInfo: userData,
+          totalLikes: totalLikes
+        });
+        
+        console.log('更新后的页面数据:', this.data);
+      } else {
+        console.warn('获取用户信息失败或数据为空');
+      }
+    } catch (err) {
+      console.error('加载用户信息失败:', err);
+      wx.hideLoading();
     }
   },
 
@@ -173,10 +197,10 @@ Page({
       
       wx.hideLoading();
       
-      if (result && result.success && result.posts) {
+      if (result && result.success && result.data && result.data.posts) {
         // 计算所有帖子的点赞总数
         let totalLikes = 0;
-        result.posts.forEach(post => {
+        result.data.posts.forEach(post => {
           totalLikes += (post.like_count || 0);
         });
         
