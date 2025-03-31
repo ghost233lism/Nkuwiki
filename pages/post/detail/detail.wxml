@@ -23,7 +23,7 @@
       <!-- 作者信息 -->
       <view class="post-header">
         <view class="author-info">
-          <image class="avatar" src="{{post.authorAvatar}}" mode="aspectFill"></image>
+          <image class="avatar" src="{{post.authorAvatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
           <view class="author-container">
             <view class="author-name">{{post.authorName}}</view>
             <view class="post-time">{{post.relativeTime}}</view>
@@ -72,46 +72,64 @@
         <view class="action-item {{post.isFavorited ? 'favorited' : ''}}" bindtap="handleFavorite">
           <image 
             class="action-icon" 
-            src="{{post.isFavorited ? '/assets/icons/index/favorited.png' : '/assets/icons/index/favorite.png'}}"
+            src="{{post.isFavorited ? '/assets/icons/index/favorite-active.png' : '/assets/icons/index/favorite.png'}}"
             mode="aspectFit"
           ></image>
+          <text class="{{post.isFavorited ? 'favorited-text' : ''}}">{{post.favoriteCounts || 0}}</text>
         </view>
       </view>
 
       <!-- 评论区域 -->
       <view class="comment-section">
         <view class="section-header">
-          <text class="section-title">评论 ({{commentCount || 0}})</text>
+          <text class="section-title">评论 ({{commentTotal || 0}})</text>
         </view>
         
-        <view wx:if="{{!comments || comments.length === 0}}" class="empty-comment">
+        <view wx:if="{{!comment || comment.length === 0}}" class="empty-comment">
           <text>暂无评论，快来抢沙发~</text>
         </view>
         
-        <view class="comment-list" wx:if="{{comments.length > 0}}">
-          <view class="comment-item" wx:for="{{comments}}" wx:key="_id">
-            <image class="avatar" src="{{item.authorAvatar}}" mode="aspectFill"></image>
+        <view class="comment-list" wx:if="{{comment.length > 0}}">
+          <view class="comment-item" wx:for="{{comment}}" wx:key="id">
+            <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
             <view class="comment-content">
               <view class="comment-header">
-                <text class="comment-author">{{item.authorName}}</text>
+                <text class="comment-author">{{item.nickname || '用户'}}</text>
                 <text class="comment-time">{{item.relativeTime}}</text>
               </view>
               <text class="comment-text" user-select="{{true}}">{{item.content}}</text>
               
               <!-- 评论图片显示 -->
-              <view class="comment-images" wx:if="{{item.images && item.images.length > 0}}">
+              <view class="comment-images" wx:if="{{item.image && item.image.length > 0}}">
                 <image 
-                  wx:for="{{item.images}}" 
+                  wx:for="{{item.image}}" 
                   wx:for-item="img" 
                   wx:key="index"
                   class="comment-image" 
                   src="{{img}}" 
                   mode="aspectFill"
-                  data-urls="{{item.images}}"
+                  data-urls="{{item.image}}"
                   data-current="{{img}}"
                   binderror="handleImageError"
                   bindtap="previewCommentImage"
                 ></image>
+              </view>
+              
+              <!-- 回复预览区域 -->
+              <view class="reply-preview" wx:if="{{item.reply_preview && item.reply_preview.length > 0}}">
+                <view class="reply-item" wx:for="{{item.reply_preview}}" wx:for-item="reply" wx:key="id">
+                  <text class="reply-author">{{reply.nickname || '用户'}}：</text>
+                  <text class="reply-text">{{reply.content}}</text>
+                </view>
+                <view class="view-more-replies" wx:if="{{item.reply_count > item.reply_preview.length}}" 
+                      data-comment-id="{{item.id}}" bindtap="viewMoreReplies">
+                  <text>查看全部{{item.reply_count}}条回复</text>
+                </view>
+              </view>
+              
+              <!-- 回复按钮 -->
+              <view class="reply-action" data-comment-id="{{item.id}}" bindtap="replyToComment">
+                <text>回复</text>
               </view>
             </view>
           </view>
@@ -128,7 +146,7 @@
     <view class="comment-input-box">
       <input 
         class="comment-input" 
-        placeholder="写下你的评论(不超过200字)..." 
+        placeholder="{{commentPlaceholder}}" 
         value="{{commentText}}" 
         bindinput="onCommentInput"
         bindfocus="expandCommentBox"
@@ -156,7 +174,7 @@
       maxlength="200"
       auto-height
       focus="{{isCommentExpanded}}"
-      placeholder="写下你的评论(不超过200字)..."
+      placeholder="{{commentPlaceholder}}"
     ></textarea>
     
     <view class="comment-footer-tools">

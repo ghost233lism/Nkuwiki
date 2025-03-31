@@ -2,26 +2,24 @@
  * 分类和标签相关API封装
  */
 
-const request = require('../request');
+const { get, API_PREFIXES, processResponse } = require('../request');
+const { getStorage } = require('../util');
 
 /**
  * 获取分类列表
  * @returns {Promise} - 返回Promise对象
  */
-async function getCategories() {
+async function getCategoryList() {
   try {
-    const result = await request.get('/api/wxapp/categories');
-    
-    return {
-      success: true,
-      categories: result.data
-    };
+    return await get(API_PREFIXES.wxapp + '/category');
   } catch (err) {
     console.error('获取分类列表失败:', err);
-    return {
-      success: false,
-      message: '获取分类列表失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取分类列表失败',
+      data: [],
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -33,24 +31,23 @@ async function getCategories() {
 async function getCategoryDetail(categoryId) {
   try {
     if (!categoryId) {
-      return {
-        success: false,
-        message: '分类ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '分类ID不能为空' }
+      });
     }
     
-    const result = await request.get(`/api/wxapp/categories/${categoryId}`);
-    
-    return {
-      success: true,
-      category: result.data
-    };
+    return await get(API_PREFIXES.wxapp + `/category/${categoryId}`);
   } catch (err) {
     console.error('获取分类详情失败:', err);
-    return {
-      success: false,
-      message: '获取分类详情失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取分类详情失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -59,20 +56,17 @@ async function getCategoryDetail(categoryId) {
  * @param {number} limit - 限制返回数量
  * @returns {Promise} - 返回Promise对象
  */
-async function getHotTags(limit = 20) {
+async function getHotTag(limit = 20) {
   try {
-    const result = await request.get(`/api/wxapp/tags/hot?limit=${limit}`);
-    
-    return {
-      success: true,
-      tags: result.data
-    };
+    return await get(API_PREFIXES.wxapp + '/tag/hot', { limit });
   } catch (err) {
     console.error('获取热门标签失败:', err);
-    return {
-      success: false,
-      message: '获取热门标签失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取热门标签失败',
+      data: [],
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -82,27 +76,26 @@ async function getHotTags(limit = 20) {
  * @param {number} limit - 限制返回数量
  * @returns {Promise} - 返回Promise对象
  */
-async function searchTags(keyword, limit = 10) {
+async function searchTag(keyword, limit = 10) {
   try {
     if (!keyword) {
-      return {
-        success: false,
-        message: '搜索关键词不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: [],
+        details: { message: '搜索关键词不能为空' }
+      });
     }
     
-    const result = await request.get(`/api/wxapp/tags/search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
-    
-    return {
-      success: true,
-      tags: result.data
-    };
+    return await get(API_PREFIXES.wxapp + '/tag/search', { keyword, limit });
   } catch (err) {
     console.error('搜索标签失败:', err);
-    return {
-      success: false,
-      message: '搜索标签失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '搜索标签失败',
+      data: [],
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -114,24 +107,23 @@ async function searchTags(keyword, limit = 10) {
 async function getTagDetail(tagId) {
   try {
     if (!tagId) {
-      return {
-        success: false,
-        message: '标签ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '标签ID不能为空' }
+      });
     }
     
-    const result = await request.get(`/api/wxapp/tags/${tagId}`);
-    
-    return {
-      success: true,
-      tag: result.data
-    };
+    return await get(API_PREFIXES.wxapp + `/tag/${tagId}`);
   } catch (err) {
     console.error('获取标签详情失败:', err);
-    return {
-      success: false,
-      message: '获取标签详情失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取标签详情失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -142,34 +134,34 @@ async function getTagDetail(tagId) {
  */
 async function followTag(tagId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!tagId) {
-      return {
-        success: false,
-        message: '标签ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '标签ID不能为空' }
+      });
     }
     
-    const result = await request.post(`/api/wxapp/tags/${tagId}/follow`, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      followed: result.data.followed,
-      follow_count: result.data.follow_count,
-      tag_id: result.data.tag_id,
-      action: result.data.action
-    };
+    return await get(API_PREFIXES.wxapp + `/tag/${tagId}/follow`);
   } catch (err) {
     console.error('关注标签失败:', err);
-    return {
-      success: false,
-      message: '关注标签失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '关注标签失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -180,42 +172,42 @@ async function followTag(tagId) {
  */
 async function unfollowTag(tagId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!tagId) {
-      return {
-        success: false,
-        message: '标签ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '标签ID不能为空' }
+      });
     }
     
-    const result = await request.post(`/api/wxapp/tags/${tagId}/unfollow`, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      followed: result.data.followed,
-      follow_count: result.data.follow_count,
-      tag_id: result.data.tag_id,
-      action: result.data.action
-    };
+    return await get(API_PREFIXES.wxapp + `/tag/${tagId}/unfollow`);
   } catch (err) {
     console.error('取消关注标签失败:', err);
-    return {
-      success: false,
-      message: '取消关注标签失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '取消关注标签失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
 module.exports = {
-  getCategories,
+  getCategoryList,
   getCategoryDetail,
-  getHotTags,
-  searchTags,
+  getHotTag,
+  searchTag,
   getTagDetail,
   followTag,
   unfollowTag

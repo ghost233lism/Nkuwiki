@@ -1,4 +1,8 @@
-const fs = wx.getFileSystemManager();
+const {
+  getStorage,
+  formatTime
+} = require('../../../utils/util');
+const api = require('../../../utils/api/index');
 
 Page({
   data: {
@@ -23,21 +27,25 @@ Page({
   // 输入反馈内容
   onContentInput(e) {
     this.setData({
-      content: e.detail.value
+      content: e.detail.value.trim()
     });
   },
 
   // 输入联系方式
   onContactInput(e) {
     this.setData({
-      contact: e.detail.value
+      contact: e.detail.value.trim()
     });
   },
 
   // 选择图片
   chooseImage() {
+    const maxImages = 3;
+    const remainCount = maxImages - this.data.images.length;
+    if (remainCount <= 0) return;
+
     wx.chooseMedia({
-      count: 3 - this.data.images.length,
+      count: remainCount,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: (res) => {
@@ -51,7 +59,7 @@ Page({
 
   // 预览图片
   previewImage(e) {
-    const url = e.currentTarget.dataset.url;
+    const { url } = e.currentTarget.dataset;
     wx.previewImage({
       urls: this.data.images,
       current: url
@@ -60,42 +68,15 @@ Page({
 
   // 删除图片
   deleteImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.images;
+    const { index } = e.currentTarget.dataset;
+    const images = [...this.data.images];
     images.splice(index, 1);
     this.setData({ images });
   },
 
-  // 保存反馈信息到本地文件
-  saveFeedback(feedback) {
-    const timestamp = new Date().getTime();
-    const fileName = `feedback_${timestamp}.json`;
-    const filePath = `${wx.env.USER_DATA_PATH}/feedback/${fileName}`;
-
-    // 确保feedback文件夹存在
-    try {
-      fs.accessSync(`${wx.env.USER_DATA_PATH}/feedback`);
-    } catch (e) {
-      fs.mkdirSync(`${wx.env.USER_DATA_PATH}/feedback`, true);
-    }
-
-    // 保存反馈信息
-    try {
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify(feedback),
-        'utf8'
-      );
-      return true;
-    } catch (e) {
-      console.error('保存反馈失败：', e);
-      return false;
-    }
-  },
-
   // 提交反馈
-  submitFeedback() {
-    if (!this.data.content.trim()) {
+  async submitFeedback() {
+    if (!this.data.content) {
       wx.showToast({
         title: '请输入反馈内容',
         icon: 'none'
@@ -103,44 +84,48 @@ Page({
       return;
     }
 
-    wx.showLoading({
-      title: '提交中...'
-    });
+    try {
+      wx.showLoading({ title: '提交中...' });
 
-    // 准备反馈数据
-    const feedback = {
-      type: this.data.type,
-      content: this.data.content,
-      contact: this.data.contact,
-      images: this.data.images,
-      createTime: new Date().toISOString(),
-      deviceInfo: {
-        ...wx.getDeviceInfo(),
-        ...wx.getAppBaseInfo(),
-        ...wx.getSystemSetting(),
-        ...wx.getWindowInfo()
-      }
-    };
-
-    // 保存反馈
-    if (this.saveFeedback(feedback)) {
-      wx.hideLoading();
-      wx.showToast({
-        title: '反馈提交成功',
-        icon: 'success',
-        duration: 2000,
-        success: () => {
-          setTimeout(() => {
-            wx.navigateBack();
-          }, 2000);
+      const userInfo = getStorage('userInfo');
+      const feedback = {
+        type: this.data.type,
+        content: this.data.content,
+        contact: this.data.contact,
+        images: this.data.images,
+        openid: userInfo?.openid,
+        deviceInfo: {
+          ...wx.getDeviceInfo(),
+          ...wx.getAppBaseInfo(),
+          ...wx.getSystemSetting(),
+          ...wx.getWindowInfo()
         }
-      });
-    } else {
-      wx.hideLoading();
+      };
+
+      const result = await api.user.submitFeedback(feedback);
+      
+      if (result?.success) {
+        wx.showToast({
+          title: '反馈提交成功',
+          icon: 'success',
+          duration: 2000,
+          success: () => {
+            setTimeout(() => {
+              wx.navigateBack();
+            }, 2000);
+          }
+        });
+      } else {
+        throw new Error(result?.message || '提交失败');
+      }
+    } catch (err) {
+      console.debug('提交反馈失败:', err);
       wx.showToast({
-        title: '提交失败，请重试',
-        icon: 'error'
+        title: err.message || '提交失败，请重试',
+        icon: 'none'
       });
+    } finally {
+      wx.hideLoading();
     }
   }
 }); 

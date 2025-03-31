@@ -1,117 +1,84 @@
 <view class="about-container">
-  <!-- Logo区域 -->
-  <view class="logo-section">
-    <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-    <text class="app-name">应用名称</text>
-    <text class="version">版本 1.0.0</text>
+  <!-- 加载中提示 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
   </view>
 
-  <!-- 公司信息区域 -->
-  <view class="company-info">
-    <view class="info-item">
-      <text class="label">公司名称</text>
-      <text class="content">{{companyName}}</text>
-    </view>
-    
-    <view class="info-item">
-      <text class="label">联系地址</text>
-      <text class="content">{{address}}</text>
-    </view>
-    
-    <view class="info-item">
-      <text class="label">联系邮箱</text>
-      <text class="content">support@nkuwiki.com</text>
-    </view>
-
-     <view class="info-item">
-      <text class="label">微信公众号</text>
-      <text class="content">nkuwiki</text>
-    </view>
+  <!-- 错误提示 -->
+  <view class="error-container" wx:elif="{{error}}">
+    <icon type="warn" size="64"></icon>
+    <text class="error-text">获取信息失败</text>
+    <button class="refresh-btn" bindtap="refresh">重新加载</button>
   </view>
 
-  <!-- 项目介绍 -->
-  <view class="company-intro">
-    <view class="intro-title">项目介绍</view>
-    <view class="intro-content">
-      <!-- 服务平台部分 -->
-      <view class="section">
-        <view class="section-title">服务平台</view>
-        
-        <view class="platform-item">
-          <view class="item-title">1. Website</view>
-          <view class="item-content">
-            <view class="list-item">• Coze</view>
-            <view class="list-item">• Hiagent</view>
-          </view>
-        </view>
+  <!-- 内容区域 -->
+  <block wx:else>
+    <!-- Logo区域 -->
+    <view class="logo-section">
+      <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
+      <text class="app-name">nkuwiki</text>
+      <text class="version">版本 1.0.0</text>
+    </view>
 
-        <view class="platform-item">
-          <view class="item-title">2. 微信公众号</view>
-          <view class="item-content">
-            <view class="list-item">• nkuwiki知识社区服务号（无限制，服务体验更佳）</view>
-            <view class="list-item">• nkuwiki订阅号（消极回复限制）</view>
-          </view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">3. 企业微信</view>
-          <view class="item-content">可以群聊里@nkuwiki南开小知与wiki互动，或者把wiki拉入自己的群聊哦！（需要转为企微群）</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">4. 小程序</view>
-          <view class="item-content">nkuwiki小程序</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">5. 邮箱</view>
-          <view class="item-content">反馈：support@nkuwiki.com</view>
-        </view>
-
-        <view class="platform-item">
-          <view class="item-title">6. 飞书Wiki</view>
-          <view class="item-content">敬请期待</view>
-        </view>
+    <!-- 公司信息区域 -->
+    <view class="company-info">
+      <view class="info-item">
+        <text class="label">公司名称</text>
+        <text class="content">{{companyInfo.name}}</text>
       </view>
+      
+      <view class="info-item">
+        <text class="label">联系地址</text>
+        <text class="content">{{companyInfo.address}}</text>
+      </view>
+      
+      <view class="info-item" bindtap="contactUs">
+        <text class="label">联系邮箱</text>
+        <text class="content">{{companyInfo.email}}</text>
+      </view>
+    </view>
 
-      <!-- 参与方式部分 -->
-      <view class="section">
-        <view class="section-title">参与方式</view>
-        <view class="section-subtitle">（根据项目进度动态更新中）</view>
-
-        <view class="contribution-item">
-          <view class="item-title">1. 知识维护</view>
-          <view class="item-content">更新Coze知识库/飞书Wiki</view>
+    <!-- 项目介绍 -->
+    <view class="company-intro">
+      <view class="intro-title">项目介绍</view>
+      <view class="intro-content">
+        <!-- 服务平台部分 -->
+        <view class="section">
+          <view class="section-title">服务平台</view>
+          
+          <view class="platform-item" wx:for="{{platforms}}" wx:key="title">
+            <view class="item-title">{{index + 1}}. {{item.title}}</view>
+            <view class="item-content">
+              <block wx:if="{{item.items && item.items.length > 0}}">
+                <view class="list-item" wx:for="{{item.items}}" wx:key="*this" wx:for-item="subItem">
+                  • {{subItem}}
+                </view>
+              </block>
+              <block wx:elif="{{item.description}}">
+                {{item.description}}
+              </block>
+            </view>
+          </view>
         </view>
 
-        <view class="contribution-item">
-          <view class="item-title">2. 数据源开发</view>
-          <view class="item-content">（需编程）完善网站/校园集市/社交平台数据接口</view>
-        </view>
+        <!-- 参与方式部分 -->
+        <view class="section">
+          <view class="section-title">参与方式</view>
+          <view class="section-subtitle">（根据项目进度动态更新中）</view>
 
-        <view class="contribution-item">
-          <view class="item-title">3. 智能体开发</view>
-          <view class="item-content">（零代码/低代码）通过Prompt工程/工作流编排/LLMs等技术优化Coze智能体。目前咱们主打的是nkuwiki（定位为南开百事通），也欢迎大家利用社区提供的海量数据资源探索搭建其他智能体。</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">4. 产品体验</view>
-          <view class="item-content">测试智能体回答准确率/用户对话日志分析/用户需求调研/指出未来开发演进方向</view>
-        </view>
-
-        <view class="contribution-item">
-          <view class="item-title">5. 创意传播</view>
-          <view class="item-content">
-            撰写宣传文案/公众号运营/制作展示素材/根据知识库和智能体生成有价值的insight
+          <view class="contribution-item" wx:for="{{contributions}}" wx:key="title">
+            <view class="item-title">{{index + 1}}. {{item.title}}</view>
+            <view class="item-content">{{item.description}}</view>
           </view>
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 版权信息 -->
-  <view class="copyright">
-    <text>Copyright © 2025 沈阳最优解教育科技有限公司</text>
-    <text>All Rights Reserved</text>
-  </view>
+    <!-- 版权信息 -->
+    <view class="copyright">
+      <text>Copyright © {{currentYear}} {{companyInfo.name}}</text>
+      <text>All Rights Reserved</text>
+    </view>
+  </block>
 </view>

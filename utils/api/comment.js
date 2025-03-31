@@ -2,61 +2,67 @@
  * 评论相关API封装
  */
 
-const request = require('../request');
+const { get, post, API_PREFIXES, processResponse } = require('../request');
+const { getStorage } = require('../util');
 
 /**
  * 创建评论
- * @param {Object} commentData - 评论数据
- * @returns {Promise} - 返回Promise对象
+ * @param {Object} data - 评论数据 
+ * @returns {Promise}
  */
-async function createComment(commentData) {
+async function createComment(data) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
-    if (!commentData.post_id) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+    if (!data.post_id) {
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '帖子ID不能为空' }
+      });
     }
     
-    if (!commentData.content && (!commentData.images || commentData.images.length === 0)) {
-      return {
-        success: false,
-        message: '评论内容不能为空'
-      };
+    if (!data.content || data.content.trim() === '') {
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论内容不能为空' }
+      });
     }
     
-    // 获取用户信息
-    const userInfo = wx.getStorageSync('userInfo') || {};
+    // 获取本地用户信息
+    const userInfo = getStorage('userInfo') || {};
     
-    // 准备评论数据
-    const data = {
-      ...commentData,
-      nick_name: userInfo.nick_name,
-      avatar: userInfo.avatar
+    // 准备评论数据，确保符合API要求的格式
+    const commentData = {
+      openid: openid,
+      post_id: data.post_id,
+      content: data.content,
+      parent_id: data.parent_id || null,
+      nickname: userInfo.nickName || userInfo.nickname,
+      avatar: userInfo.avatarUrl || userInfo.avatar,
+      image: data.image || []
     };
     
-    const result = await request.post('/api/wxapp/comments', data, {}, {
-      openid,
-      nick_name: userInfo.nick_name,
-      avatar: userInfo.avatar
-    });
-    
-    return {
-      success: true,
-      comment: result.data,
-      message: '评论成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/comment', commentData);
   } catch (err) {
-    console.error('发表评论失败:', err);
-    return {
-      success: false,
-      message: '发表评论失败: ' + (err.message || '未知错误')
-    };
+    console.error('创建评论失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '创建评论失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -68,33 +74,41 @@ async function createComment(commentData) {
  */
 async function updateComment(commentId, commentData) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!commentId) {
-      return {
-        success: false,
-        message: '评论ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论ID不能为空' }
+      });
     }
     
-    const result = await request.put(`/api/wxapp/comments/${commentId}`, commentData, {
+    // 准备评论数据
+    const data = {
+      ...commentData,
+      comment_id: commentId,
       openid
-    });
-    
-    return {
-      success: true,
-      comment: result.data,
-      message: '更新成功'
     };
+    
+    return await post(API_PREFIXES.wxapp + '/comment/update', data);
   } catch (err) {
     console.error('更新评论失败:', err);
-    return {
-      success: false,
-      message: '更新评论失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '更新评论失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -105,31 +119,37 @@ async function updateComment(commentId, commentData) {
  */
 async function deleteComment(commentId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!commentId) {
-      return {
-        success: false,
-        message: '评论ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论ID不能为空' }
+      });
     }
     
-    // 使用查询参数传递openid
-    const result = await request.delete(`/api/wxapp/comments/${commentId}`, {}, {}, { openid });
-    
-    return {
-      success: true,
-      message: '删除成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/comment/delete', {
+      comment_id: commentId,
+      openid
+    });
   } catch (err) {
     console.error('删除评论失败:', err);
-    return {
-      success: false,
-      message: '删除评论失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '删除评论失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -140,34 +160,37 @@ async function deleteComment(commentId) {
  */
 async function likeComment(commentId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!commentId) {
-      return {
-        success: false,
-        message: '评论ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论ID不能为空' }
+      });
     }
     
-    const result = await request.post(`/api/wxapp/comments/${commentId}/like`, {}, {}, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      comment_id: result.data.comment_id,
-      action: result.data.action
-    };
+    return await post(API_PREFIXES.wxapp + '/comment/like', {
+      comment_id: commentId,
+      openid
+    });
   } catch (err) {
     console.error('点赞评论失败:', err);
-    return {
-      success: false,
-      message: '点赞评论失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '点赞评论失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -178,34 +201,37 @@ async function likeComment(commentId) {
  */
 async function unlikeComment(commentId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     if (!commentId) {
-      return {
-        success: false,
-        message: '评论ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论ID不能为空' }
+      });
     }
     
-    const result = await request.post(`/api/wxapp/comments/${commentId}/unlike`, {}, {}, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      comment_id: result.data.comment_id,
-      action: result.data.action
-    };
+    return await post(API_PREFIXES.wxapp + '/comment/unlike', {
+      comment_id: commentId,
+      openid
+    });
   } catch (err) {
     console.error('取消点赞评论失败:', err);
-    return {
-      success: false,
-      message: '取消点赞评论失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '取消点赞评论失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -217,24 +243,50 @@ async function unlikeComment(commentId) {
 async function getCommentDetail(commentId) {
   try {
     if (!commentId) {
-      return {
-        success: false,
-        message: '评论ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '评论ID不能为空' }
+      });
     }
     
-    const result = await request.get(`/api/wxapp/comments/${commentId}`);
-    
-    return {
-      success: true,
-      comment: result.data
-    };
+    return await get(API_PREFIXES.wxapp + '/comment/detail', { comment_id: commentId });
   } catch (err) {
     console.error('获取评论详情失败:', err);
-    return {
-      success: false,
-      message: '获取评论详情失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取评论详情失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
+  }
+}
+
+/**
+ * 获取评论列表
+ * @param {Object} params - 请求参数
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getCommentList(params = {}) {
+  try {
+    return await get(API_PREFIXES.wxapp + '/comment/list', params);
+  } catch (err) {
+    console.error('获取评论列表失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '获取评论列表失败',
+      data: [],
+      details: { 
+        message: err.message || '未知错误',
+        pagination: {
+          total: 0,
+          limit: params.limit || 20,
+          offset: params.offset || 0,
+          has_more: false
+        }
+      }
+    });
   }
 }
 
@@ -244,5 +296,6 @@ module.exports = {
   deleteComment,
   likeComment,
   unlikeComment,
-  getCommentDetail
+  getCommentDetail,
+  getCommentList
 }; 

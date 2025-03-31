@@ -26,7 +26,15 @@
     "condition": false,
     "swc": false,
     "disableSWC": true,
-    "ignoreUploadUnusedFiles": true
+    "ignoreUploadUnusedFiles": true,
+    "ignoreDevUnusedFiles": true,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "compileHotReLoad": false,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "useMultiFrameRuntime": true,
+    "useStaticServer": true
   },
   "condition": {},
   "editorSetting": {
@@ -41,5 +49,5 @@
     "ignore": [],
     "include": []
   },
-  "projectname": "app"
+  "projectname": "nkuwiki"
 }

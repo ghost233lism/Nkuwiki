@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "南开知识助手",
+  "usingComponents": {
+    "towxml": "/wxcomponents/towxml/towxml"
+  }
+} 

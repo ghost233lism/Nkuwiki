@@ -1,8 +1,13 @@
 const app = getApp()
-const config = app.globalData.config || {};
-const API_BASE_URL = config.services?.app?.base_url || 'https://nkuwiki.com';
+const {get, post, processResponse} = require('../../utils/request');
 const towxml = require('../../wxcomponents/towxml/index');
 const api = require('../../utils/api/index');
+const {
+  formatRelativeTime,
+  getStorage,
+  setStorage,
+  removeStorage
+} = require('../../utils/util');
 
 // 简单的Markdown解析函数
 function parseMarkdown(markdown) {
@@ -54,32 +59,313 @@ Page({
     searchValue: '',
     searchHistory: [],
     searchResults: [],
-    markdownHtml: '',
+    currentCategory: 'all', // 当前选中的分类
+    categories: [
+      { id: 'all', name: '全部', icon: '/assets/icons/search/all.png' },
+      { id: 'website', name: '网站', icon: '/assets/icons/search/website.png' },
+      { id: 'wechat', name: '微信', icon: '/assets/icons/search/wechat.png' },
+      { id: 'market', name: '集市', icon: '/assets/icons/search/market.png' },
+      { id: 'douyin', name: '抖音', icon: '/assets/icons/search/douyin.png' }
+    ],
     loading: false,
-    currentPage: 1,
-    pageSize: 10,
-    hasMore: true,
-    baseUrl: app.globalData.config.services.app.base_url,
-    isStreaming: false,
-    typingText: '',
+    pagination: {
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      hasMore: true
+    },
+    isRecording: false, // 是否正在录音
+    textContent: '',
+    richTextContent: null,
+    usePlainText: false,
+    enableTyper: true,
+    typerSpeed: 20,
+    markdownHtml: '',
     fullResponse: '',
     sources: [],
     // 记录所有会话
     chatHistory: [],
     _lastMarkdown: '',
     _lastMarkdownHtml: '',
-    usePlainText: false,  // 是否使用纯文本模式（不使用富文本渲染）
-    textContent: '',  // 存储纯文本内容
-    richTextContent: null,  // 存储美化后的文本内容
-    enableTyper: true,  // 打字机效果始终开启
-    typerSpeed: 20,  // 打字机速度，值越小速度越快
+    typingText: '',
     requestTask: null, // 存储请求任务，用于取消请求
   },
 
-  // 处理输入框变化
-  onInputChange(e) {
+  // 输入框内容变化
+  onSearchInput(e) {
+    this.setData({ searchValue: e.detail.value });
+  },
+
+  // 清空搜索框
+  clearSearchInput() {
     this.setData({
-      searchValue: e.detail.value
+      searchValue: '',
+      searchResults: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
+    });
+  },
+
+  // 加载搜索历史
+  loadSearchHistory() {
+    try {
+      const searchHistory = getStorage('searchHistory') || [];
+      this.setData({ searchHistory });
+    } catch (err) {
+      console.debug('加载搜索历史失败:', err);
+    }
+  },
+
+  // 保存搜索历史
+  saveSearchHistory(keyword) {
+    try {
+      let searchHistory = this.data.searchHistory;
+      // 如果已存在相同关键词，先删除
+      searchHistory = searchHistory.filter(item => item !== keyword);
+      // 添加到开头
+      searchHistory.unshift(keyword);
+      // 限制历史记录数量，保留最新10条
+      if (searchHistory.length > 10) {
+        searchHistory = searchHistory.slice(0, 10);
+      }
+      this.setData({ searchHistory });
+      setStorage('searchHistory', searchHistory);
+    } catch (err) {
+      console.debug('保存搜索历史失败:', err);
+    }
+  },
+
+  // 清空搜索历史
+  clearSearchHistory() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要清空搜索历史吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({ searchHistory: [] });
+          removeStorage('searchHistory');
+          wx.showToast({
+            title: '已清空搜索历史',
+            icon: 'success'
+          });
+        }
+      }
+    });
+  },
+
+  // 点击历史记录
+  onHistoryItemTap(e) {
+    const keyword = e.currentTarget.dataset.keyword;
+    this.setData({ searchValue: keyword });
+    this.handleSearch();
+  },
+
+  // 切换分类
+  switchCategory(e) {
+    const category = e.currentTarget.dataset.category;
+    if (category === this.data.currentCategory) return;
+    
+    this.setData({
+      currentCategory: category,
+      searchResults: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
+    });
+    
+    if (this.data.searchValue) {
+      this.handleSearch();
+    }
+  },
+
+  // 开始语音搜索
+  startVoiceSearch() {
+    // 检查是否有录音权限
+    wx.authorize({
+      scope: 'scope.record',
+      success: () => {
+        this.setData({ isRecording: true });
+        const recorderManager = wx.getRecorderManager();
+        
+        recorderManager.onStart(() => {
+          wx.showToast({
+            title: '开始录音',
+            icon: 'none'
+          });
+        });
+        
+        recorderManager.onStop((res) => {
+          this.setData({ isRecording: false });
+          if (res.duration < 1000) {
+            wx.showToast({
+              title: '说话时间太短',
+              icon: 'none'
+            });
+            return;
+          }
+          
+          wx.showLoading({ title: '识别中...' });
+          
+          // 调用语音识别API
+          wx.uploadFile({
+            url: `${API_BASE_URL}/api/voice/recognize`,
+            filePath: res.tempFilePath,
+            name: 'file',
+            success: (uploadRes) => {
+              const result = JSON.parse(uploadRes.data);
+              if (result.code === 200 && result.data) {
+                this.setData({ searchValue: result.data.text });
+                this.handleSearch();
+              } else {
+                wx.showToast({
+                  title: '识别失败',
+                  icon: 'none'
+                });
+              }
+            },
+            fail: () => {
+              wx.showToast({
+                title: '识别失败',
+                icon: 'none'
+              });
+            },
+            complete: () => {
+              wx.hideLoading();
+            }
+          });
+        });
+        
+        recorderManager.start({
+          duration: 10000, // 最长录音时间，单位ms
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          encodeBitRate: 48000,
+          format: 'mp3'
+        });
+      },
+      fail: () => {
+        wx.showModal({
+          title: '提示',
+          content: '需要您的录音权限才能使用语音搜索功能',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting();
+            }
+          }
+        });
+      }
+    });
+  },
+
+  // 停止语音搜索
+  stopVoiceSearch() {
+    if (this.data.isRecording) {
+      const recorderManager = wx.getRecorderManager();
+      recorderManager.stop();
+    }
+  },
+
+  // 处理搜索事件
+  async handleSearch() {
+    const { searchValue, currentCategory, pagination } = this.data;
+    if (!searchValue.trim()) {
+      wx.showToast({
+        title: '请输入搜索内容',
+        icon: 'none'
+      });
+      return;
+    }
+
+    this.setData({ loading: true });
+
+    try {
+      const params = {
+        keyword: searchValue,
+        category: currentCategory,
+        page: pagination.page,
+        pageSize: pagination.pageSize
+      };
+      
+      const result = await api.search.searchPosts(params);
+      
+      if (result.code === 200) {
+        // 处理搜索结果，添加相对时间
+        const processedResults = result.data.list.map(item => ({
+          ...item,
+          created_at: formatRelativeTime(item.created_at)
+        }));
+
+        // 更新搜索结果和分页信息
+        this.setData({
+          searchResults: pagination.page === 1 
+            ? processedResults 
+            : [...this.data.searchResults, ...processedResults],
+          'pagination.total': result.data.total,
+          'pagination.hasMore': result.data.list.length === pagination.pageSize,
+          loading: false
+        });
+
+        // 保存搜索历史
+        if (pagination.page === 1) {
+          this.saveSearchHistory(searchValue);
+        }
+      } else {
+        wx.showToast({
+          title: result.message || '搜索失败',
+          icon: 'none'
+        });
+      }
+    } catch (err) {
+      console.debug('搜索失败:', err);
+      wx.showToast({
+        title: '搜索失败',
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  // 加载更多
+  loadMore() {
+    if (!this.data.pagination.hasMore || this.data.loading) return;
+    
+    this.setData({
+      'pagination.page': this.data.pagination.page + 1
+    });
+    
+    this.handleSearch();
+  },
+
+  // 跳转到详情页
+  goToDetail(e) {
+    const post = e.currentTarget.dataset.post;
+    if (!post?.id) {
+      console.debug('跳转详情页失败：未提供帖子ID', post);
+      wx.showToast({
+        title: '无法打开帖子',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.navigateTo({
+      url: `/pages/post/detail/detail?id=${post.id}`,
+      fail: (err) => {
+        console.debug('跳转详情页失败:', err);
+        wx.showToast({
+          title: '跳转失败',
+          icon: 'none'
+        });
+      }
     });
   },
 
@@ -88,22 +374,15 @@ Page({
     this.setData({
       usePlainText: !this.data.usePlainText
     }, () => {
-      // 如果已有内容，重新渲染
       if (this.data.fullResponse) {
         if (this.data.usePlainText) {
-          this.setData({
-            markdownHtml: '' // 清空markdown以便显示纯文本
-          });
+          this.setData({ markdownHtml: '' });
         } else {
-          // 重新生成markdown
           const markdownHtml = parseMarkdown(this.data.fullResponse);
-          this.setData({
-            markdownHtml: markdownHtml
-          });
+          this.setData({ markdownHtml });
         }
       }
       
-      // 提示用户
       wx.showToast({
         title: this.data.usePlainText ? '已切换到纯文本模式' : '已切换到富文本模式',
         icon: 'none'
@@ -136,205 +415,6 @@ Page({
     
     this.setData({ chatHistory });
     wx.setStorageSync('chatHistory', chatHistory);
-  },
-
-  // 处理搜索事件
-  handleSearch() {
-    const { searchValue } = this.data;
-    if (!searchValue.trim()) {
-      wx.showToast({
-        title: '请输入搜索内容',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 取消现有请求
-    if (this.data.requestTask) {
-      this.data.requestTask.abort();
-    }
-
-    this.setData({
-      textContent: '',  // 清空之前的内容
-      richTextContent: null, // 清除之前的富文本内容
-      loading: true,
-      isStreaming: false // 不立即显示流式状态，避免出现"正在生成"
-    });
-
-    console.log(`开始搜索: ${searchValue}`);
-    
-    // 添加一个调试选项，显示固定内容用于测试打字机效果
-    if (searchValue === 'test') {
-      console.log('使用测试内容');
-      const testContent = "# 测试标题\n\n这是一段测试文字，用于测试打字机效果。\n\n## 二级标题\n\n* 列表项1\n* 列表项2\n* 列表项3\n\n";
-      this.setData({
-        textContent: testContent,
-        loading: false
-      });
-      
-      try {
-        // 一次性完整生成markdown内容
-        const result = towxml(testContent, 'markdown', {
-          theme: 'light',
-          typer: {
-            enable: true,  // 直接硬编码为true
-            speed: 20,     // 加快速度
-            delay: 100,
-            showCursor: true,
-            skippable: ['table', 'pre', 'code', 'image']
-          }
-        });
-        
-        // 处理表格和代码块的noType属性
-        this.handleNoTypeElements(result);
-        
-        this.setData({
-          richTextContent: result
-        });
-      } catch (error) {
-        console.error('处理测试内容失败:', error);
-      }
-      
-      return;
-    }
-    
-    // 测试超短内容
-    if (searchValue === 't') {
-      console.log('使用超短测试内容');
-      const testContent = "这是测试。";
-      this.setData({
-        textContent: testContent,
-        loading: false
-      });
-      
-      try {
-        // 一次性完整生成markdown内容
-        const result = towxml(testContent, 'markdown', {
-          theme: 'light',
-          typer: {
-            enable: true,  // 直接硬编码为true
-            speed: 20,     // 速度设为较快
-            delay: 100,    // 减少延迟
-            showCursor: true
-          }
-        });
-      
-        this.setData({
-          richTextContent: result
-        });
-      } catch (error) {
-        console.error('处理测试内容失败:', error);
-      }
-      
-      return;
-    }
-    
-    // 使用新的API发起流式请求
-    this.startChatWithAgent(searchValue);
-  },
-
-  // 使用agent API开始聊天
-  startChatWithAgent: function(query) {
-    const that = this;
-    
-    console.log('开始调用agent.chat API');
-    
-    // 初始化累积的响应文本
-    let accumulatedText = '';
-    let isFirstChunk = true;
-    
-    // 设置为正在流式响应状态
-    this.setData({
-      isStreaming: true
-    });
-    
-    // 调用agent API
-    api.agent.chat({
-      query: query,
-      stream: true,
-      format: 'markdown',
-      onMessage: function(content) {
-        // 处理第一个数据块的前导空行
-        if (isFirstChunk) {
-          content = content.replace(/^\s+/, '');
-          isFirstChunk = false;
-          
-          // 收到第一个数据块时，关闭loading
-          that.setData({
-            loading: false
-          });
-        }
-        
-        // 处理连续的空行，将多个空行替换为单个空行
-        content = content.replace(/\n\s*\n/g, '\n');
-        
-        // 更新累积文本
-        accumulatedText += content;
-        
-        // 确保整个文本中不会有多余的空行
-        const processedText = accumulatedText.replace(/\n\s*\n/g, '\n').trim();
-        
-        // 更新纯文本内容
-        that.setData({
-          textContent: processedText
-        });
-        
-        // 使用towxml处理富文本
-        if (!that.data.usePlainText) {
-          that.formatRichTextContent(processedText);
-        }
-      },
-      onError: function(error) {
-        console.error('流式请求错误:', error);
-        wx.showToast({
-          title: '请求失败: ' + (error.errMsg || '未知错误'),
-          icon: 'none'
-        });
-        that.setData({
-          loading: false,
-          isStreaming: false
-        });
-      },
-      onComplete: function() {
-        console.log('流式请求完成');
-        that.setData({
-          loading: false,
-          isStreaming: false,
-          fullResponse: accumulatedText
-        });
-        
-        // 保存会话历史
-        if (that.data.enableTyper && !that.data.usePlainText) {
-          that.saveChatHistory(query, accumulatedText);
-        }
-      }
-    }).then(result => {
-      if (result.success && result.requestTask) {
-        // 保存请求任务，以便能够取消
-        this.setData({
-          requestTask: result.requestTask
-        });
-      } else if (!result.success) {
-        wx.showToast({
-          title: result.message || '请求失败',
-          icon: 'none'
-        });
-        this.setData({
-          loading: false,
-          isStreaming: false
-        });
-      }
-    }).catch(error => {
-      console.error('API调用异常:', error);
-      wx.showToast({
-        title: '系统错误',
-        icon: 'none'
-      });
-      this.setData({
-        loading: false,
-        isStreaming: false
-      });
-    });
   },
 
   // 实时美化文本内容，识别链接、Email等
@@ -498,9 +578,10 @@ Page({
     }
   },
 
-  // 复制结果
+  // 复制搜索结果
   copyResult() {
-    if (!this.data.textContent) {
+    const content = this.data.usePlainText ? this.data.textContent : this.data.fullResponse;
+    if (!content) {
       wx.showToast({
         title: '没有可复制的内容',
         icon: 'none'
@@ -508,22 +589,12 @@ Page({
       return;
     }
     
-    // 使用纯文本内容进行复制，确保格式正确
-    const textToCopy = this.data.textContent;
-    
     wx.setClipboardData({
-      data: textToCopy,
-      success() {
+      data: content,
+      success: () => {
         wx.showToast({
-          title: '复制成功',
+          title: '已复制到剪贴板',
           icon: 'success'
-        });
-      },
-      fail(err) {
-        console.error('复制失败:', err);
-        wx.showToast({
-          title: '复制失败',
-          icon: 'none'
         });
       }
     });
@@ -542,8 +613,14 @@ Page({
     this.setData({
       textContent: '',
       richTextContent: null,
-      isStreaming: false,
-      fullResponse: ''
+      fullResponse: '',
+      searchResults: [],
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        hasMore: true
+      }
     });
   },
   
@@ -571,7 +648,7 @@ Page({
   onShareAppMessage: function() {
     const query = this.data.searchValue;
     return {
-      title: `南开wiki - ${query}`,
+      title: `nkuwiki - ${query}`,
       path: `/pages/search/search?query=${encodeURIComponent(query)}`
     };
   },
@@ -595,6 +672,9 @@ Page({
     
     // 初始化会话历史
     this.loadChatHistory();
+    
+    // 加载搜索历史
+    this.loadSearchHistory();
   },
   
   onUnload: function() {
@@ -606,6 +686,12 @@ Page({
     // 取消现有请求
     if (this.data.requestTask) {
       this.data.requestTask.abort();
+    }
+  },
+
+  onReachBottom: function() {
+    if (this.data.pagination.hasMore) {
+      this.loadMore();
     }
   }
 }); 

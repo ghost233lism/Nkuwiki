@@ -2,52 +2,38 @@
  * 帖子相关API封装
  */
 
-const request = require('../request');
+const { get, post, API_PREFIXES, processResponse } = require('../request');
+const { 
+  safeParseJSON,
+  processPostData,
+  getStorage,
+} = require('../util');
 
-/**
+/** 
  * 获取帖子列表
  * @param {Object} params - 请求参数
  * @returns {Promise} - 返回Promise对象
  */
-async function getPosts(params = {}) {
+async function getPostList(params = {}) {
   try {
-    // 提取查询参数
-    const { 
-      page = 1, 
-      pageSize = 20,
-      category_id,
-      tag,
-      status = 1,
-      order_by = 'update_time DESC'
-    } = params;
+    const result = await get(API_PREFIXES.wxapp + '/post/list', params);
     
-    // 构建查询参数
-    const queryParams = {
-      limit: pageSize,
-      offset: (page - 1) * pageSize
-    };
+    // 处理每个帖子的数据
+    if (result.data) {
+      const posts = Array.isArray(result.data) ? result.data : [];
+      const processedPosts = posts.map(post => processPostData(post));
+      result.data = processedPosts;
+    }
     
-    // 添加可选参数
-    if (category_id) queryParams.category_id = category_id;
-    if (tag) queryParams.tag = tag;
-    if (status !== undefined) queryParams.status = status;
-    if (order_by) queryParams.order_by = order_by;
-    
-    const result = await request.get('/api/wxapp/posts', queryParams);
-    
-    return {
-      success: true,
-      posts: result.data.posts,
-      total: result.data.total,
-      limit: result.data.limit,
-      offset: result.data.offset
-    };
+    return result;
   } catch (err) {
     console.error('获取帖子列表失败:', err);
-    return {
-      success: false,
-      message: '获取帖子列表失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取帖子列表失败',
+      data: [],
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -60,112 +46,71 @@ async function getPosts(params = {}) {
 async function getPostDetail(postId, updateView = true) {
   try {
     if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '帖子ID不能为空' }
+      });
     }
     
-    const result = await request.get(`/api/wxapp/posts/${postId}`, { update_view: updateView });
+    const result = await get(API_PREFIXES.wxapp + '/post/detail', { 
+      post_id: postId,
+      update_view: updateView 
+    });
     
-    return {
-      success: true,
-      post: result.data
-    };
+    if (result.data) {
+      result.data = processPostData(result.data);
+    }
+    
+    return result;
   } catch (err) {
     console.error('获取帖子详情失败:', err);
-    return {
-      success: false,
-      message: '获取帖子详情失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取帖子详情失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
 /**
  * 获取帖子评论列表
- * @param {string} postId - 帖子ID
- * @param {Object} params - 请求参数
- * @returns {Promise} - 返回Promise对象
+ * @param {number} postId - 帖子ID
+ * @param {object} params - 请求参数
+ * @returns {Promise} 评论列表
  */
-async function getPostComments(postId, params = {}) {
+async function getPostCommentList(postId, params = {}) {
   try {
-    if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
-    }
+    console.debug(`获取帖子评论列表，参数: postId=${postId}`, params);
     
-    // 提取查询参数
-    const { 
-      page = 1, 
-      pageSize = 20,
-      parent_id,
-      sort_by
-    } = params;
+    const result = await get(API_PREFIXES.wxapp + '/comment/list', {
+      post_id: postId,
+      limit: params.limit || 20,
+      offset: params.offset || 0,
+      ...params
+    });
     
-    // 构建查询参数
-    const queryParams = {
-      limit: pageSize,
-      offset: (page - 1) * pageSize
-    };
+    console.debug('评论列表API响应:', result);
     
-    if (parent_id !== undefined) queryParams.parent_id = parent_id;
-    if (sort_by) queryParams.sort_by = sort_by;
-    
-    const result = await request.get(`/api/wxapp/posts/${postId}/comments`, queryParams);
-    
-    return {
-      success: true,
-      comments: result.data.comments,
-      total: result.data.total,
-      limit: result.data.limit,
-      offset: result.data.offset
-    };
+    return result;
   } catch (err) {
     console.error('获取评论列表失败:', err);
-    return {
-      success: false,
-      message: '获取评论列表失败: ' + (err.message || '未知错误')
-    };
-  }
-}
-
-/**
- * 点赞/取消点赞帖子
- * @param {string} postId - 帖子ID
- * @returns {Promise} - 返回Promise对象
- */
-async function likePost(postId) {
-  try {
-    const openid = wx.getStorageSync('openid');
-    if (!openid) {
-      throw new Error('用户未登录');
-    }
-    
-    if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
-    }
-    
-    const result = await request.post(`/api/wxapp/posts/${postId}/like`, {}, {}, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
-  } catch (err) {
-    console.error('点赞操作失败:', err);
-    return {
-      success: false,
-      message: '点赞操作失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '获取评论列表失败',
+      data: [],
+      details: { 
+        message: err.message || '未知错误',
+        pagination: {
+          total: 0,
+          limit: params.limit || 20,
+          offset: params.offset || 0,
+          has_more: false
+        }
+      }
+    });
   }
 }
 
@@ -176,116 +121,103 @@ async function likePost(postId) {
  */
 async function createPost(postData) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
     // 获取用户信息
-    const userInfo = wx.getStorageSync('userInfo') || {};
+    const userInfo = getStorage('userInfo') || {};
     
     // 检查必要字段
     if (!postData.title) {
-      throw new Error('帖子标题不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '帖子标题不能为空' }
+      });
     }
     
     if (!postData.content) {
-      throw new Error('帖子内容不能为空');
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '帖子内容不能为空' }
+      });
     }
     
     // 准备帖子数据，确保符合API要求的格式
     const data = {
+      openid,
       title: postData.title,
       content: postData.content,
-      images: postData.images || [],
-      category_id: postData.category_id || 1,
-      status: postData.isPublic !== undefined ? (postData.isPublic ? 1 : 0) : 1,
-      allow_comment: postData.allow_comment !== undefined ? postData.allow_comment : 1,
-      // 添加用户信息
-      author_name: userInfo.nickName || userInfo.nick_name || '用户',
-      author_avatar: userInfo.avatarUrl || userInfo.avatar || '',
+      image: postData.image || [],
+      tag: postData.tag || [],
+      category_id: postData.category_id || 0,
+      location: postData.location || null,
+      nickname: userInfo.nickName,
+      avatar: userInfo.avatarUrl
     };
     
-    // 准备URL查询参数
-    const query = {
-      openid: openid,
-      nick_name: userInfo.nickName || userInfo.nick_name || '',
-      avatar: userInfo.avatarUrl || userInfo.avatar || ''
-    };
-    
-    console.debug('准备发送帖子数据:', data);
-    console.debug('URL查询参数:', query);
-    
-    // 发送请求，通过query参数传递openid
-    const result = await request.post('/api/wxapp/posts', data, {}, query);
-    
-    console.debug('帖子创建API响应:', result);
-    
-    return {
-      success: true,
-      post: result.data,
-      message: '发布成功'
-    };
+    return await post(API_PREFIXES.wxapp + '/post', data);
   } catch (err) {
-    console.error('发布帖子失败:', err);
-    
-    // 检查是否是网络错误
-    if (err.code === -1) {
-      return {
-        success: false,
-        message: '网络连接失败，请检查网络设置'
-      };
-    }
-    
-    // 检查是否是后端API错误
-    if (err.code >= 400) {
-      return {
-        success: false,
-        message: `服务器错误 (${err.code}): ${err.message || '未知错误'}`
-      };
-    }
-    
-    return {
-      success: false,
-      message: '发布帖子失败: ' + (err.message || '未知错误')
-    };
+    console.error('创建帖子失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '创建帖子失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
 /**
  * 更新帖子
- * @param {string} postId - 帖子ID
- * @param {Object} postData - 帖子数据
+ * @param {Object} data - 要更新的帖子数据
  * @returns {Promise} - 返回Promise对象
  */
-async function updatePost(postId, postData) {
+async function updatePost(data) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
     }
     
-    if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+    if (!data.post_id) {
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '缺少帖子ID' }
+      });
     }
     
-    // 将openid作为查询参数传递，而不是header
-    const result = await request.put(`/api/wxapp/posts/${postId}`, postData, {}, { openid });
+    // 确保有openid
+    data.openid = openid;
     
-    return {
-      success: true,
-      post: result.data,
-      message: '更新成功'
-    };
+    console.debug('更新帖子:', data);
+    
+    return await post(API_PREFIXES.wxapp + '/post/update', data);
   } catch (err) {
     console.error('更新帖子失败:', err);
-    return {
-      success: false,
-      message: '更新帖子失败: ' + (err.message || '未知错误')
-    };
+    return processResponse({
+      code: err.code || 500,
+      message: '更新帖子失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -296,23 +228,22 @@ async function updatePost(postId, postData) {
  */
 async function deletePost(postId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
     if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+      throw new Error('帖子ID不能为空');
     }
     
-    const result = await request.delete(`/api/wxapp/posts/${postId}`, {}, {}, { openid });
+    console.debug('删除帖子:', { postId, openid });
+    
+    const result = await post(API_PREFIXES.wxapp + '/post/delete', { post_id: postId, openid });
     
     return {
-      success: true,
-      message: '删除成功'
+      success: result.success,
+      message: result.message || '删除成功'
     };
   } catch (err) {
     console.error('删除帖子失败:', err);
@@ -330,7 +261,7 @@ async function deletePost(postId) {
  */
 async function favoritePost(postId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
@@ -342,16 +273,35 @@ async function favoritePost(postId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/posts/${postId}/favorite`, {}, {}, { openid });
+    const response = await post(API_PREFIXES.wxapp + '/post/favorite', { post_id: postId, openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      favorite: result.data.favorite,
-      favorite_count: result.data.favorite_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
+    console.log('收藏API原始响应:', response);
+    
+    if (response && response.success) {
+      const favoriteCount = response.details?.favorite_count;
+      const status = response.details?.status || '';
+      console.log('API返回的收藏数量:', favoriteCount, '状态:', status);
+      
+      if (status === 'already_favorited') {
+        return {
+          success: false,
+          message: '已经收藏，请勿重复收藏',
+          favorited: true
+        };
+      }
+      
+      return {
+        success: true,
+        message: '收藏成功',
+        favorited: true,
+        favorite_count: favoriteCount
+      };
+    } else {
+      return {
+        success: false,
+        message: response?.message || '收藏失败'
+      };
+    }
   } catch (err) {
     console.error('收藏操作失败:', err);
     return {
@@ -368,7 +318,7 @@ async function favoritePost(postId) {
  */
 async function unfavoritePost(postId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
@@ -380,16 +330,27 @@ async function unfavoritePost(postId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/posts/${postId}/unfavorite`, {}, {}, { openid });
+    const response = await post(API_PREFIXES.wxapp + '/post/unfavorite', { post_id: postId, openid });
     
-    return {
-      success: true,
-      message: result.data.message,
-      favorite: result.data.favorite,
-      favorite_count: result.data.favorite_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
+    console.log('取消收藏API原始响应:', response);
+    
+    if (response && response.success) {
+      const favoriteCount = response.details?.favorite_count;
+      const status = response.details?.status || '';
+      console.log('API返回的收藏数量:', favoriteCount, '状态:', status);
+      
+      return {
+        success: true,
+        message: '取消收藏成功',
+        favorited: false,
+        favorite_count: favoriteCount
+      };
+    } else {
+      return {
+        success: false,
+        message: response?.message || '取消收藏失败'
+      };
+    }
   } catch (err) {
     console.error('取消收藏操作失败:', err);
     return {
@@ -409,10 +370,10 @@ async function unfavoritePost(postId) {
  * @param {number} params.pageSize - 每页数量
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserPosts(params = {}) {
+async function getUserPost(params = {}) {
   try {
     // 优先使用传入的openid，否则从存储中获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
       throw new Error('未提供openid且未登录');
     }
@@ -426,22 +387,25 @@ async function getUserPosts(params = {}) {
       offset: ((params.page || 1) - 1) * (params.pageSize || 10)
     };
     
-    // 实际接口只有GET /api/wxapp/posts，通过查询参数筛选用户
-    const result = await request.get('/api/wxapp/posts', requestParams);
+    const result = await get(API_PREFIXES.wxapp + '/post/list', requestParams);
     console.debug('获取用户帖子列表成功:', result);
     
     // 如果只需要数量
     if (params.countOnly) {
       return {
         success: true,
-        count: result.data.total || 0,
+        data: {
+          count: result.data.total || 0
+        },
         message: '获取帖子数量成功'
       };
     } else {
       return {
         success: true,
-        posts: result.data.posts || [],
-        total: result.data.total || 0,
+        data: {
+          post: result.data.post || [],
+          total: result.data.total || 0
+        },
         message: '获取帖子列表成功'
       };
     }
@@ -454,15 +418,194 @@ async function getUserPosts(params = {}) {
   }
 }
 
+/**
+ * 点赞/取消点赞帖子
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function likePost(postId) {
+  try {
+    const openid = getStorage('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    const response = await post(API_PREFIXES.wxapp + '/post/like', {
+      post_id: postId,
+      openid: openid
+    });
+    
+    console.log('点赞API原始响应:', response);
+    
+    if (response && response.success) {
+      const likeCount = response.details?.like_count;
+      console.log('API返回的点赞数量:', likeCount);
+      
+      return {
+        success: true,
+        message: '点赞成功',
+        liked: true,
+        like_count: likeCount
+      };
+    } else if (response && !response.success && response.message && response.message.includes('已经点赞')) {
+      return {
+        success: false,
+        message: '已经点赞，请勿重复点赞',
+        liked: true
+      };
+    } else {
+      return {
+        success: false,
+        message: response?.message || '点赞失败'
+      };
+    }
+  } catch (err) {
+    console.error('点赞操作失败:', err);
+    return {
+      success: false,
+      message: '点赞操作失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 取消点赞帖子
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function unlikePost(postId) {
+  try {
+    const openid = getStorage('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    const result = await post(API_PREFIXES.wxapp + '/post/unlike', {
+      post_id: postId,
+      openid
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('取消点赞操作失败:', err);
+    return {
+      success: false,
+      message: '取消点赞操作失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取帖子状态（点赞、收藏等）
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getPostStatus(postId) {
+  try {
+    const openid = getStorage('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/post/status', {
+      post_id: postId,
+      openid
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('获取帖子状态失败:', err);
+    return {
+      success: false,
+      message: '获取帖子状态失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 创建评论
+ * @param {Object} commentData - 评论数据
+ * @returns {Promise} - 返回Promise对象
+ */
+async function createComment(commentData) {
+  try {
+    if (!commentData.post_id) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    if (!commentData.content || commentData.content.trim() === '') {
+      return {
+        success: false,
+        message: '评论内容不能为空'
+      };
+    }
+    
+    console.debug('开始提交评论，数据:', JSON.stringify(commentData));
+    
+    const result = await post(API_PREFIXES.wxapp + '/comment', commentData);
+    
+    console.debug('评论API返回结果:', JSON.stringify(result));
+    
+    if (!result || !result.success) {
+      console.error('评论API返回失败:', result?.message);
+      return {
+        success: false,
+        message: result?.message || '评论失败'
+      };
+    }
+    
+    return {
+      success: true,
+      comment: result.data,
+      message: '评论成功',
+      details: result.details
+    };
+  } catch (err) {
+    console.error('创建评论失败:', err);
+    return {
+      success: false,
+      message: '创建评论失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+// 导出所有帖子相关API方法
 module.exports = {
-  getPosts,
+  getPostList,
   getPostDetail,
-  getPostComments,
-  likePost,
+  getPostCommentList,
   createPost,
   updatePost,
   deletePost,
   favoritePost,
   unfavoritePost,
-  getUserPosts
+  getUserPost,
+  likePost,
+  unlikePost,
+  getPostStatus,
+  createComment
 }; 

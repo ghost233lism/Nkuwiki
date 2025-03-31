@@ -2,7 +2,8 @@
  * 用户相关API封装
  */
 
-const request = require('../request');
+const { get, post, API_PREFIXES, processResponse } = require('../request');
+const { getStorage, setStorage, getOpenID } = require('../util');
 
 /**
  * 用户登录/同步
@@ -11,88 +12,178 @@ const request = require('../request');
  */
 async function login(userData = {}) {
   try {
-    console.log('开始登录/同步用户:', userData);
+    console.debug('开始登录/同步用户:', userData);
     
-    // 先尝试从本地获取openid
-    let openid = wx.getStorageSync('openid');
-    console.log('本地存储的openid:', openid);
+    // 确保隐藏任何系统加载提示
+    wx.hideLoading();
     
-    // 如果没有openid，直接调用getOpenID云函数
-    if (!openid) {
-      try {
-        console.log('本地无openid，准备调用getOpenID云函数');
-        // 确保云环境已初始化
-        if (!wx.cloud) {
-          throw new Error('云开发环境未正确加载');
-        }
-        
-        // 尝试调用云函数获取openid
-        const wxCloudResult = await wx.cloud.callFunction({
-          name: 'getOpenID'  // 这个云函数直接返回用户openid，不需要参数
-        });
-        
-        console.log('getOpenID云函数调用结果:', wxCloudResult);
-        
-        if (wxCloudResult && wxCloudResult.result) {
-          // 检查code字段确认请求成功
-          if (wxCloudResult.result.code === 0 && wxCloudResult.result.data && wxCloudResult.result.data.openid) {
-            openid = wxCloudResult.result.data.openid;
-            wx.setStorageSync('openid', openid);
-            console.log('成功获取openid:', openid);
-          } else {
-            console.error('getOpenID返回数据格式不正确或code非0:', wxCloudResult.result);
-          }
-        } else {
-          console.error('getOpenID返回数据格式不正确:', wxCloudResult);
-        }
-      } catch (cloudError) {
-        console.error('调用getOpenID云函数失败:', cloudError);
-      }
-    }
+    // 获取openid，使用util中的getOpenID函数，并传入不显示loading的参数
+    let openid = await getOpenID(false);
+    console.debug('获取到的openid:', openid);
     
     // 如果仍然没有openid，返回错误
     if (!openid) {
-      return {
-        code: -1,
-        message: '登录失败: 无法获取用户标识',
-        openid: ''
-      };
+      return processResponse({
+        code: 401,
+        message: '登录失败',
+        data: null,
+        details: { 
+          message: '无法获取用户标识',
+          openid: ''
+        }
+      });
     }
     
-    // 准备用户数据
+    // 准备用户数据，转换字段名以符合后端API要求
     const syncData = {
-      openid: openid,  // 使用获取到的openid
+      openid: openid,
       unionid: userData.unionid || '',
-      nick_name: userData.nickName || '',
-      avatar: userData.avatarUrl || '',
-      platform: 'wxapp'
+      nickname: userData.nickname || '',
+      avatar: userData.avatar || '',
+      gender: userData.gender || 0,
+      bio: userData.bio || '',
+      country: userData.country || '',
+      province: userData.province || '',
+      city: userData.city || '',
+      language: userData.language || '',
+      birthday: userData.birthday || '',
+      wechatId: userData.wechatId || '',
+      qqId: userData.qqId || '',
+      platform: 'wxapp',
+      extra: userData.extra || {}
     };
     
-    console.log('开始同步用户数据:', syncData);
+    console.debug('开始同步用户数据:', syncData);
     
     // 调用同步用户API
-    const result = await request.post('/api/wxapp/users/sync', syncData);
-    console.log('用户同步成功, 结果:', result);
+    const result = await post(API_PREFIXES.wxapp + '/user/sync', syncData);
+    console.debug('用户同步结果:', result);
     
-    // 存储用户信息
-    if (result.data) {
-      wx.setStorageSync('userInfo', result.data);
-      console.log('用户信息已存储到本地');
+    // 处理同步结果
+    if (result.code === 200) {
+      // 如果返回了用户数据，直接使用
+      if (result.data) {
+        const userInfo = {
+          ...result.data,
+          nickname: result.data.nickname || 'nkuwiki用户',
+          avatar: result.data.avatar || '/assets/icons/default-avatar.png'
+        };
+        
+        // 存储更新后的用户信息
+        setStorage('userInfo', userInfo);
+        console.debug('处理后的用户信息已存储到本地:', userInfo);
+        
+        return processResponse({
+          code: 200,
+          message: '登录成功',
+          data: userInfo
+        });
+      }
+      
+      // 如果没有返回用户数据，获取用户信息
+      console.debug('同步成功，获取用户信息');
+      return await getProfile({ openid, isSelf: true });
     }
     
-    return {
-      code: 0,
-      data: result.data,
-      openid: openid,
-      message: '登录成功'
-    };
+    // 如果同步失败
+    return result;
   } catch (err) {
     console.error('登录流程出现异常:', err);
-    return {
-      code: -1,
-      message: '登录失败: ' + (err.message || '未知错误'),
-      openid: wx.getStorageSync('openid') || ''
+    return processResponse({
+      code: err.code || 500,
+      message: '登录失败',
+      data: null,
+      details: { 
+        message: err.message || '未知错误',
+        openid: getStorage('openid') || ''
+      }
+    });
+  }
+}
+
+/**
+ * 获取用户信息
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getProfile(params = {}) {
+  try {
+    // 如果没有提供openid，则使用本地存储的openid
+    const openid = params.openid || getStorage('openid');
+    const isSelf = params.isSelf === true;
+    
+    if (!openid) {
+      return processResponse({
+        code: 400,
+        message: '请求参数错误',
+        data: null,
+        details: { message: '缺少用户openid' }
+      });
+    }
+    
+    // 调用获取用户信息API
+    const result = await get(API_PREFIXES.wxapp + '/user/profile', { openid });
+    
+    // 确保用户数据有默认值
+    if (result.code === 200 && result.data) {
+      // 如果昵称为null，设置默认昵称
+      if (!result.data.nickname) {
+        result.data.nickname = 'nkuwiki用户';
+      }
+      
+      // 如果头像为null，设置默认头像
+      if (!result.data.avatar) {
+        result.data.avatar = '/assets/icons/default-avatar.png';
+      }
+      
+      // 设置前端需要的头像URL格式和ID字段
+      result.data.avatarUrl = result.data.avatar;
+      result.data._id = result.data.openid;
+      
+      // 如果是查询自己的信息，更新本地存储
+      if (isSelf) {
+        setStorage('userInfo', result.data);
+      }
+    }
+    
+    return result;
+  } catch (err) {
+    console.error('获取用户信息失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '获取用户信息失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
+  }
+}
+
+/**
+ * 获取用户列表
+ * @param {Object} params - 请求参数
+ * @param {number} params.limit - 返回记录数量限制，默认10
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getUserList(params = {}) {
+  try {
+    // 设置默认参数
+    const queryParams = {
+      limit: params.limit || 10,
+      offset: params.offset || 0
     };
+    
+    // 调用获取用户列表API
+    return await get(API_PREFIXES.wxapp + '/user/list', queryParams);
+  } catch (err) {
+    console.error('获取用户列表失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '获取用户列表失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
   }
 }
 
@@ -103,56 +194,230 @@ async function login(userData = {}) {
  */
 async function updateUser(userData = {}) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
+    if (!openid) {
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
+    }
+    
+    // 确保有openid
+    userData.openid = openid;
+    
+    return await post(API_PREFIXES.wxapp + '/user/update', userData);
+  } catch (err) {
+    console.error('更新用户信息失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '更新用户信息失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
+  }
+}
+
+/**
+ * 获取用户关注统计
+ * @param {string} openid - 用户openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowStat(openid) {
+  try {
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/user/follow/stat', { openid });
+    
+    return result;
+  } catch (err) {
+    console.error('获取关注统计失败:', err);
+    return {
+      success: false,
+      message: '获取关注统计失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 关注用户
+ * @param {string} followedId - 被关注用户的openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function followUser(followedId) {
+  try {
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
-    console.log('更新用户信息:', userData);
-    
-    // 构建更新数据对象
-    const updateData = {};
-    
-    // 只包含需要更新的字段，根据API文档映射字段名
-    if (userData.nickName !== undefined) updateData.nick_name = userData.nickName;
-    if (userData.status !== undefined) updateData.bio = userData.status;
-    if (userData.avatarUrl !== undefined) updateData.avatar = userData.avatarUrl;
-    if (userData.gender !== undefined) updateData.gender = userData.gender;
-    if (userData.country !== undefined) updateData.country = userData.country;
-    if (userData.province !== undefined) updateData.province = userData.province;
-    if (userData.city !== undefined) updateData.city = userData.city;
-    if (userData.language !== undefined) updateData.language = userData.language;
-    if (userData.birthday !== undefined) updateData.birthday = userData.birthday;
-    if (userData.wechatId !== undefined) updateData.wechatId = userData.wechatId;
-    if (userData.qqId !== undefined) updateData.qqId = userData.qqId;
-    if (userData.extra !== undefined) updateData.extra = userData.extra;
-    
-    // 调用更新用户API
-    const result = await request.put(`/api/wxapp/users/${openid}`, updateData);
-    console.log('用户信息更新成功:', result);
-    
-    // 更新本地存储的用户信息
-    if (result.data) {
-      const userInfo = wx.getStorageSync('userInfo') || {};
-      const newUserInfo = {
-        ...userInfo,
-        ...result.data
-      };
-      wx.setStorageSync('userInfo', newUserInfo);
+    if (!followedId) {
+      throw new Error('缺少被关注用户ID');
     }
     
-    return {
-      code: 0,
-      success: true,
-      message: '更新成功',
-      data: result.data
-    };
+    const result = await post(API_PREFIXES.wxapp + '/user/follow', {
+      openid,
+      followed_id: followedId
+    });
+    
+    return result;
   } catch (err) {
-    console.error('更新用户信息失败:', err);
+    console.error('关注用户失败:', err);
     return {
-      code: -1,
       success: false,
-      message: '更新失败: ' + (err.message || '未知错误')
+      message: '关注用户失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 取消关注用户
+ * @param {string} followedId - 被关注用户的openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function unfollowUser(followedId) {
+  try {
+    const openid = getStorage('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!followedId) {
+      throw new Error('缺少被取消关注用户ID');
+    }
+    
+    const result = await post(API_PREFIXES.wxapp + '/user/unfollow', {
+      openid,
+      followed_id: followedId
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('取消关注用户失败:', err);
+    return {
+      success: false,
+      message: '取消关注用户失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 检查关注状态
+ * @param {Object} params - 请求参数
+ * @param {string} params.followed_id - 被关注用户的openid
+ * @param {string} params.openid - 关注者用户的openid（可选，默认当前用户）
+ * @returns {Promise} - 返回Promise对象
+ */
+async function checkFollow(params = {}) {
+  try {
+    const openid = params.openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    if (!params.followed_id) {
+      throw new Error('缺少被关注用户ID');
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/user/follow/check', {
+      openid,
+      followed_id: params.followed_id
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('检查关注状态失败:', err);
+    return {
+      success: false,
+      message: '检查关注状态失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户关注列表
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid（可选，默认当前用户）
+ * @param {number} params.limit - 返回记录数量限制，默认20
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowList(params = {}) {
+  try {
+    const openid = params.openid || getStorage('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/user/follow/list', {
+      openid,
+      limit: params.limit || 10,
+      offset: params.offset || 0
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('获取关注列表失败:', err);
+    return {
+      success: false,
+      message: '获取关注列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户粉丝列表
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid（可选，默认当前用户）
+ * @param {number} params.limit - 返回记录数量限制，默认20
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowerList(params = {}) {
+  try {
+    const openid = params.openid || getStorage('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/user/follower/list', {
+      openid,
+      limit: params.limit || 10,
+      offset: params.offset || 0
+    });
+    
+    return result;
+  } catch (err) {
+    console.error('获取粉丝列表失败:', err);
+    return {
+      success: false,
+      message: '获取粉丝列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户令牌
+ * @param {string} openid - 用户openid（可选，默认当前用户）
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getToken(openid) {
+  try {
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const result = await get(API_PREFIXES.wxapp + '/user/token', { openid });
+    
+    return result;
+  } catch (err) {
+    console.error('获取用户Token失败:', err);
+    return {
+      success: false,
+      message: '获取用户Token失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -162,41 +427,25 @@ async function updateUser(userData = {}) {
  * @param {Object} params - 请求参数
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserLikes(params = {}) {
+async function getUserLike(params = {}) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = params.openid || wx.getStorageSync('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      throw new Error('缺少用户openid');
     }
     
-    // 获取统计数据模式
-    if (params.countOnly) {
-      const result = await request.get(`/api/wxapp/users/likes/count`, { openid });
-      return {
-        success: true,
-        count: result.data.count
-      };
-    } else {
-      // 获取点赞列表模式
-      const { page = 1, pageSize = 10 } = params;
-      
-      const result = await request.get(`/api/wxapp/users/likes`, { 
-        openid, 
-        page, 
-        limit: pageSize 
-      });
-      
-      return {
-        success: true,
-        likes: result.data.likes,
-        total: result.data.total
-      };
-    }
+    const result = await get(API_PREFIXES.wxapp + '/user/like', {
+      openid,
+      limit: params.limit || 10,
+      offset: params.offset || 0
+    });
+    
+    return result;
   } catch (err) {
-    console.error('获取用户点赞失败:', err);
+    console.error('获取用户点赞列表失败:', err);
     return {
       success: false,
-      message: '获取点赞数据失败: ' + (err.message || '未知错误')
+      message: '获取用户点赞列表失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -206,32 +455,28 @@ async function getUserLikes(params = {}) {
  * @param {string} postId - 帖子ID
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserLikesDetail(postId) {
+async function getUserLikeDetail(postId) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
     if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+      throw new Error('缺少帖子ID');
     }
     
-    const result = await request.get(`/api/wxapp/users/likes/detail`, { openid, postId });
+    const result = await get(API_PREFIXES.wxapp + '/user/like/detail', {
+      openid,
+      post_id: postId
+    });
     
-    return {
-      success: true,
-      detail: result.data,
-      isLiked: result.data && result.data.isLiked
-    };
+    return result;
   } catch (err) {
-    console.error('获取点赞详情失败:', err);
+    console.error('获取用户点赞详情失败:', err);
     return {
       success: false,
-      message: '获取点赞详情失败: ' + (err.message || '未知错误')
+      message: '获取用户点赞详情失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -241,28 +486,24 @@ async function getUserLikesDetail(postId) {
  * @param {Object} params - 请求参数
  * @returns {Promise} - 返回Promise对象
  */
-async function fixUserLikes(params = {}) {
+async function fixUserLike(params = {}) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('用户未登录');
+      throw new Error('缺少用户openid');
     }
     
-    // 将openid作为查询参数传递，而不是请求体
-    const result = await request.post(`/api/wxapp/users/likes/fix`, {
-      fix_type: params.fix_type || 'all'
-    }, {}, { openid });
+    const result = await post(API_PREFIXES.wxapp + '/user/like/fix', {
+      openid,
+      post_id: params.post_id
+    });
     
-    return {
-      success: true,
-      result: result.data,
-      message: result.message || '修复成功'
-    };
+    return result;
   } catch (err) {
-    console.error('修复点赞数据失败:', err);
+    console.error('修复用户点赞数据失败:', err);
     return {
       success: false,
-      message: '修复点赞数据失败: ' + (err.message || '未知错误')
+      message: '修复用户点赞数据失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -274,138 +515,45 @@ async function fixUserLikes(params = {}) {
  */
 async function uploadUserAvatar(filePath) {
   try {
-    const openid = wx.getStorageSync('openid');
+    const openid = getStorage('openid');
     if (!openid) {
       throw new Error('用户未登录');
     }
     
     if (!filePath) {
-      throw new Error('文件路径不能为空');
+      throw new Error('缺少文件路径');
     }
     
-    console.debug('开始上传用户头像:', { openid, filePath });
+    // 上传文件到云存储
+    const uploadResult = await wx.cloud.uploadFile({
+      cloudPath: `avatars/${openid}_${Date.now()}.jpg`,
+      filePath: filePath
+    });
     
-    // 上传文件到微信云存储
-    const cloudPath = `avatars/${openid}_${Date.now()}.jpg`;
-    
-    console.debug('准备上传到云存储路径:', cloudPath);
-    
-    // 这部分仍使用云函数，因为涉及微信云存储
-    let uploadResult;
-    try {
-      uploadResult = await wx.cloud.uploadFile({
-        cloudPath,
-        filePath
-      });
-      console.debug('头像上传云存储成功:', uploadResult);
-    } catch (cloudError) {
-      console.error('上传头像到云存储失败:', cloudError);
-      throw new Error('上传头像到云存储失败: ' + (cloudError.errMsg || '未知错误'));
+    if (!uploadResult.fileID) {
+      throw new Error('上传头像失败');
     }
     
-    if (!uploadResult || !uploadResult.fileID) {
-      throw new Error('上传头像失败: 未获取到文件ID');
+    // 更新用户头像
+    const result = await post(API_PREFIXES.wxapp + '/user/avatar', {
+      openid,
+      avatar: uploadResult.fileID
+    });
+    
+    if (result.success) {
+      // 更新本地存储的用户信息
+      const userInfo = getStorage('userInfo') || {};
+      userInfo.avatar = uploadResult.fileID;
+      userInfo.avatarUrl = uploadResult.fileID;
+      setStorage('userInfo', userInfo);
     }
     
-    // 获取用户信息
-    const userInfo = wx.getStorageSync('userInfo') || {};
-    console.debug('当前用户信息:', userInfo);
-    
-    // 调用更新用户API将头像URL更新到用户资料
-    console.debug('准备更新用户头像URL:', uploadResult.fileID);
-    
-    // 构建更新数据对象
-    const updateData = {
-      avatar: uploadResult.fileID  // 服务器端使用avatar字段
-    };
-    
-    // 调用更新用户API
-    const result = await request.put(`/api/wxapp/users/${openid}`, updateData);
-    console.debug('更新用户头像成功:', result);
-    
-    // 更新本地存储的用户信息
-    if (result.data) {
-      const newUserInfo = {
-        ...userInfo,
-        avatarUrl: uploadResult.fileID  // 本地使用avatarUrl字段
-      };
-      wx.setStorageSync('userInfo', newUserInfo);
-    }
-    
-    return {
-      success: true,
-      fileID: uploadResult.fileID,
-      message: '头像上传成功'
-    };
+    return result;
   } catch (err) {
-    console.error('上传头像失败:', err);
+    console.error('上传用户头像失败:', err);
     return {
       success: false,
-      message: '上传头像失败: ' + (err.message || '未知错误')
-    };
-  }
-}
-
-/**
- * 获取用户信息
- * @param {Object} params - 请求参数，包含openid
- * @returns {Promise} - 返回Promise对象
- */
-async function getUserInfo(params = {}) {
-  try {
-    // 优先使用传入的openid，否则从存储中获取
-    const openid = params.openid || wx.getStorageSync('openid');
-    if (!openid) {
-      throw new Error('未提供openid且未登录');
-    }
-    
-    console.debug('获取用户信息:', { openid });
-    
-    // 统一使用 /api/wxapp/users/{openid} 接口获取用户信息
-    const apiUrl = `/api/wxapp/users/${openid}`;
-    
-    const result = await request.get(apiUrl);
-    
-    console.debug('获取用户信息API原始返回:', result);
-    
-    // 处理API响应
-    let userData = null;
-    let success = false;
-    
-    // 适配新API格式 (code=200)
-    if (result && result.code === 200 && result.data) {
-      userData = result.data;
-      success = true;
-    } 
-    // 兼容旧格式
-    else if (result && result.success) {
-      userData = result.userInfo || result;
-      success = true;
-    }
-    
-    // 如果是当前用户且获取成功，更新本地存储
-    if (success && userData && (!params.openid || params.isSelf)) {
-      const localUserInfo = {
-        ...wx.getStorageSync('userInfo'),
-        ...userData,
-        openid: userData.openid,
-        nickName: userData.nick_name || userData.nickName,
-        avatarUrl: userData.avatar || userData.avatarUrl
-      };
-      wx.setStorageSync('userInfo', localUserInfo);
-    }
-    
-    // 保持与前端组件期望的一致结构返回
-    return {
-      success: success,
-      userInfo: userData,
-      message: (result && result.message) || '获取用户信息' + (success ? '成功' : '失败')
-    };
-  } catch (err) {
-    console.error('获取用户信息失败:', err);
-    return {
-      success: false,
-      message: '获取用户信息失败: ' + (err.message || '未知错误')
+      message: '上传用户头像失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -419,88 +567,102 @@ async function getUserInfo(params = {}) {
  * @param {number} params.pageSize - 每页数量
  * @returns {Promise} - 返回Promise对象
  */
-async function getUserInteractionPosts(params = {}) {
+async function getUserInteractionPost(params = {}) {
   try {
-    // 优先使用传入的openid，否则从存储中获取
-    const openid = params.openid || wx.getStorageSync('openid');
+    const openid = params.openid || getStorage('openid');
     if (!openid) {
-      throw new Error('未提供openid且未登录');
+      throw new Error('缺少用户openid');
     }
     
-    console.debug('获取用户交互帖子:', { openid, type: params.type, params });
+    const result = await get(API_PREFIXES.wxapp + '/user/interaction/post', {
+      openid,
+      limit: params.limit || 10,
+      offset: params.offset || 0,
+      type: params.type || 'all'
+    });
     
-    // 构建请求参数
-    const limit = params.pageSize || 10;
-    const offset = ((params.page || 1) - 1) * limit;
-    
-    // 根据API文档，目前没有直接获取用户交互帖子的接口
-    // 最佳方案是使用帖子列表接口并添加过滤条件，或自己维护本地收藏/点赞列表
-    // 这里给出一个临时实现
-    let result;
-    
-    switch (params.type) {
-      case 'like':
-        // 获取用户点赞的帖子，使用帖子列表API
-        result = await request.get('/api/wxapp/posts', {
-          openid: openid,
-          limit: limit,
-          offset: offset,
-          interaction: 'liked' // 这是假设的参数，API可能不支持
-        });
-        break;
-        
-      case 'star':
-      case 'favorite':
-        // 获取用户收藏的帖子，使用帖子列表API
-        result = await request.get('/api/wxapp/posts', {
-          openid: openid,
-          limit: limit,
-          offset: offset,
-          interaction: 'favorited' // 这是假设的参数，API可能不支持
-        });
-        break;
-        
-      case 'comment':
-        // 获取用户评论的帖子，使用评论列表API
-        result = await request.get('/api/wxapp/comments', {
-          openid: openid,
-          limit: limit,
-          offset: offset
-        });
-        
-        // 评论结果可能需要额外处理，将评论关联的帖子信息提取出来
-        // 这里简化处理，假设评论数据中包含帖子信息
-        break;
-        
-      default:
-        throw new Error('未知的交互类型');
-    }
-    
-    console.debug(`获取用户${params.type}帖子结果:`, result);
-    
-    // 处理结果
-    return {
-      success: true,
-      posts: result.data.posts || [],
-      total: result.data.total || 0,
-      message: `获取${params.type}列表成功`
-    };
+    return result;
   } catch (err) {
-    console.error('获取用户交互帖子失败:', err);
+    console.error('获取用户互动帖子失败:', err);
     return {
       success: false,
-      message: '获取用户交互帖子失败: ' + (err.message || '未知错误') + ' (请联系开发者完善API)'
+      message: '获取用户互动帖子失败: ' + (err.message || '未知错误')
     };
   }
 }
 
+/**
+ * 提交用户反馈
+ * @param {Object} data - 反馈数据
+ * @returns {Promise} - 返回Promise对象
+ */
+async function submitFeedback(data = {}) {
+  try {
+    const openid = await getOpenID();
+    if (!openid) {
+      return processResponse({
+        code: 401,
+        message: '未登录',
+        data: null,
+        details: { message: '用户未登录' }
+      });
+    }
+    
+    // 确保有openid
+    data.openid = openid;
+    
+    // 调用反馈API
+    const result = await post(API_PREFIXES.wxapp + '/feedback/submit', data);
+    return result;
+  } catch (err) {
+    console.debug('提交反馈失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '提交反馈失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
+  }
+}
+
+/**
+ * 获取关于页面信息
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getAboutInfo() {
+  try {
+    const result = await get(API_PREFIXES.wxapp + '/about');
+    return result;
+  } catch (err) {
+    console.debug('获取关于信息失败:', err);
+    return processResponse({
+      code: err.code || 500,
+      message: '获取关于信息失败',
+      data: null,
+      details: { message: err.message || '未知错误' }
+    });
+  }
+}
+
+// 导出所有用户相关API方法
 module.exports = {
   login,
+  getProfile,
+  getUserList,
   updateUser,
-  getUserInfo,
-  getUserLikes,
-  getUserLikesDetail,
-  fixUserLikes,
+  updateProfile: updateUser, // 兼容新命名
+  getFollowStat,
+  followUser,
+  unfollowUser,
+  checkFollow,
+  getFollowList,
+  getFollowerList,
+  getToken,
+  getUserLike,
+  getUserLikeDetail,
+  fixUserLike,
   uploadUserAvatar,
-  getUserInteractionPosts
+  getUserInteractionPosts: getUserInteractionPost,
+  submitFeedback,
+  getAboutInfo
 }; 

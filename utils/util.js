@@ -97,7 +97,266 @@ function formatRelativeTime(timestamp) {
   }
 }
 
+/**
+ * 获取系统信息
+ * @returns {Object} 系统信息
+ */
+function getSystemInfo() {
+  try {
+    // 使用新的API获取系统信息
+    const appBaseInfo = wx.getAppBaseInfo();
+    const deviceInfo = wx.getDeviceInfo();
+    const windowInfo = wx.getWindowInfo();
+    const systemSetting = wx.getSystemSetting();
+    const appAuthorizeSetting = wx.getAppAuthorizeSetting();
+    
+    return {
+      // 基础信息
+      platform: appBaseInfo.platform,
+      language: appBaseInfo.language,
+      version: appBaseInfo.version,
+      SDKVersion: appBaseInfo.SDKVersion,
+      theme: appBaseInfo.theme,
+      enableDebug: appBaseInfo.enableDebug,
+      host: appBaseInfo.host,
+      
+      // 设备信息
+      brand: deviceInfo.brand,
+      model: deviceInfo.model,
+      system: deviceInfo.system,
+      platform: deviceInfo.platform,
+      
+      // 窗口信息
+      screenWidth: windowInfo.screenWidth,
+      screenHeight: windowInfo.screenHeight,
+      windowWidth: windowInfo.windowWidth,
+      windowHeight: windowInfo.windowHeight,
+      statusBarHeight: windowInfo.statusBarHeight,
+      safeArea: windowInfo.safeArea,
+      pixelRatio: windowInfo.pixelRatio,
+      
+      // 系统设置
+      bluetoothEnabled: systemSetting.bluetoothEnabled,
+      locationEnabled: systemSetting.locationEnabled,
+      wifiEnabled: systemSetting.wifiEnabled,
+      deviceOrientation: systemSetting.deviceOrientation,
+      
+      // 授权设置
+      albumAuthorized: appAuthorizeSetting.albumAuthorized,
+      bluetoothAuthorized: appAuthorizeSetting.bluetoothAuthorized,
+      cameraAuthorized: appAuthorizeSetting.cameraAuthorized,
+      locationAuthorized: appAuthorizeSetting.locationAuthorized,
+      locationReducedAccuracy: appAuthorizeSetting.locationReducedAccuracy,
+      microphoneAuthorized: appAuthorizeSetting.microphoneAuthorized,
+      notificationAuthorized: appAuthorizeSetting.notificationAuthorized,
+      notificationAlertAuthorized: appAuthorizeSetting.notificationAlertAuthorized,
+      notificationBadgeAuthorized: appAuthorizeSetting.notificationBadgeAuthorized,
+      notificationSoundAuthorized: appAuthorizeSetting.notificationSoundAuthorized
+    };
+  } catch (err) {
+    console.error('获取系统信息失败:', err);
+    return {};
+  }
+}
+
+/**
+ * 获取Storage的封装函数
+ * @param {string} key - 存储的键
+ * @returns {any} 存储的值
+ */
+function getStorage(key) {
+  try {
+    return wx.getStorageSync(key);
+  } catch (e) {
+    console.debug(`获取Storage失败[${key}]:`, e);
+    return null;
+  }
+}
+
+/**
+ * 设置Storage的封装函数
+ * @param {string} key - 存储的键
+ * @param {any} data - 存储的数据
+ * @returns {boolean} 是否设置成功
+ */
+function setStorage(key, data) {
+  try {
+    wx.setStorageSync(key, data);
+    return true;
+  } catch (e) {
+    console.debug(`设置Storage失败[${key}]:`, e);
+    return false;
+  }
+}
+
+/**
+ * 移除Storage的封装函数
+ * @param {string} key - 存储的键
+ * @returns {boolean} 是否移除成功
+ */
+function removeStorage(key) {
+  try {
+    wx.removeStorageSync(key);
+    return true;
+  } catch (e) {
+    console.debug(`移除Storage失败[${key}]:`, e);
+    return false;
+  }
+}
+
+/**
+ * 获取用户OpenID
+ * @param {boolean} showLoading - 是否显示加载中提示，默认为true
+ * @returns {Promise<string>} 用户OpenID
+ */
+async function getOpenID(showLoading = true) {
+  try {
+    // 先检查本地存储中是否已有openid
+    const cachedOpenID = getStorage('openid');
+    if (cachedOpenID) {
+      console.debug('从缓存获取openid:', cachedOpenID);
+      
+      // 保存到全局变量
+      const app = getApp();
+      if (app && app.globalData) {
+        app.globalData.openid = cachedOpenID;
+      }
+      
+      return cachedOpenID;
+    }
+    
+    // 再检查全局变量中是否已有openid
+    const app = getApp();
+    if (app && app.globalData && app.globalData.openid) {
+      console.debug('从全局变量获取到openid:', app.globalData.openid);
+      return app.globalData.openid;
+    }
+    
+    // 添加Loading提示，根据参数决定是否显示
+    if (showLoading) {
+      wx.showLoading({
+        title: '登录中...',
+        mask: true
+      });
+    } else {
+      // 确保关闭任何现有loading
+      wx.hideLoading();
+    }
+    
+    // 确保云环境初始化
+    if (!wx.cloud) {
+      console.error('云开发环境未初始化');
+      if (showLoading) wx.hideLoading();
+      return null;
+    }
+    
+    // 尝试通过wx.login获取临时凭证code
+    try {
+      const loginResult = await new Promise((resolve, reject) => {
+        wx.login({
+          success: res => resolve(res),
+          fail: err => reject(err)
+        });
+      });
+      
+      if (loginResult && loginResult.code) {
+        console.debug('获取到wx.login的code:', loginResult.code);
+        
+        // 调用云函数获取openid
+        const wxCloudResult = await wx.cloud.callFunction({
+          name: 'getOpenID',
+          data: { code: loginResult.code },
+          timeout: 10000 // 设置超时时间为10秒
+        });
+        
+        // 只处理新格式
+        if (wxCloudResult && wxCloudResult.result && 
+            wxCloudResult.result.data && wxCloudResult.result.data.openid) {
+          const openid = wxCloudResult.result.data.openid;
+          console.debug('通过云函数获取到openid:', openid);
+          
+          // 保存到全局变量
+          if (app && app.globalData) {
+            app.globalData.openid = openid;
+          }
+          
+          // 保存到本地存储
+          setStorage('openid', openid);
+          
+          // 隐藏Loading
+          if (showLoading) wx.hideLoading();
+          
+          return openid;
+        } else {
+          console.error('云函数返回结果不包含openid:', wxCloudResult);
+          if (showLoading) wx.hideLoading();
+          return null;
+        }
+      } else {
+        console.error('wx.login获取code失败:', loginResult);
+        if (showLoading) wx.hideLoading();
+        return null;
+      }
+    } catch (err) {
+      console.error('登录过程出错:', err);
+      if (showLoading) wx.hideLoading();
+      return null;
+    }
+  } catch (err) {
+    console.error('获取openid过程中出错:', err);
+    if (showLoading) wx.hideLoading();
+    return null;
+  }
+}
+
+function processCloudUrl(url) {
+  if (!url) return '';
+  if (typeof url !== 'string') return '';
+  
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  if (url.startsWith('cloud://')) {
+    const matches = url.match(/cloud:\/\/(.*?)\.(.*?)\/(.*)/);
+    return matches?.length === 4 ? `https://${matches[2]}.tcb.qcloud.la/${matches[3]}` : '';
+  }
+  return url;
+}
+
+function processPostData(post) {
+  if (!post) return null;
+  
+  const images = (post.image || post.images || '').toString();
+  const tags = (post.tag || post.tags || '').toString();
+  const likedUsers = (post.liked_user || post.liked_users || '').toString();
+  const favoriteUsers = (post.favorite_user || post.favorite_users || '').toString();
+
+  return {
+    ...post,
+    image: safeParseJSON(images).map(processCloudUrl),
+    tag: safeParseJSON(tags),
+    liked_user: safeParseJSON(likedUsers),
+    favorite_user: safeParseJSON(favoriteUsers),
+    avatar: processCloudUrl(post.avatar)
+  };
+}
+
+function safeParseJSON(str) {
+  try {
+    return JSON.parse(str || '[]');
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   formatTime,
-  formatRelativeTime
-}
+  formatRelativeTime,
+  getOpenID,
+  getSystemInfo,
+  getStorage,
+  setStorage,
+  removeStorage,
+  processCloudUrl,
+  processPostData,
+  safeParseJSON
+};

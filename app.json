@@ -11,13 +11,12 @@
     "pages/profile/myPosts/myPosts",
     "pages/profile/feedback/feedback",
     "pages/profile/about/about",
-    "pages/profile/mylike_fav_comment/mylike_fav_comment",
-    "pages/notification/notification"
+    "pages/profile/mylike_fav_comment/mylike_fav_comment"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "南开百科",
+    "navigationBarTitleText": "nkuwiki",
     "navigationBarTextStyle": "black",
     "initialRenderingCache": "static",
     "enablePullDownRefresh": true

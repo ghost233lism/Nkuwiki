@@ -7,8 +7,7 @@
 	"exclude": [
 		"node_modules",
 		"cloudfunctions/**/*",
-		"**/node_modules/*",
-		"utils/api.js"
+		"**/node_modules/*"
 	],
 	"include": ["**/*.js", "**/*.json", "**/*.wxs", "**/*.wxml", "**/*.wxss"]
 }
