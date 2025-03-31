@@ -38,8 +38,11 @@ project
 │   │   ├── feedback.js # 反馈相关API
 │   │   ├── search.js   # 搜索相关API
 │   │   ├── agent.js    # 智能体相关API
-│   │   └── upload.js   # 上传相关API
-│   └── request.js      # 网络请求工具
+│   │   ├── upload.js   # 上传相关API
+│   │   └── search.js   # 搜索相关API
+│   ├── request.js      # 网络请求工具
+│   ├── config.js       # 配置文件
+│   └── utils.js        # 通用工具函数
 ├── cloudfunctions/     # 云函数
 │   ├── getOpenID/      # 获取用户OpenID
 │   └── uploadImage/    # 图片上传
