@@ -260,5 +260,8 @@ module.exports = {
   delete: (url, data = {}, header = {}, query = {}) => request(url, 'DELETE', data, header, query),
   
   // 流式请求
-  stream: streamRequest
+  streamRequest,
+  
+  // 基础请求方法
+  request
 }; 

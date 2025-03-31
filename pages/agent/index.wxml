@@ -1,0 +1,139 @@
+<view class="page-container">
+  <!-- 顶部搜索区域 -->
+  <view class="search-container">
+    <view class="search-box" hover-class="search-box-hover">
+      <input
+        class="search-input"
+        placeholder="有关南开大学的问题，我知无不言"
+        placeholder-style="color: #999;"
+        value="{{ query }}"
+        bindinput="onInputChange"
+        bindconfirm="handleSearch"
+        focus="{{ false }}"
+      />
+      <view class="search-button" bindtap="handleSearch">
+        <image class="search-icon" src="/assets/icons/search/search.png" mode="aspectFit" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <!-- 加载指示器 -->
+    <view class="loading-wrapper" wx:if="{{ loading && !textContent }}">
+      <view class="loading-dots">
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+      </view>
+      <text class="loading-text">南开知识助手思考中...</text>
+    </view>
+
+    <!-- 响应结果 -->
+    <view class="result-container" wx:if="{{ textContent }}">
+      <!-- 查询信息 -->
+      <view class="query-info" wx:if="{{ rewrittenQuery && rewrittenQuery !== originalQuery }}">
+        <text class="original-query">原始问题: {{ originalQuery }}</text>
+        <text class="rewritten-query">改写问题: {{ rewrittenQuery }}</text>
+      </view>
+
+      <!-- 文本内容 - 纯文本 -->
+      <scroll-view scroll-y class="text-content" wx:if="{{ usePlainText }}">
+        <text selectable="true">{{ textContent }}</text>
+        <view wx:if="{{ isStreaming }}" class="typing-cursor"></view>
+      </scroll-view>
+
+      <!-- 文本内容 - 富文本 -->
+      <scroll-view scroll-y class="text-content" wx:else>
+        <towxml nodes="{{ richTextContent }}" />
+        <view wx:if="{{ isStreaming && !enableTyper }}" class="typing-cursor"></view>
+      </scroll-view>
+
+      <!-- 底部操作按钮 -->
+      <view class="result-actions">
+        <view class="action-btn" hover-class="action-btn-hover" bindtap="clearResult">
+          <image class="action-icon" src="/assets/icons/eraser.png" mode="aspectFit" />
+          <text>清空</text>
+        </view>
+        <view class="action-btn" hover-class="action-btn-hover" bindtap="copyResult">
+          <image class="action-icon" src="/assets/icons/copy.png" mode="aspectFit" />
+          <text>复制</text>
+        </view>
+        <view class="action-btn" hover-class="action-btn-hover" bindtap="togglePlainTextMode">
+          <image class="action-icon" src="/assets/icons/txt.png" mode="aspectFit" />
+          <text>{{ usePlainText ? '富文本' : '纯文本' }}</text>
+        </view>
+      </view>
+
+      <!-- 信息来源 -->
+      <view class="sources-container" wx:if="{{ sources.length > 0 }}">
+        <view class="sources-header">
+          <text class="sources-title">信息来源 ({{ retrievedCount }})</text>
+        </view>
+        <view class="sources-list">
+          <view 
+            class="source-item" 
+            wx:for="{{ sources }}" 
+            wx:key="index" 
+            bindtap="openSourceUrl" 
+            data-url="{{ item.url }}"
+            hover-class="source-item-hover"
+          >
+            <view class="source-icon">
+              <image 
+                src="{{ item.type === 'website_nku' ? '/assets/icons/search/website.png' : 
+                      item.type === 'wechat_nku' ? '/assets/icons/search/wechat.png' :
+                      item.type === 'wxapp_post' ? '/assets/icons/post.png' : 
+                      '/assets/icons/search/search.png' }}" 
+                mode="aspectFit" 
+              />
+            </view>
+            <view class="source-content">
+              <text class="source-title">{{ item.title || '未知标题' }}</text>
+              <text class="source-snippet">{{ item.snippet || item.content || '无摘要' }}</text>
+              <text class="source-url">{{ item.url || '' }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 建议问题 -->
+      <view class="suggested-questions" wx:if="{{ suggestedQuestions.length > 0 }}">
+        <view class="questions-header">
+          <text class="questions-title">您可能还想问</text>
+        </view>
+        <view class="questions-list">
+          <view 
+            class="question-item" 
+            wx:for="{{ suggestedQuestions }}" 
+            wx:key="index" 
+            bindtap="handleSuggestedQuestion" 
+            data-question="{{ item }}"
+            hover-class="question-item-hover"
+          >
+            <image class="question-icon" src="/assets/icons/question.png" mode="aspectFit" />
+            <text class="question-text">{{ item }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 默认提示 -->
+    <view class="empty-state" wx:if="{{ !loading && !textContent }}">
+      <image class="empty-icon" src="/assets/icons/agent.png" mode="aspectFit" />
+      <text class="empty-text">南开知识助手</text>
+      <text class="empty-sub-text">我可以回答关于南开大学的各种问题</text>
+      <view class="sample-questions">
+        <view class="sample-question" bindtap="handleSuggestedQuestion" data-question="南开大学的历史沿革？">
+          <text>南开大学的历史沿革？</text>
+        </view>
+        <view class="sample-question" bindtap="handleSuggestedQuestion" data-question="南开大学有哪些知名校友？">
+          <text>南开大学有哪些知名校友？</text>
+        </view>
+        <view class="sample-question" bindtap="handleSuggestedQuestion" data-question="南开大学的王牌专业有哪些？">
+          <text>南开大学的王牌专业有哪些？</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view> 

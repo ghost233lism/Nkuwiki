@@ -13,8 +13,9 @@ async function getPosts(params = {}) {
   try {
     // 提取查询参数
     const { 
-      page = 1, 
-      pageSize = 20,
+      limit = 20, 
+      offset = 0,
+      openid,
       category_id,
       tag,
       status = 1,
@@ -23,24 +24,24 @@ async function getPosts(params = {}) {
     
     // 构建查询参数
     const queryParams = {
-      limit: pageSize,
-      offset: (page - 1) * pageSize
+      limit,
+      offset
     };
     
     // 添加可选参数
+    if (openid) queryParams.openid = openid;
     if (category_id) queryParams.category_id = category_id;
     if (tag) queryParams.tag = tag;
     if (status !== undefined) queryParams.status = status;
     if (order_by) queryParams.order_by = order_by;
     
-    const result = await request.get('/api/wxapp/posts', queryParams);
+    // 更新API路径
+    const result = await request.get('/api/wxapp/post/list', queryParams);
     
     return {
       success: true,
-      posts: result.data.posts,
-      total: result.data.total,
-      limit: result.data.limit,
-      offset: result.data.offset
+      posts: result.data.data,
+      pagination: result.data.pagination
     };
   } catch (err) {
     console.error('获取帖子列表失败:', err);
@@ -66,7 +67,11 @@ async function getPostDetail(postId, updateView = true) {
       };
     }
     
-    const result = await request.get(`/api/wxapp/posts/${postId}`, { update_view: updateView });
+    // 更新API路径和参数
+    const result = await request.get('/api/wxapp/post/detail', { 
+      post_id: postId,
+      update_view: updateView 
+    });
     
     return {
       success: true,
@@ -132,44 +137,6 @@ async function getPostComments(postId, params = {}) {
 }
 
 /**
- * 点赞/取消点赞帖子
- * @param {string} postId - 帖子ID
- * @returns {Promise} - 返回Promise对象
- */
-async function likePost(postId) {
-  try {
-    const openid = wx.getStorageSync('openid');
-    if (!openid) {
-      throw new Error('用户未登录');
-    }
-    
-    if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
-    }
-    
-    const result = await request.post(`/api/wxapp/posts/${postId}/like`, {}, {}, { openid });
-    
-    return {
-      success: true,
-      message: result.data.message,
-      liked: result.data.liked,
-      like_count: result.data.like_count,
-      post_id: result.data.post_id,
-      action: result.data.action
-    };
-  } catch (err) {
-    console.error('点赞操作失败:', err);
-    return {
-      success: false,
-      message: '点赞操作失败: ' + (err.message || '未知错误')
-    };
-  }
-}
-
-/**
  * 创建帖子
  * @param {Object} postData - 帖子数据
  * @returns {Promise} - 返回Promise对象
@@ -195,31 +162,19 @@ async function createPost(postData) {
     
     // 准备帖子数据，确保符合API要求的格式
     const data = {
+      openid,
       title: postData.title,
       content: postData.content,
       images: postData.images || [],
-      category_id: postData.category_id || 1,
-      status: postData.isPublic !== undefined ? (postData.isPublic ? 1 : 0) : 1,
-      allow_comment: postData.allow_comment !== undefined ? postData.allow_comment : 1,
-      // 添加用户信息
-      author_name: userInfo.nickName || userInfo.nick_name || '用户',
-      author_avatar: userInfo.avatarUrl || userInfo.avatar || '',
+      tags: postData.tags || [],
+      category_id: postData.category_id || 0,
+      location: postData.location || null,
+      nick_name: userInfo.nickName || userInfo.nick_name,
+      avatar: userInfo.avatarUrl || userInfo.avatar
     };
     
-    // 准备URL查询参数
-    const query = {
-      openid: openid,
-      nick_name: userInfo.nickName || userInfo.nick_name || '',
-      avatar: userInfo.avatarUrl || userInfo.avatar || ''
-    };
-    
-    console.debug('准备发送帖子数据:', data);
-    console.debug('URL查询参数:', query);
-    
-    // 发送请求，通过query参数传递openid
-    const result = await request.post('/api/wxapp/posts', data, {}, query);
-    
-    console.debug('帖子创建API响应:', result);
+    // 更新API路径
+    const result = await request.post('/api/wxapp/post', data);
     
     return {
       success: true,
@@ -227,27 +182,10 @@ async function createPost(postData) {
       message: '发布成功'
     };
   } catch (err) {
-    console.error('发布帖子失败:', err);
-    
-    // 检查是否是网络错误
-    if (err.code === -1) {
-      return {
-        success: false,
-        message: '网络连接失败，请检查网络设置'
-      };
-    }
-    
-    // 检查是否是后端API错误
-    if (err.code >= 400) {
-      return {
-        success: false,
-        message: `服务器错误 (${err.code}): ${err.message || '未知错误'}`
-      };
-    }
-    
+    console.error('创建帖子失败:', err);
     return {
       success: false,
-      message: '发布帖子失败: ' + (err.message || '未知错误')
+      message: '创建帖子失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -255,7 +193,7 @@ async function createPost(postData) {
 /**
  * 更新帖子
  * @param {string} postId - 帖子ID
- * @param {Object} postData - 帖子数据
+ * @param {Object} postData - 要更新的帖子数据
  * @returns {Promise} - 返回Promise对象
  */
 async function updatePost(postId, postData) {
@@ -266,14 +204,26 @@ async function updatePost(postId, postData) {
     }
     
     if (!postId) {
-      return {
-        success: false,
-        message: '帖子ID不能为空'
-      };
+      throw new Error('帖子ID不能为空');
     }
     
-    // 将openid作为查询参数传递，而不是header
-    const result = await request.put(`/api/wxapp/posts/${postId}`, postData, {}, { openid });
+    // 准备要更新的数据
+    const data = {};
+    
+    // 只包含需要更新的字段
+    if (postData.title !== undefined) data.title = postData.title;
+    if (postData.content !== undefined) data.content = postData.content;
+    if (postData.images !== undefined) data.images = postData.images;
+    if (postData.tags !== undefined) data.tags = postData.tags;
+    if (postData.category_id !== undefined) data.category_id = postData.category_id;
+    if (postData.location !== undefined) data.location = postData.location;
+    if (postData.status !== undefined) data.status = postData.status;
+    
+    // 更新API路径和参数
+    const result = await request.put('/api/wxapp/post/update', data, {}, { 
+      post_id: postId,
+      openid
+    });
     
     return {
       success: true,
@@ -454,15 +404,101 @@ async function getUserPosts(params = {}) {
   }
 }
 
+/**
+ * 点赞/取消点赞帖子
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function likePost(postId) {
+  try {
+    const openid = wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/post/like', {
+      post_id: postId,
+      openid
+    });
+    
+    return {
+      success: true,
+      message: result.data.message || '操作成功',
+      liked: result.data.liked,
+      like_count: result.data.like_count,
+      post_id: result.data.post_id,
+      action: result.data.action
+    };
+  } catch (err) {
+    console.error('点赞操作失败:', err);
+    return {
+      success: false,
+      message: '点赞操作失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 取消点赞帖子
+ * @param {string} postId - 帖子ID
+ * @returns {Promise} - 返回Promise对象
+ */
+async function unlikePost(postId) {
+  try {
+    const openid = wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!postId) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/post/unlike', {
+      post_id: postId,
+      openid
+    });
+    
+    return {
+      success: true,
+      message: result.data.message || '取消点赞成功',
+      liked: false,
+      like_count: result.data.like_count,
+      post_id: result.data.post_id,
+      action: 'unlike'
+    };
+  } catch (err) {
+    console.error('取消点赞操作失败:', err);
+    return {
+      success: false,
+      message: '取消点赞操作失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+// 导出所有帖子相关API方法
 module.exports = {
   getPosts,
   getPostDetail,
   getPostComments,
-  likePost,
   createPost,
   updatePost,
   deletePost,
   favoritePost,
   unfavoritePost,
-  getUserPosts
+  getUserPosts,
+  likePost,
+  unlikePost
 }; 

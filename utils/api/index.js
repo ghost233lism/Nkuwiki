@@ -9,6 +9,8 @@
  * - upload: 上传相关API
  * - category: 分类和标签相关API
  * - agent: 智能体相关API
+ * - notification: 通知相关API
+ * - search: 搜索相关API
  */
 
 // 导入子模块
@@ -18,6 +20,8 @@ const comment = require('./comment');
 const upload = require('./upload');
 const category = require('./category');
 const agent = require('./agent');
+const notification = require('./notification');
+const search = require('./search');
 
 // 导出所有API模块
 module.exports = {
@@ -26,5 +30,7 @@ module.exports = {
   comment,  // 评论相关API
   upload,   // 上传相关API
   category, // 分类和标签相关API
-  agent     // 智能体相关API
+  agent,    // 智能体相关API
+  notification, // 通知相关API
+  search    // 搜索相关API
 }; 

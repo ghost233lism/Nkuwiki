@@ -902,4 +902,17 @@ Page({
       console.error('处理评论图片错误时发生异常:', err);
     }
   },
+  // 跳转到通知页面
+  goToNotification: function() {
+    wx.navigateTo({
+      url: '/pages/notification/notification'
+    });
+  },
+  
+  // 跳转到智能助手页面
+  goToAgent: function() {
+    wx.navigateTo({
+      url: '/pages/agent/index'
+    });
+  },
 })

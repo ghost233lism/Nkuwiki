@@ -6,6 +6,7 @@
     "pages/discover/discover",
     "pages/profile/profile",
     "pages/post/post",
+    "pages/agent/index",
     "pages/profile/edit/edit",
     "pages/post/detail/detail",
     "pages/profile/myPosts/myPosts",

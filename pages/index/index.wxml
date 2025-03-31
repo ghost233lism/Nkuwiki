@@ -11,6 +11,7 @@
     <image class="icon" src="/assets/icons/index/notification-unread.png" bindtap="goToNotification"/>
     </block>
     <image class="icon" src="/assets/icons/index/message.png" />
+    <image class="icon" src="/assets/icons/agent.png" bindtap="goToAgent"/>
   </view>
 
   <!-- 搜索框 -->

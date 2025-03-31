@@ -36,15 +36,13 @@ async function createComment(commentData) {
     // 准备评论数据
     const data = {
       ...commentData,
+      openid,
       nick_name: userInfo.nick_name,
       avatar: userInfo.avatar
     };
     
-    const result = await request.post('/api/wxapp/comments', data, {}, {
-      openid,
-      nick_name: userInfo.nick_name,
-      avatar: userInfo.avatar
-    });
+    // 更新API路径
+    const result = await request.post('/api/wxapp/comment', data);
     
     return {
       success: true,
@@ -80,9 +78,15 @@ async function updateComment(commentId, commentData) {
       };
     }
     
-    const result = await request.put(`/api/wxapp/comments/${commentId}`, commentData, {
+    // 准备评论数据
+    const data = {
+      ...commentData,
+      comment_id: commentId,
       openid
-    });
+    };
+    
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/comment/update', data);
     
     return {
       success: true,
@@ -117,8 +121,11 @@ async function deleteComment(commentId) {
       };
     }
     
-    // 使用查询参数传递openid
-    const result = await request.delete(`/api/wxapp/comments/${commentId}`, {}, {}, { openid });
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/comment/delete', {
+      comment_id: commentId,
+      openid
+    });
     
     return {
       success: true,
@@ -152,11 +159,15 @@ async function likeComment(commentId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/comments/${commentId}/like`, {}, {}, { openid });
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/comment/like', {
+      comment_id: commentId,
+      openid
+    });
     
     return {
       success: true,
-      message: result.data.message,
+      message: result.data.message || '点赞成功',
       liked: result.data.liked,
       like_count: result.data.like_count,
       comment_id: result.data.comment_id,
@@ -190,15 +201,19 @@ async function unlikeComment(commentId) {
       };
     }
     
-    const result = await request.post(`/api/wxapp/comments/${commentId}/unlike`, {}, {}, { openid });
+    // 更新API路径和参数
+    const result = await request.post('/api/wxapp/comment/unlike', {
+      comment_id: commentId,
+      openid
+    });
     
     return {
       success: true,
-      message: result.data.message,
-      liked: result.data.liked,
+      message: result.data.message || '取消点赞成功',
+      liked: false,
       like_count: result.data.like_count,
       comment_id: result.data.comment_id,
-      action: result.data.action
+      action: 'unlike'
     };
   } catch (err) {
     console.error('取消点赞评论失败:', err);
@@ -223,7 +238,10 @@ async function getCommentDetail(commentId) {
       };
     }
     
-    const result = await request.get(`/api/wxapp/comments/${commentId}`);
+    // 更新API路径和参数
+    const result = await request.get('/api/wxapp/comment/detail', {
+      comment_id: commentId
+    });
     
     return {
       success: true,
@@ -238,11 +256,59 @@ async function getCommentDetail(commentId) {
   }
 }
 
+/**
+ * 获取评论列表
+ * @param {Object} params - 请求参数
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getCommentList(params = {}) {
+  try {
+    // 提取查询参数
+    const { 
+      post_id,
+      limit = 20, 
+      offset = 0,
+      order_by = 'create_time DESC' 
+    } = params;
+    
+    if (!post_id) {
+      return {
+        success: false,
+        message: '帖子ID不能为空'
+      };
+    }
+    
+    // 构建查询参数
+    const queryParams = {
+      post_id,
+      limit,
+      offset,
+      order_by
+    };
+    
+    // 获取评论列表
+    const result = await request.get('/api/wxapp/comment/list', queryParams);
+    
+    return {
+      success: true,
+      comments: result.data.data,
+      pagination: result.data.pagination
+    };
+  } catch (err) {
+    console.error('获取评论列表失败:', err);
+    return {
+      success: false,
+      message: '获取评论列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
 module.exports = {
   createComment,
   updateComment,
   deleteComment,
   likeComment,
   unlikeComment,
-  getCommentDetail
+  getCommentDetail,
+  getCommentList
 }; 

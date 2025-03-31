@@ -65,13 +65,23 @@ async function login(userData = {}) {
       unionid: userData.unionid || '',
       nick_name: userData.nickName || '',
       avatar: userData.avatarUrl || '',
-      platform: 'wxapp'
+      gender: userData.gender || 0,
+      bio: userData.bio || '',
+      country: userData.country || '',
+      province: userData.province || '',
+      city: userData.city || '',
+      language: userData.language || '',
+      birthday: userData.birthday || '',
+      wechatId: userData.wechatId || '',
+      qqId: userData.qqId || '',
+      platform: 'wxapp',
+      extra: userData.extra || {}
     };
     
     console.log('开始同步用户数据:', syncData);
     
-    // 调用同步用户API
-    const result = await request.post('/api/wxapp/users/sync', syncData);
+    // 调用同步用户API - 更新API路径
+    const result = await request.post('/api/wxapp/user/sync', syncData);
     console.log('用户同步成功, 结果:', result);
     
     // 存储用户信息
@@ -97,6 +107,70 @@ async function login(userData = {}) {
 }
 
 /**
+ * 获取用户信息
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getProfile(params = {}) {
+  try {
+    // 如果没有提供openid，则使用本地存储的openid
+    const openid = params.openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    // 调用获取用户信息API
+    const result = await request.get('/api/wxapp/user/profile', { openid });
+    
+    return {
+      success: true,
+      data: result.data,
+      message: '获取用户信息成功'
+    };
+  } catch (err) {
+    console.error('获取用户信息失败:', err);
+    return {
+      success: false,
+      message: '获取用户信息失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户列表
+ * @param {Object} params - 请求参数
+ * @param {number} params.limit - 返回记录数量限制，默认10
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getUserList(params = {}) {
+  try {
+    // 设置默认参数
+    const queryParams = {
+      limit: params.limit || 10,
+      offset: params.offset || 0
+    };
+    
+    // 调用获取用户列表API
+    const result = await request.get('/api/wxapp/user/list', queryParams);
+    
+    return {
+      success: true,
+      data: result.data.data,
+      pagination: result.data.pagination,
+      message: '获取用户列表成功'
+    };
+  } catch (err) {
+    console.error('获取用户列表失败:', err);
+    return {
+      success: false,
+      message: '获取用户列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
  * 更新用户信息
  * @param {Object} userData - 要更新的用户数据
  * @returns {Promise} - 返回Promise对象
@@ -111,7 +185,9 @@ async function updateUser(userData = {}) {
     console.log('更新用户信息:', userData);
     
     // 构建更新数据对象
-    const updateData = {};
+    const updateData = {
+      openid: openid // 添加openid到请求体
+    };
     
     // 只包含需要更新的字段，根据API文档映射字段名
     if (userData.nickName !== undefined) updateData.nick_name = userData.nickName;
@@ -125,10 +201,11 @@ async function updateUser(userData = {}) {
     if (userData.birthday !== undefined) updateData.birthday = userData.birthday;
     if (userData.wechatId !== undefined) updateData.wechatId = userData.wechatId;
     if (userData.qqId !== undefined) updateData.qqId = userData.qqId;
+    if (userData.status !== undefined) updateData.status = userData.status;
     if (userData.extra !== undefined) updateData.extra = userData.extra;
     
-    // 调用更新用户API
-    const result = await request.put(`/api/wxapp/users/${openid}`, updateData);
+    // 调用更新用户API - 更新API路径
+    const result = await request.put('/api/wxapp/user/update', updateData, {}, { openid });
     console.log('用户信息更新成功:', result);
     
     // 更新本地存储的用户信息
@@ -153,6 +230,261 @@ async function updateUser(userData = {}) {
       code: -1,
       success: false,
       message: '更新失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户关注统计
+ * @param {string} openid - 用户openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowStats(openid) {
+  try {
+    if (!openid) {
+      openid = wx.getStorageSync('openid');
+      if (!openid) {
+        throw new Error('缺少用户openid');
+      }
+    }
+    
+    const result = await request.get('/api/wxapp/user/follow-stats', { openid });
+    
+    return {
+      success: true,
+      followers: result.data.followers,
+      following: result.data.following,
+      message: '获取关注统计成功'
+    };
+  } catch (err) {
+    console.error('获取关注统计失败:', err);
+    return {
+      success: false,
+      message: '获取关注统计失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 关注用户
+ * @param {string} followedId - 被关注用户的openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function followUser(followedId) {
+  try {
+    const followerId = wx.getStorageSync('openid');
+    if (!followerId) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!followedId) {
+      throw new Error('缺少被关注用户的openid');
+    }
+    
+    const data = {
+      follower_id: followerId,
+      followed_id: followedId
+    };
+    
+    const result = await request.post('/api/wxapp/user/follow', data);
+    
+    return {
+      success: true,
+      status: result.data.status,
+      following_count: result.data.following_count,
+      followers_count: result.data.followers_count,
+      is_following: result.data.is_following,
+      message: '关注成功'
+    };
+  } catch (err) {
+    console.error('关注用户失败:', err);
+    return {
+      success: false,
+      message: '关注用户失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 取消关注用户
+ * @param {string} followedId - 被关注用户的openid
+ * @returns {Promise} - 返回Promise对象
+ */
+async function unfollowUser(followedId) {
+  try {
+    const followerId = wx.getStorageSync('openid');
+    if (!followerId) {
+      throw new Error('用户未登录');
+    }
+    
+    if (!followedId) {
+      throw new Error('缺少被关注用户的openid');
+    }
+    
+    const data = {
+      follower_id: followerId,
+      followed_id: followedId
+    };
+    
+    const result = await request.post('/api/wxapp/user/unfollow', data);
+    
+    return {
+      success: true,
+      status: result.data.status,
+      following_count: result.data.following_count,
+      followers_count: result.data.followers_count,
+      is_following: result.data.is_following,
+      message: '取消关注成功'
+    };
+  } catch (err) {
+    console.error('取消关注用户失败:', err);
+    return {
+      success: false,
+      message: '取消关注用户失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 检查关注状态
+ * @param {Object} params - 请求参数
+ * @param {string} params.followedId - 被关注用户的openid
+ * @param {string} params.followerId - 关注者用户的openid（可选，默认当前用户）
+ * @returns {Promise} - 返回Promise对象
+ */
+async function checkFollow(params = {}) {
+  try {
+    const followerId = params.followerId || wx.getStorageSync('openid');
+    if (!followerId) {
+      throw new Error('缺少关注者openid');
+    }
+    
+    if (!params.followedId) {
+      throw new Error('缺少被关注用户的openid');
+    }
+    
+    const queryParams = {
+      follower_id: followerId,
+      followed_id: params.followedId
+    };
+    
+    const result = await request.get('/api/wxapp/user/check-follow', queryParams);
+    
+    return {
+      success: true,
+      is_following: result.data.is_following,
+      message: '检查关注状态成功'
+    };
+  } catch (err) {
+    console.error('检查关注状态失败:', err);
+    return {
+      success: false,
+      message: '检查关注状态失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户关注列表
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid（可选，默认当前用户）
+ * @param {number} params.limit - 返回记录数量限制，默认20
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowingList(params = {}) {
+  try {
+    const openid = params.openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const queryParams = {
+      openid: openid,
+      limit: params.limit || 20,
+      offset: params.offset || 0
+    };
+    
+    const result = await request.get('/api/wxapp/user/followings', queryParams);
+    
+    return {
+      success: true,
+      data: result.data.data,
+      pagination: result.data.pagination,
+      message: '获取关注列表成功'
+    };
+  } catch (err) {
+    console.error('获取关注列表失败:', err);
+    return {
+      success: false,
+      message: '获取关注列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户粉丝列表
+ * @param {Object} params - 请求参数
+ * @param {string} params.openid - 用户openid（可选，默认当前用户）
+ * @param {number} params.limit - 返回记录数量限制，默认20
+ * @param {number} params.offset - 分页偏移量，默认0
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getFollowersList(params = {}) {
+  try {
+    const openid = params.openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const queryParams = {
+      openid: openid,
+      limit: params.limit || 20,
+      offset: params.offset || 0
+    };
+    
+    const result = await request.get('/api/wxapp/user/followers', queryParams);
+    
+    return {
+      success: true,
+      data: result.data.data,
+      pagination: result.data.pagination,
+      message: '获取粉丝列表成功'
+    };
+  } catch (err) {
+    console.error('获取粉丝列表失败:', err);
+    return {
+      success: false,
+      message: '获取粉丝列表失败: ' + (err.message || '未知错误')
+    };
+  }
+}
+
+/**
+ * 获取用户令牌
+ * @param {string} openid - 用户openid（可选，默认当前用户）
+ * @returns {Promise} - 返回Promise对象
+ */
+async function getToken(openid) {
+  try {
+    openid = openid || wx.getStorageSync('openid');
+    if (!openid) {
+      throw new Error('缺少用户openid');
+    }
+    
+    const result = await request.get('/api/wxapp/user/token', { openid });
+    
+    return {
+      success: true,
+      token: result.data.token,
+      expires_at: result.data.expires_at,
+      message: '获取用户令牌成功'
+    };
+  } catch (err) {
+    console.error('获取用户令牌失败:', err);
+    return {
+      success: false,
+      message: '获取用户令牌失败: ' + (err.message || '未知错误')
     };
   }
 }
@@ -347,70 +679,6 @@ async function uploadUserAvatar(filePath) {
 }
 
 /**
- * 获取用户信息
- * @param {Object} params - 请求参数，包含openid
- * @returns {Promise} - 返回Promise对象
- */
-async function getUserInfo(params = {}) {
-  try {
-    // 优先使用传入的openid，否则从存储中获取
-    const openid = params.openid || wx.getStorageSync('openid');
-    if (!openid) {
-      throw new Error('未提供openid且未登录');
-    }
-    
-    console.debug('获取用户信息:', { openid });
-    
-    // 统一使用 /api/wxapp/users/{openid} 接口获取用户信息
-    const apiUrl = `/api/wxapp/users/${openid}`;
-    
-    const result = await request.get(apiUrl);
-    
-    console.debug('获取用户信息API原始返回:', result);
-    
-    // 处理API响应
-    let userData = null;
-    let success = false;
-    
-    // 适配新API格式 (code=200)
-    if (result && result.code === 200 && result.data) {
-      userData = result.data;
-      success = true;
-    } 
-    // 兼容旧格式
-    else if (result && result.success) {
-      userData = result.userInfo || result;
-      success = true;
-    }
-    
-    // 如果是当前用户且获取成功，更新本地存储
-    if (success && userData && (!params.openid || params.isSelf)) {
-      const localUserInfo = {
-        ...wx.getStorageSync('userInfo'),
-        ...userData,
-        openid: userData.openid,
-        nickName: userData.nick_name || userData.nickName,
-        avatarUrl: userData.avatar || userData.avatarUrl
-      };
-      wx.setStorageSync('userInfo', localUserInfo);
-    }
-    
-    // 保持与前端组件期望的一致结构返回
-    return {
-      success: success,
-      userInfo: userData,
-      message: (result && result.message) || '获取用户信息' + (success ? '成功' : '失败')
-    };
-  } catch (err) {
-    console.error('获取用户信息失败:', err);
-    return {
-      success: false,
-      message: '获取用户信息失败: ' + (err.message || '未知错误')
-    };
-  }
-}
-
-/**
  * 获取用户交互的帖子（点赞、收藏、评论）
  * @param {Object} params - 请求参数
  * @param {string} params.openid - 用户openid
@@ -494,10 +762,19 @@ async function getUserInteractionPosts(params = {}) {
   }
 }
 
+// 导出所有用户相关API方法
 module.exports = {
   login,
+  getProfile,
+  getUserList,
   updateUser,
-  getUserInfo,
+  getFollowStats,
+  followUser,
+  unfollowUser,
+  checkFollow,
+  getFollowingList,
+  getFollowersList,
+  getToken,
   getUserLikes,
   getUserLikesDetail,
   fixUserLikes,
