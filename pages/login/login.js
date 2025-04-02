@@ -54,12 +54,8 @@ Page({
       // 使用auth-behavior中的wxLogin方法
       const loginResult = await this.wxLogin();
       if (loginResult.code === 200) {
-        ui.showToast('登录成功', { type: ToastType.SUCCESS });
-        
-        // 延迟跳转，确保Toast能够显示
-        setTimeout(() => {
-          nav.switchTab('/pages/index/index');
-        }, 1500);
+        // 登录成功，直接跳转到首页
+        nav.switchTab('/pages/index/index');
       } else {
         throw new Error(loginResult.message || '登录失败');
       }

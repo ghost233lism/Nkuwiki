@@ -1,87 +1,65 @@
-<!-- 引入模板 -->
-<import src="../../../templates/post.wxml"/>
-
 <page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
   <!-- 页面状态 -->
   <loading wx:if="{{loading.post}}" type="dot-gray" show="{{loading.post}}" />
-  <error wx:elif="{{error}}" text="{{errorText}}" bind:retry="loadPostDetail" />
+  <error wx:elif="{{error}}" text="{{errorText}}" bind:retry="fetchPostData" />
 
   <!-- 帖子内容 -->
-  <block wx:elif="{{post}}">
+  <block wx:elif="{{postDetail}}">
     <!-- 编辑模式 -->
     <post-edit 
       wx:if="{{isEditMode}}"
-      post="{{post}}"
+      post="{{postDetail}}"
       bind:submit="onPostEdit"
     />
 
     <!-- 展示模式 -->
     <block wx:else>
-      <!-- 作者信息 -->
-      <user-card 
-        avatar="{{post.avatar}}"
-        nickname="{{post.nickname}}"
-        time="{{post.create_time}}"
-      />
-
-      <!-- 帖子内容 -->
-      <view class="post-content">
-        <view class="post-title">{{post.title}}</view>
-        <towxml nodes="{{post.content}}" />
-        <view class="post-images" wx:if="{{post.image && post.image.length}}">
-          <image 
-            wx:for="{{post.image}}" 
-            wx:key="*this"
-            src="{{item}}"
-            mode="aspectFill"
-            bindtap="onImagePreview"
-            data-url="{{item}}"
-          />
+      <view class="post-container">
+        <!-- 使用post-item组件展示帖子 -->
+        <post-item
+          post="{{postDetail}}"
+          showActions="{{true}}"
+          showComments="{{false}}"
+          bind:like="onPostItemLike"
+          bind:favorite="onPostItemFavorite"
+          bind:share="onPostShare"
+          bind:comment="onPostItemComment"
+        />
+        
+        <!-- 评论区标题 -->
+        <view class="comment-header-section">
+          <text class="comment-header-title">评论 ({{postDetail.comment_count || 0}})</text>
+        </view>
+        
+        <!-- 使用comment-list组件 -->
+        <comment-list
+          id="commentList"
+          comments="{{comments}}"
+          total="{{postDetail.comment_count || 0}}"
+          loading="{{loading.comment}}"
+          error="{{commentError}}"
+          hasMore="{{hasMore}}"
+          currentOpenid="{{userInfo.openid}}"
+          bind:reply="onReplyTap"
+          bind:delete="onCommentDelete"
+          bind:loadmore="onLoadMore"
+          bind:retry="onCommentRetry"
+          bind:usertap="goToUserProfile"
+        />
+      </view>
+      
+      <!-- 底部评论按钮 -->
+      <view class="comment-bar">
+        <view class="comment-input-placeholder" bindtap="onCommentTap">
+          <text>写评论...</text>
         </view>
       </view>
-
-      <!-- 交互栏 -->
-      <action-bar>
-        <view slot="left">
-          <action-item
-            icon="{{post.liked ? 'like-fill' : 'like'}}"
-            text="{{post.like_count || 0}}"
-            bind:tap="onPostLike"
-          />
-          <action-item
-            icon="comment"
-            text="{{post.comment_count || 0}}"
-            bind:tap="onCommentTap"
-          />
-          <action-item
-            icon="{{post.favorited ? 'star-fill' : 'star'}}"
-            text="{{post.favorite_count || 0}}"
-            bind:tap="onPostFavorite"
-          />
-        </view>
-        <view slot="right">
-          <action-item
-            icon="share"
-            text="分享"
-            bind:tap="onPostShare"
-          />
-        </view>
-      </action-bar>
-
-      <!-- 评论列表 -->
-      <comment-list
-        id="commentList"
-        postId="{{id}}"
-        bind:reply="onCommentReply"
-        bind:delete="onCommentDelete"
-        bind:loadmore="onLoadMore"
-      />
     </block>
   </block>
 
   <!-- 评论输入框 -->
   <comment-input
-    wx:if="{{post.allowComment}}"
+    id="commentInput"
     show="{{focusComment}}"
     loading="{{loading.comment}}"
     value="{{commentText}}"
@@ -89,6 +67,7 @@
     bind:input="onCommentInput"
     bind:submit="onCommentSubmit"
     bind:close="onCommentClose"
+    data-focus="{{focusComment}}"
   />
   
   <!-- WEUI组件 -->

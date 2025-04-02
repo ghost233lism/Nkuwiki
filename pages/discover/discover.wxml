@@ -1,5 +1,4 @@
 <!-- 发现页面 -->
-<import src="../../templates/card-template/card-template.wxml" />
 
 <view class="container">
   <!-- 加载状态 -->
@@ -22,39 +21,65 @@
     <!-- 使用header组件替代原生标题栏 -->
     <header title="发现" icons="{{['notification', 'message']}}" bind:iconTap="onHeaderIconTap" />
 
-    <!-- 使用post-list替代手动循环 -->
-    <template is="card" 
-      data="{{icon: '/assets/icons/discover/hot.png', title: '校园热点', subtitle: '实时更新'}}">
-      <post-list posts="{{hotPosts}}" type="grid" bind:itemClick="viewPostDetail" />
-    </template>
+    <!-- 校园热点 -->
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/hot.png" />
+        <view class="card-title">校园热点</view>
+        <view class="card-subtitle">实时更新</view>
+      </view>
+      <view class="card-content">
+        <post-list posts="{{hotPosts}}" type="grid" bind:itemClick="viewPostDetail" />
+      </view>
+    </view>
 
     <!-- AI助手 -->
-    <template is="card" 
-      data="{{icon: '/assets/icons/discover/ai.png', title: 'AI 助手', showFooter: true, footerText: '点击查看全部功能'}}">
-      <view class="ai-grid">
-        <custom-button 
-          wx:for="{{aiFeatures}}" 
-          type="primary" 
-          size="sm" 
-          data-type="{{item.id}}"
-          bind:tap="navigateToAI">
-          {{item.name}}
-        </custom-button>
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/ai.png" />
+        <view class="card-title">AI 助手</view>
       </view>
-    </template>
+      <view class="card-content">
+        <view class="ai-grid">
+          <custom-button 
+            wx:for="{{aiFeatures}}" 
+            type="primary" 
+            size="sm" 
+            data-type="{{item.id}}"
+            bind:tap="navigateToAI">
+            {{item.name}}
+          </custom-button>
+        </view>
+      </view>
+      <view class="card-footer">
+        <text class="footer-text">点击查看全部功能</text>
+      </view>
+    </view>
 
     <!-- 校园活动 -->
-    <template is="card" data="{{icon: '/assets/icons/discover/activity.png', title: '校园活动'}}">
-      <post-item 
-        post="{{currentActivity}}" 
-        type="activity"
-        bind:click="viewActivityDetail" />
-    </template>
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/activity.png" />
+        <view class="card-title">校园活动</view>
+      </view>
+      <view class="card-content">
+        <post-item 
+          post="{{currentActivity}}" 
+          type="activity"
+          bind:click="viewActivityDetail" />
+      </view>
+    </view>
 
     <!-- 学习资源 -->
-    <template is="card" data="{{icon: '/assets/icons/discover/book.png', title: '学习资源'}}">
-      <post-list posts="{{studyResources}}" type="vertical" />
-    </template>
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/book.png" />
+        <view class="card-title">学习资源</view>
+      </view>
+      <view class="card-content">
+        <post-list posts="{{studyResources}}" type="vertical" />
+      </view>
+    </view>
 
     <!-- 内容列表 -->
     <post-list 

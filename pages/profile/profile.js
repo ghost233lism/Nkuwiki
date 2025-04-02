@@ -334,7 +334,6 @@ Page({
       this.showLoading('登录中...');
       await this.wxLogin();
       await this.syncUserAndInitPage();
-      this.showToast('登录成功', 'success');
     } catch (err) {
       this.handleError(err, '登录失败');
     } finally {

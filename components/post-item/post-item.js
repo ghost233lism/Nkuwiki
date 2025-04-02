@@ -25,6 +25,10 @@ Component({
     showFollow: {
       type: Boolean,
       value: true
+    },
+    index: {
+      type: Number,
+      value: -1
     }
   },
 
@@ -74,17 +78,24 @@ Component({
       if (!post || !currentOpenid) return;
       
       // 优先使用API返回的状态
-      const isLiked = post.is_liked !== undefined ? post.is_liked : 
+      const isLiked = typeof post.is_liked === 'boolean' ? post.is_liked : 
                       (Array.isArray(post.liked_users) && 
                       post.liked_users.includes(currentOpenid));
       
-      const isFavorited = post.is_favorited !== undefined ? post.is_favorited : 
+      const isFavorited = typeof post.is_favorited === 'boolean' ? post.is_favorited : 
                          (Array.isArray(post.favorite_users) && 
                          post.favorite_users.includes(currentOpenid));
       
       // 检查关注状态
       const isFollowed = Array.isArray(post.followed_users) && 
                          post.followed_users.includes(currentOpenid);
+      
+      console.debug('更新帖子组件状态:', {
+        postId: post.id,
+        isLiked,
+        isFavorited,
+        isFollowed
+      });
       
       this.setData({
         isLiked,
@@ -97,56 +108,22 @@ Component({
     handleLike() {
       if (!this.properties.post) return;
       
-      const { id } = this.properties.post;
-      const { isLiked } = this.data;
-      
-      if (isLiked) {
-        this.unlikePost(id)
-          .then(() => {
-            this.setData({ 
-              isLiked: false,
-              'post.like_count': Math.max(0, (this.properties.post.like_count || 0) - 1)
-            });
-            this.triggerEvent('updatePost', { id, action: 'unlike' });
-          });
-      } else {
-        this.likePost(id)
-          .then(() => {
-            this.setData({ 
-              isLiked: true,
-              'post.like_count': (this.properties.post.like_count || 0) + 1
-            });
-            this.triggerEvent('updatePost', { id, action: 'like' });
-          });
-      }
+      // 触发父组件的点赞事件，将postId和当前索引传递
+      this.triggerEvent('like', {
+        postId: this.properties.post.id,
+        index: this.properties.index
+      });
     },
     
     // 处理收藏
     handleFavorite() {
       if (!this.properties.post) return;
       
-      const { id } = this.properties.post;
-      const { isFavorited } = this.data;
-      
-      if (isFavorited) {
-        this.unfavoritePost(id)
-          .then(() => {
-            this.setData({ 
-              isFavorited: false,
-              'post.favorite_count': Math.max(0, (this.properties.post.favorite_count || 0) - 1)
-            });
-            this.triggerEvent('updatePost', { id, action: 'unfavorite' });
-          });
-      } else {
-        this.favoritePost(id)
-          .then(() => {
-            this.setData({ 
-              isFavorited: true,
-              'post.favorite_count': (this.properties.post.favorite_count || 0) + 1
-            });
-            this.triggerEvent('updatePost', { id, action: 'favorite' });
-          });
-      }
+      // 触发父组件的收藏事件，将postId和当前索引传递
+      this.triggerEvent('favorite', {
+        postId: this.properties.post.id,
+        index: this.properties.index
+      });
     },
     
     // 处理关注
@@ -184,6 +161,9 @@ Component({
       if (!this.properties.post) return;
       
       const { id } = this.properties.post;
+      // 触发posttap事件，供父组件post-list使用
+      this.triggerEvent('posttap', { id });
+      // 直接跳转到详情页
       this.goToDetail({ currentTarget: { dataset: { id } } });
     },
     
@@ -240,7 +220,7 @@ Component({
       if (!id) return;
       
       wx.navigateTo({
-        url: `/pages/post-detail/post-detail?id=${id}`
+        url: `/pages/post/detail/detail?id=${id}`
       });
     },
     
@@ -250,7 +230,7 @@ Component({
       if (!id) return;
       
       wx.navigateTo({
-        url: `/pages/post-detail/post-detail?id=${id}&tab=comments`
+        url: `/pages/post/detail/detail?id=${id}&tab=comments`
       });
     },
     

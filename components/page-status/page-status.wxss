@@ -236,6 +236,14 @@
   margin-left: 10rpx;
 }
 
+.no-more-text {
+  width: 100%;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  padding: 20rpx 0;
+}
+
 .load-more-end {
   width: 100%;
   height: 80rpx;

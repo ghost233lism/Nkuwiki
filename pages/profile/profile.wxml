@@ -8,7 +8,7 @@
     bind:avatar="onAvatarTap"
   ></nav-bar>
 
-  <page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <page-status loading="{{loading}}" error="{{error}}" retry-text="重试" hasMore="{{false}}">
     <!-- 加载状态 -->
     <loading 
       wx:if="{{loading}}" 

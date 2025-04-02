@@ -36,18 +36,18 @@
   <!-- 内容列表 - 使用post-list组件 -->
   <view class="post-list-container">
     <post-list 
-      posts="{{posts}}"
-      loading="{{postsLoading}}"
-      error="{{postsError}}"
-      errorMsg="{{postsErrorMsg}}"
+      post="{{post}}"
+      loading="{{postLoading}}"
+      error="{{postError}}"
+      errorMsg="{{postErrorMsg}}"
       hasMore="{{pagination.hasMore}}"
       currentOpenid="{{currentOpenid}}"
       bind:posttap="handlePostTap"
       bind:loadmore="handleLoadMore"
       bind:retry="onRetry"
       bind:emptybtn="handleEmptyBtnTap"
-      bind:like="toggleLike"
-      bind:favorite="toggleFavorite"
+      bind:like="handleLike"
+      bind:favorite="handleFavorite"
       bind:usertap="handleUserTap"
     />
   </view>

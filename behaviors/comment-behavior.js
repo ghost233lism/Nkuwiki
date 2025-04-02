@@ -76,36 +76,72 @@ module.exports = Behavior({
   
   methods: {
     // 加载评论列表
-    async loadComments(postId, params = {}) {
-      if (!postId) return;
+    async loadComment(postId, params = {}) {
+      if (!postId) {
+        console.debug('loadComment: 未提供postId');
+        return [];
+      }
       
       this.setData({ commentsLoading: true });
       
       try {
+        console.debug(`loadComment: 开始加载帖子 ${postId} 的评论`);
+        
         const res = await commentApi.list({ 
           post_id: postId,
           openid: storage.get('openid'),
           ...params
         });
         
+        console.debug(`loadComment: 接收到评论数据:`, res);
+        
         if (res.code !== 200) {
           throw error.create(res.message || '获取评论失败');
         }
         
+        if (!res.data || !Array.isArray(res.data)) {
+          console.debug('loadComment: 评论数据无效', res.data);
+          throw error.create('评论数据格式无效');
+        }
+        
+        console.debug('评论原始数据:', res.data);
+        
         // 格式化评论，添加相对时间
-        const formattedComments = (res.data || []).map(comment => ({
-          ...comment,
-          formattedTime: formatRelativeTime(comment.create_time || comment.createTime)
-        }));
+        const formattedComment = (res.data || []).map(comment => {
+          // 确保user_info字段存在且非空
+          const userInfo = comment.user_info || {};
+          
+          return {
+            ...comment,
+            // 设置用户信息字段
+            avatar: comment.avatar || userInfo.avatar || '/icons/avatar1.png',
+            nickname: comment.nickname || userInfo.nickname || comment.user_name || '匿名用户',
+            // 处理时间格式
+            formattedTime: formatRelativeTime(comment.create_time || comment.createTime)
+          };
+        });
+        
+        console.debug(`loadComment: 格式化后的评论数据(${formattedComment.length}条):`, formattedComment);
+        
+        // 输出关键字段，方便检查
+        if (formattedComment.length > 0) {
+          console.debug('第一条评论数据:', {
+            id: formattedComment[0].id,
+            content: formattedComment[0].content,
+            avatar: formattedComment[0].avatar,
+            nickname: formattedComment[0].nickname,
+            formattedTime: formattedComment[0].formattedTime
+          });
+        }
         
         this.setData({ 
-          comments: formattedComments,
+          comments: formattedComment,
           commentsLoading: false
         });
         
-        return formattedComments;
+        return formattedComment;
       } catch (err) {
-        console.debug('加载评论失败:', err);
+        console.debug('loadComment: 加载评论失败:', err);
         this.setData({ commentsLoading: false, commentsError: true });
         return [];
       }
@@ -230,7 +266,7 @@ module.exports = Behavior({
       if (result) {
         this.hideReply();
         // 刷新评论列表
-        this.loadComments(postId);
+        this.loadComment(postId);
       }
       
       this.setData({ replying: false });

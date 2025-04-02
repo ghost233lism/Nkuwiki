@@ -1,6 +1,7 @@
 Component({
   properties: {
-    posts: {
+    // 帖子列表数据
+    post: {
       type: Array,
       value: []
     },
@@ -39,6 +40,16 @@ Component({
     currentOpenid: {
       type: String,
       value: ''
+    },
+    noMoreText: {
+      type: String,
+      value: '没有更多数据了'
+    }
+  },
+
+  lifetimes: {
+    attached() {
+      console.debug('post-list组件已附加，post数据长度:', this.data.post ? this.data.post.length : 0);
     }
   },
 
@@ -46,7 +57,7 @@ Component({
     // 跳转到详情页
     handlePostTap(e) {
       const { id } = e.currentTarget.dataset;
-      this.triggerEvent('posttap', { id });
+      this.triggerEvent('posttap', { postId: id });
     },
     
     // 加载更多
@@ -63,14 +74,24 @@ Component({
     
     // 处理点赞事件
     handleLike(e) {
-      const { id, index } = e.currentTarget.dataset;
-      this.triggerEvent('like', { id, index });
+      const index = e.currentTarget.dataset.index;
+      const post = this.data.post[index];
+      if (!post) {
+        console.debug('点赞失败：找不到索引为', index, '的帖子');
+        return;
+      }
+      this.triggerEvent('like', { post, index });
     },
     
     // 处理收藏事件
     handleFavorite(e) {
-      const { id, index } = e.currentTarget.dataset;
-      this.triggerEvent('favorite', { id, index });
+      const index = e.currentTarget.dataset.index;
+      const post = this.data.post[index];
+      if (!post) {
+        console.debug('收藏失败：找不到索引为', index, '的帖子');
+        return;
+      }
+      this.triggerEvent('favorite', { post, index });
     },
     
     // 处理评论事件

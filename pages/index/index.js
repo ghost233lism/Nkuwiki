@@ -9,7 +9,6 @@ const {
 } = require('../../utils/util');
 const baseBehavior = require('../../behaviors/base-behavior');
 const postBehavior = require('../../behaviors/post-behavior');
-const commentBehavior = require('../../behaviors/comment-behavior');
 const userBehavior = require('../../behaviors/user-behavior');
 const authBehavior = require('../../behaviors/auth-behavior');
 
@@ -59,7 +58,6 @@ Page({
   behaviors: [
     baseBehavior,
     postBehavior,
-    commentBehavior,
     userBehavior,
     authBehavior
   ],
@@ -85,8 +83,6 @@ Page({
     // 用户信息
     userInfo: null,
     currentOpenid: '',
-
-    // 使用postBehavior中的posts和相关状态
     
     // 分类图标数据
     tabs: [
@@ -122,22 +118,13 @@ Page({
     this.setData({ loading: true });
     
     try {
-      // 初始化分类
-      await this.initCategories();
+      // 获取存储中的用户信息，先使用本地缓存数据快速显示
+      this.getUserInfoFromStorage();
       
-      // 登录检查 - 使用async验证以确保服务器端检查
-      if (await this.ensureLogin(false, false)) {
-        // 获取用户信息
-        const userInfo = await this.getCurrentUserInfo(true); // 强制刷新
-        this.setData({ userInfo });
-        // 检查未读通知
-        await this.checkUnreadNotification();
-      }
-      
-      // 不管登录状态，都加载帖子
-      await this.loadPosts();
+      // 异步加载数据，不阻塞UI显示
+      this.loadInitialDataAsync();
     } catch (err) {
-      console.debug('首页加载失败:', err);
+      console.debug('首页加载出错:', err);
       this.setData({ 
         error: true,
         errorText: '加载失败，请下拉刷新重试'
@@ -147,17 +134,50 @@ Page({
     }
   },
 
+  // 异步加载初始数据，不阻塞UI
+  loadInitialDataAsync() {
+    // 先加载帖子，提高用户体验
+    this.loadPosts().then(() => {
+      // 帖子加载完后再进行登录检查和通知检查
+      this.ensureLogin(false, false).then(isLoggedIn => {
+        if (isLoggedIn) {
+          // 用户已登录，获取最新用户信息并检查未读通知
+          this.getCurrentUserInfo(false); // 不强制刷新
+          this.checkUnreadNotification();
+        }
+      }).catch(err => {
+        console.debug('登录检查失败:', err);
+      });
+    });
+  },
+
   async onShow() {
-    this.setData({ error: null });
+    // 检查是否需要刷新，避免重复请求
+    const lastShowTime = this.data.lastShowTime || 0;
+    const now = Date.now();
     
-    // 登录检查 - 使用async验证以确保服务器端检查
-    if (await this.ensureLogin(false, false)) {
-      // 检查未读通知
-      await this.checkUnreadNotification();
+    // 设置最近显示时间
+    this.setData({ lastShowTime: now });
+    
+    // 如果距离上次刷新时间少于10秒，不刷新内容
+    if (now - lastShowTime < 10000) {
+      console.debug('距离上次刷新时间小于10秒，跳过刷新');
+      return;
     }
     
-    // 无论如何都刷新帖子列表
-    this.refreshCategoryPosts();
+    // 静默检查未读通知
+    const openid = storage.get('openid');
+    if (openid) {
+      this.checkUnreadNotification().catch(err => {
+        console.debug('检查未读通知失败:', err);
+      });
+    }
+    
+    // 如果有错误或超过30秒没刷新，才刷新帖子列表
+    if (this.data.error || now - lastShowTime > 30000) {
+      this.setData({ error: null });
+      this.refreshCategoryPosts();
+    }
   },
 
   onPullDownRefresh() {
@@ -190,6 +210,23 @@ Page({
     });
   },
   
+  // 加载帖子 - 映射到postBehavior的loadPost方法
+  async loadPosts() {
+    console.debug('加载首页帖子');
+    try {
+      // 获取当前分类ID
+      const categoryId = this.data.navItems[this.data.activeTab].id;
+      const params = categoryId === 'all' ? {} : { category: categoryId };
+      
+      // 使用postBehavior中的refreshPost方法
+      await this.refreshPost(params);
+      return true;
+    } catch (err) {
+      this.handleError(err, '加载帖子失败');
+      return false;
+    }
+  },
+  
   // 重试按钮处理
   onRetry() {
     console.debug('点击重试按钮');
@@ -203,16 +240,34 @@ Page({
   },
 
   async loadInitialData() {
+    // 如果正在加载，跳过
+    if (this.data.loading) {
+      console.debug('正在加载中，跳过初始数据加载');
+      return;
+    }
+    
     this.setData({ loading: true, error: null });
+    
     try {
-      // 并行加载数据
-      await Promise.all([
-        this.loadInitialPosts(),
-        this.checkUnreadNotification(),
-        this.getCurrentUserInfo()
-      ]);
+      // 先尝试使用本地存储的数据
+      this.getUserInfoFromStorage();
+      
+      // 异步加载关键数据，避免阻塞UI
+      this.loadPosts().then(() => {
+        // 加载完成后才检查通知
+        if (storage.get('openid')) {
+          this.checkUnreadNotification();
+        }
+      });
+      
+      // 后台异步获取用户信息
+      this.getCurrentUserInfo(false).catch(err => {
+        console.debug('获取用户信息失败:', err);
+      });
     } catch (err) {
       this.handleError(err, '加载初始数据失败');
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
@@ -248,21 +303,37 @@ Page({
   },
 
   async refreshCategoryPosts() {
+    // 避免重复加载
+    if (this.data.postLoading) {
+      console.debug('正在加载中，跳过刷新');
+      return;
+    }
+    
+    this.setData({ postLoading: true });
+    
     try {
       const categoryId = this.data.navItems[this.data.activeTab].id;
       const params = categoryId === 'all' ? {} : { category: categoryId };
       
       // 使用postBehavior中的refreshPost方法
       await this.refreshPost(params);
-      
-      wx.stopPullDownRefresh();
     } catch (err) {
       this.handleError(err, '刷新帖子失败');
+    } finally {
+      this.setData({ postLoading: false });
       wx.stopPullDownRefresh();
     }
   },
 
   async loadMoreCategoryPosts() {
+    // 避免重复加载
+    if (this.data.postLoading || !this.data.pagination.hasMore) {
+      console.debug('正在加载中或已无更多数据，跳过加载更多');
+      return;
+    }
+    
+    this.setData({ postLoading: true });
+    
     try {
       const categoryId = this.data.navItems[this.data.activeTab].id;
       const params = categoryId === 'all' ? {} : { category: categoryId };
@@ -271,6 +342,8 @@ Page({
       await this.loadMorePost(params);
     } catch (err) {
       this.handleError(err, '加载更多帖子失败');
+    } finally {
+      this.setData({ postLoading: false });
     }
   },
 
@@ -319,6 +392,19 @@ Page({
   },
 
   async checkUnreadNotification() {
+    // 使用节流控制，避免频繁请求
+    const now = Date.now();
+    const lastCheckTime = this.data.lastNotificationCheckTime || 0;
+    
+    // 如果距离上次检查少于30秒，则跳过
+    if (now - lastCheckTime < 30000) {
+      console.debug('距离上次检查通知时间小于30秒，跳过检查');
+      return this.data.hasUnreadNotification;
+    }
+    
+    // 记录本次检查时间
+    this.setData({ lastNotificationCheckTime: now });
+    
     try {
       const openid = storage.get('openid');
       if (!openid) return false;
@@ -342,7 +428,11 @@ Page({
   },
 
   handlePostTap(e) {
-    const { postId } = e.detail;
+    const postId = e.detail.postId || e.detail.id;
+    if (!postId) {
+      console.debug('帖子详情跳转失败: 找不到帖子ID', e.detail);
+      return;
+    }
     wx.navigateTo({
       url: `/pages/post/detail/detail?id=${postId}`
     });
@@ -362,5 +452,73 @@ Page({
   handleUserTap(e) {
     const { userId } = e.detail;
     this.navigateToUserProfile(userId);
-  }
+  },
+
+  // 处理点赞
+  handleLike(e) {
+    // 获取事件中的post和index数据
+    const { post, index, postId } = e.detail;
+    
+    // 构建事件对象传给toggleLike
+    let event;
+    
+    if (postId) {
+      // 新的格式：使用postId
+      event = {
+        detail: {
+          postId,
+          index
+        }
+      };
+    } else if (post) {
+      // 旧的格式：使用post对象
+      event = {
+        currentTarget: {
+          dataset: {
+            post: post,
+            index: index
+          }
+        }
+      };
+    } else {
+      console.debug('点赞失败: 找不到帖子数据');
+      return;
+    }
+    
+    this.toggleLike(event);
+  },
+
+  // 处理收藏
+  handleFavorite(e) {
+    // 获取事件中的post和index数据
+    const { post, index, postId } = e.detail;
+    
+    // 构建事件对象传给toggleFavorite
+    let event;
+    
+    if (postId) {
+      // 新的格式：使用postId
+      event = {
+        detail: {
+          postId,
+          index
+        }
+      };
+    } else if (post) {
+      // 旧的格式：使用post对象
+      event = {
+        currentTarget: {
+          dataset: {
+            post: post,
+            index: index
+          }
+        }
+      };
+    } else {
+      console.debug('收藏失败: 找不到帖子数据');
+      return;
+    }
+    
+    this.toggleFavorite(event);
+  },
 });

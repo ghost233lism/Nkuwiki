@@ -77,7 +77,8 @@
     <!-- 点赞 -->
     <view 
       class="action-item {{isLiked ? 'liked' : ''}}" 
-      catchtap="handleLike">
+      catchtap="handleLike"
+      data-post-id="{{post.id}}">
       <icon name="{{isLiked ? 'like-active' : 'like'}}" size="32" color="{{isLiked ? '#07c160' : ''}}"></icon>
       <text>{{post.like_count || 0}}</text>
     </view>
@@ -93,7 +94,8 @@
     <!-- 收藏 -->
     <view 
       class="action-item {{isFavorited ? 'favorited' : ''}}" 
-      catchtap="handleFavorite">
+      catchtap="handleFavorite"
+      data-post-id="{{post.id}}">
       <icon name="{{isFavorited ? 'favorite-active' : 'favorite'}}" size="32" color="{{isFavorited ? '#07c160' : ''}}"></icon>
       <text>{{post.favorite_count || 0}}</text>
     </view>

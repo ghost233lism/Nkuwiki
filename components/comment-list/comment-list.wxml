@@ -4,19 +4,31 @@
     <text class="section-title">评论 ({{total || 0}})</text>
   </view>
 
-  <!-- 评论状态显示 -->
-  <page-status
-    loading="{{loading && comments.length === 0}}"
-    loadingText="加载评论中..."
-    error="{{error}}"
-    errorText="{{errorMsg}}"
-    empty="{{!loading && comments.length === 0 && !error}}"
-    emptyText="暂无评论，快来抢沙发~"
-    bind:retry="retry">
-  </page-status>
+  <!-- 加载状态 -->
+  <view wx:if="{{loading && (!comments || comments.length === 0)}}" class="center-loading">
+    <view class="loading-dots">
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+    </view>
+    <text class="loading-text">加载评论中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{error}}" class="error-message">
+    <icon type="warn" size="40"></icon>
+    <text>{{errorMsg || '加载评论失败'}}</text>
+    <button class="retry-btn" bindtap="retry">重试</button>
+  </view>
+
+  <!-- 空评论状态 -->
+  <view wx:elif="{{!loading && (!comments || comments.length === 0)}}" class="empty-message">
+    <icon type="info" size="40"></icon>
+    <text>暂无评论，快来抢沙发~</text>
+  </view>
 
   <!-- 评论列表 -->
-  <view class="comment-list" wx:if="{{comments.length > 0}}">
+  <view class="comment-list" wx:elif="{{comments && comments.length > 0}}">
     <view class="comment-item" wx:for="{{comments}}" wx:key="id">
       <view class="comment-main">
         <view class="avatar-container" bindtap="goToUserProfile" data-user-id="{{item.openid}}">

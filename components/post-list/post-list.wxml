@@ -2,22 +2,33 @@
   loading="{{loading}}"
   error="{{error}}"
   errorText="{{errorMsg}}"
-  empty="{{posts.length === 0 && !loading && !error}}"
+  empty="{{post.length === 0 && !loading && !error}}"
   emptyText="{{emptyText}}"
+  hasMore="{{hasMore}}"
+  noMoreText="{{noMoreText}}"
   bind:retry="handleRetry"
+  bind:loadmore="loadMore"
 >
+  <!-- DEBUG信息 -->
+  <view wx:if="{{post.length === 0 && !loading && !error}}" class="debug-info">
+    <text>post长度: {{post.length}}</text>
+    <text>loading: {{loading}}</text>
+    <text>error: {{error}}</text>
+  </view>
+
   <view class="post-list">
     <!-- 帖子列表 -->
-    <block wx:for="{{posts}}" wx:key="_id">
+    <block wx:for="{{post}}" wx:key="_id">
       <post-item 
         post="{{item}}" 
         currentOpenid="{{currentOpenid}}"
         showActions="{{true}}"
         showComments="{{true}}"
         showFollow="{{true}}"
-        data-id="{{item._id}}"
+        data-id="{{item.id}}"
         data-index="{{index}}"
-        bind:tap="handlePostTap"
+        index="{{index}}"
+        bind:posttap="handlePostTap"
         bind:like="handleLike"
         bind:favorite="handleFavorite" 
         bind:comment="handleComment"
@@ -25,12 +36,6 @@
         bind:usertap="handleUserTap"
       />
     </block>
-    
-    <!-- 加载状态 -->
-    <view class="list-footer" wx:if="{{posts.length > 0}}">
-      <view wx:if="{{hasMore && !loading}}" class="load-more" bindtap="loadMore">加载更多</view>
-      <view wx:if="{{!hasMore}}" class="no-more">没有更多了</view>
-    </view>
   </view>
   
   <!-- 空状态按钮 -->

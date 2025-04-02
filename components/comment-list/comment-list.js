@@ -6,12 +6,18 @@ Component({
     // 评论数据数组
     comments: {
       type: Array,
-      value: []
+      value: [],
+      observer: function(newVal) {
+        console.debug(`评论列表组件接收到新的评论数据: ${newVal ? newVal.length : 0}条`);
+      }
     },
     // 评论总数
     total: {
       type: Number,
-      value: 0
+      value: 0,
+      observer: function(newVal) {
+        console.debug(`评论列表组件接收到新的评论总数: ${newVal}`);
+      }
     },
     // 是否正在加载
     loading: {
@@ -49,15 +55,37 @@ Component({
    * 组件的初始数据
    */
   data: {
-    
+    debug: {
+      commentsLength: 0
+    }
+  },
+
+  lifetimes: {
+    attached() {
+      console.debug('评论列表组件已挂载');
+    },
+    ready() {
+      console.debug('评论列表组件已准备好，评论数:', this.properties.comments.length);
+      // 更新调试信息
+      this.setData({
+        'debug.commentsLength': this.properties.comments.length
+      });
+    }
   },
 
   /**
    * 组件的方法列表
    */
   methods: {
+    // 重试加载评论
+    retry() {
+      console.debug('重试加载评论');
+      this.triggerEvent('retry');
+    },
+
     // 加载更多评论
     loadMore() {
+      console.debug('加载更多评论');
       this.triggerEvent('loadmore');
     },
     
@@ -70,7 +98,15 @@ Component({
     // 回复评论
     handleReply(e) {
       const { id, index } = e.currentTarget.dataset;
-      this.triggerEvent('reply', { id, index });
+      // 获取完整的评论对象
+      const comment = this.data.comments[index];
+      if (!comment) return;
+      
+      this.triggerEvent('reply', { 
+        id,
+        index,
+        comment
+      });
     },
     
     // 查看更多回复
@@ -92,11 +128,6 @@ Component({
         urls,
         current
       });
-    },
-    
-    // 重试加载
-    retry() {
-      this.triggerEvent('retry');
     },
     
     // 图片加载出错处理
