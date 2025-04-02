@@ -1,53 +1,36 @@
-<view class="my-posts-container">
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
   <!-- 顶部标题栏 -->
-  <view class="header">
-    <view class="back-icon" bindtap="goBack">
-      <image src="/assets/icons/back.png"></image>
-    </view>
-    <view class="title-text">我的帖子</view>
-    <view class="placeholder"></view>
-  </view>
+  <nav-bar
+    title="我的帖子"
+    show-back
+    bind:back="goBack"
+  />
 
   <!-- 帖子列表 -->
-  <view class="posts-list" wx:if="{{posts.length > 0}}">
-    <view class="post-item" wx:for="{{posts}}" wx:key="_id" bindtap="goToPostDetail" data-id="{{item._id}}">
-      <!-- 帖子内容预览 -->
-      <view class="post-content">
-        <view class="post-title" wx:if="{{item.title}}">{{item.title}}</view>
-        <view class="post-text">{{item.content}}</view>
-        
-        <!-- 如果有图片，显示第一张 -->
-        <view class="post-image" wx:if="{{item.images && item.images.length > 0}}">
-          <image src="{{item.images[0]}}" mode="aspectFill"></image>
-          <view class="image-count" wx:if="{{item.images.length > 1}}">+{{item.images.length - 1}}</view>
-        </view>
-      </view>
-      
-      <!-- 帖子统计信息 -->
-      <view class="post-stats">
-        <view class="post-time">{{item.formattedTime}}</view>
-        <view class="stats-info">
-          <view class="stat-item">
-            <image src="/assets/icons/index/like.png"></image>
-            <text>{{item.likes || 0}}</text>
-          </view>
-          <view class="stat-item">
-            <image src="/assets/icons/index/comment.png"></image>
-            <text>{{item.comments ? item.comments.length : 0}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-  </view>
-  
-  <!-- 空状态 -->
-  <view class="empty-state" wx:else>
-    <image src="/assets/icons/default-avatar.png"></image>
-    <text>你还没有发布任何帖子</text>
-    <button class="create-btn" bindtap="createNewPost">发布第一条帖子</button>
-  </view>
-  
-  <!-- 加载状态 -->
-  <view class="loading" wx:if="{{loading}}">加载中...</view>
-  <view class="no-more" wx:if="{{posts.length > 0 && !hasMore}}">没有更多帖子了</view>
-</view> 
+  <post-list
+    posts="{{posts}}"
+    loading="{{loading}}"
+    error="{{error}}"
+    errorMsg="{{errorMsg}}"
+    hasMore="{{hasMore}}"
+    empty="{{posts.length === 0}}"
+    emptyText="您还没有发布任何帖子"
+    emptyBtnText="去发布帖子"
+    showEmptyBtn="{{true}}"
+    currentOpenid="{{openid}}"
+    refreshing="{{refreshing}}"
+    bind:postTap="onPostTap"
+    bind:like="onLike"
+    bind:favorite="onFavorite"
+    bind:comment="onComment"
+    bind:userTap="onUserTap"
+    bind:loadMore="loadList"
+  />
+
+  <!-- 新建帖子按钮 -->
+  <floating-button
+    icon="add"
+    text="发帖"
+    bind:tap="onNewPost"
+  />
+</page-status> 

@@ -1,0 +1,103 @@
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 40rpx;
+  position: relative;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.logo-wrapper {
+  position: relative;
+  margin-bottom: 40rpx;
+}
+
+.logo {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160rpx;
+  height: 160rpx;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(24, 144, 255, 0.2) 0%, rgba(24, 144, 255, 0) 70%);
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.app-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.app-name {
+  font-size: 56rpx;
+  font-weight: 600;
+  color: #333;
+  letter-spacing: 2rpx;
+  margin-bottom: 12rpx;
+  background: linear-gradient(135deg, #333 0%, #666 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.subtitle {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+  letter-spacing: 1rpx;
+}
+
+.version {
+  font-size: 24rpx;
+  color: #999;
+  letter-spacing: 1rpx;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+/* 动画效果 */
+.logo-section.animate .logo {
+  transform: scale(1.1);
+}
+
+.logo-section.animate .glow {
+  opacity: 1;
+  animation: glowPulse 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glowPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+} 

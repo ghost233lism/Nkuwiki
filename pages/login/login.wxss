@@ -1,312 +1,106 @@
-.login-container {
-  height: 100vh;
-  padding: 40rpx;
+/* 登录页面样式 */
+page {
+  background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+}
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20rpx 40rpx 80rpx;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: -200rpx;
+  left: -200rpx;
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(24, 144, 255, 0.05) 100%);
+  z-index: 1;
+}
+
+.container::after {
+  content: '';
+  position: absolute;
+  bottom: -200rpx;
+  right: -200rpx;
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.1) 0%, rgba(82, 196, 26, 0.05) 100%);
+  z-index: 1;
+}
+
+/* 状态层样式 */
+.state-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
-  background-color: #fff;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 100;
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 80rpx;
-}
-
-.logo {
-  width: 160rpx;
-  height: 160rpx;
-  margin-bottom: 20rpx;
-}
-
-.title {
-  font-size: 48rpx;
-  font-weight: bold;
-  margin-bottom: 10rpx;
-  color: #333;
-}
-
-.subtitle {
+.state-text {
   font-size: 28rpx;
   color: #666;
+  margin-top: 20rpx;
 }
 
-.login-form {
-  width: 100%;
-  margin-bottom: 80rpx;
+.state-text.error {
+  color: #ff4d4f;
 }
 
-.input {
-  width: 100%;
-  height: 88rpx;
-  background: #F5F5F5;
-  border-radius: 44rpx;
-  padding: 0 30rpx;
-  margin-bottom: 20rpx;
-  box-sizing: border-box;
-}
-
-.code-input {
-  display: flex;
-  gap: 20rpx;
-}
-
-.code-input .input {
-  flex: 1;
-}
-
-.send-btn {
-  width: 200rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #4B6EFF;
-  color: white;
-  border-radius: 44rpx;
+.retry-btn {
+  margin-top: 30rpx;
+  padding: 16rpx 40rpx;
   font-size: 28rpx;
-  padding: 0;
-}
-
-.send-btn.disabled {
-  background: #ccc;
-}
-
-.login-btn {
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #4B6EFF;
-  color: white;
-  border-radius: 44rpx;
-  margin-top: 40rpx;
-}
-
-.divider {
-  font-size: 24rpx;
-  color: #999;
-  margin: 0 10rpx;
-}
-
-.wx-login-btn {
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #07C160;
-  color: white;
-  border-radius: 44rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
-  box-shadow: 0 8rpx 16rpx rgba(7, 193, 96, 0.2);
-  transition: all 0.3s ease;
-}
-
-.wx-login-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 4rpx 8rpx rgba(7, 193, 96, 0.2);
-}
-
-.wx-login-btn[disabled] {
-  background: #07C160;
-  opacity: 1;
-  color: white;
-}
-
-.wx-login-btn::after {
+  color: #fff;
+  background: #1890ff;
+  border-radius: 8rpx;
   border: none;
 }
 
-.wx-icon {
-  width: 40rpx;
-  height: 40rpx;
-  margin-right: 10rpx;
-}
-
-/* 加载动画容器 */
-.loading-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-/* 加载动画 */
-.loading-spinner {
-  width: 36rpx;
-  height: 36rpx;
-  border: 4rpx solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 0.8s linear infinite;
-  margin-right: 16rpx;
-}
-
-/* 加载文字 */
-.loading-text {
-  color: #fff;
-  font-size: 30rpx;
-}
-
-/* 旋转动画 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.footer {
-  position: fixed;
-  bottom: 60rpx;
+/* 主内容样式 */
+.main-content {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.tips {
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 10rpx;
-}
-
-.links {
-  display: flex;
-  align-items: center;
-}
-
-.link {
-  font-size: 24rpx;
-  color: #4B6EFF;
-}
-
-.avatar-button {
-  margin-top: 40rpx;
-  background-color: #f8f8f8;
-  color: #333;
-}
-
-/* 全屏加载遮罩 */
-.loading-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40rpx;
-}
-
-.loading-spinner-large {
-  width: 80rpx;
-  height: 80rpx;
-  margin-bottom: 30rpx;
-  border-radius: 50%;
   position: relative;
+  z-index: 2;
 }
 
-.loading-spinner-large:before,
-.loading-spinner-large:after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 6rpx solid transparent;
-  border-radius: 50%;
+/* 错误提示样式 */
+.weui-toptips {
+  padding: 20rpx 40rpx !important;
+  font-size: 28rpx !important;
+  border-radius: 8rpx !important;
+  transform: translateZ(0);
+  transition: all 0.3s ease-out !important;
 }
 
-.loading-spinner-large:before {
-  border-top-color: #07C160;
-  animation: spin 1s linear infinite;
+/* 加载提示样式 */
+.mp-loading {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px);
 }
 
-.loading-spinner-large:after {
-  border-bottom-color: #07C160;
-  animation: spin 1.5s linear infinite reverse;
+.mp-loading__tips {
+  font-size: 28rpx !important;
+  color: #666 !important;
+  margin-top: 20rpx !important;
 }
-
-.loading-text-large {
-  font-size: 34rpx;
-  color: #333;
-  margin-top: 20rpx;
-  font-weight: 500;
-  animation: pulse 2s infinite;
-}
-
-/* 点状加载动画 */
-.loading-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20rpx;
-}
-
-.loading-dot {
-  width: 16rpx;
-  height: 16rpx;
-  background-color: #07C160;
-  border-radius: 50%;
-  margin: 0 8rpx;
-  animation: bounceDot 1.4s infinite ease-in-out both;
-}
-
-.loading-dot:nth-child(1) {
-  animation-delay: -0.32s;
-  background-color: #5d6df1;
-}
-
-.loading-dot:nth-child(2) {
-  animation-delay: -0.16s;
-  background-color: #07C160;
-}
-
-.loading-dot:nth-child(3) {
-  background-color: #3fcca8;
-}
-
-@keyframes bounceDot {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-/* 可以添加额外的样式类，当登录成功时应用 */
-.loading-success .loading-dot:nth-child(1),
-.loading-success .loading-dot:nth-child(2),
-.loading-success .loading-dot:nth-child(3) {
-  background-color: #07C160;
-}
-
-.loading-success .loading-text-large {
-  color: #07C160;
-}
-
-.loading-full-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  padding: 40rpx;
-  box-sizing: border-box;
-} 

@@ -1,0 +1,1 @@
+var globalThis=this,self=this;module.exports=require("../_commons/0.js")([{ids:[2],modules:{12:function(e,t,s){e.exports=s(121)},121:function(e,t){Component({properties:{extClass:{type:String,value:""},content:{type:String,value:""},ariaLabel:{type:String,value:""}}})}},entries:[[12,0]]}]);

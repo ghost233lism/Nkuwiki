@@ -1,0 +1,40 @@
+<page-status
+  loading="{{loading}}"
+  error="{{error}}"
+  errorText="{{errorMsg}}"
+  empty="{{posts.length === 0 && !loading && !error}}"
+  emptyText="{{emptyText}}"
+  bind:retry="handleRetry"
+>
+  <view class="post-list">
+    <!-- 帖子列表 -->
+    <block wx:for="{{posts}}" wx:key="_id">
+      <post-item 
+        post="{{item}}" 
+        currentOpenid="{{currentOpenid}}"
+        showActions="{{true}}"
+        showComments="{{true}}"
+        showFollow="{{true}}"
+        data-id="{{item._id}}"
+        data-index="{{index}}"
+        bind:tap="handlePostTap"
+        bind:like="handleLike"
+        bind:favorite="handleFavorite" 
+        bind:comment="handleComment"
+        bind:follow="handleFollow"
+        bind:usertap="handleUserTap"
+      />
+    </block>
+    
+    <!-- 加载状态 -->
+    <view class="list-footer" wx:if="{{posts.length > 0}}">
+      <view wx:if="{{hasMore && !loading}}" class="load-more" bindtap="loadMore">加载更多</view>
+      <view wx:if="{{!hasMore}}" class="no-more">没有更多了</view>
+    </view>
+  </view>
+  
+  <!-- 空状态按钮 -->
+  <view slot="empty-action" wx:if="{{empty && showEmptyBtn}}">
+    <button class="empty-btn primary-btn" bindtap="handleEmptyBtnTap">{{emptyBtnText}}</button>
+  </view>
+</page-status>

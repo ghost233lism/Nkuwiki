@@ -1,1443 +1,366 @@
-// index.js
-const app = getApp();
-const defaultAvatarUrl = '/assets/icons/default-avatar.png'
+const { 
+  ui, 
+  error, 
+  ToastType, 
+  storage, 
+  createApiClient, 
+  get,
+  getOpenID
+} = require('../../utils/util');
+const baseBehavior = require('../../behaviors/base-behavior');
+const postBehavior = require('../../behaviors/post-behavior');
+const commentBehavior = require('../../behaviors/comment-behavior');
+const userBehavior = require('../../behaviors/user-behavior');
+const authBehavior = require('../../behaviors/auth-behavior');
 
-// 防止重复点击的标志
-let isLiking = false
-let isFavoriting = false
-
-// 在文件顶部引入工具函数和API模块
-const util = require('../../utils/util');
-const api = require('../../utils/api/index');
-const { getOpenID } = util; // 显式导入getOpenID函数
-
-// 常量定义
-const PAGE_SIZE = 10;
-const MAX_IMAGES = 9;
-const MAX_COMMENT_PREVIEW = 3;
-
-// 工具函数
-const formatTimeDisplay = (dateStr) => {
-  if (!dateStr) return ''
-
-  try {
-    let date;
-    if (typeof dateStr === 'string') {
-      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) {
-        dateStr = dateStr.replace(' ', 'T');
-      }
-      date = new Date(dateStr);
-      
-      if (isNaN(date.getTime())) {
-        console.error('无效的日期格式:', dateStr);
-        return '';
-      }
-    } else {
-      date = new Date(dateStr);
+// 通知API
+const notificationApi = createApiClient('/api/wxapp/notification', {
+  count: {
+    method: 'GET',
+    path: '/count',
+    params: {
+      openid: true
     }
-    
-    const now = new Date()
-    const diff = now - date
-    const minutes = Math.floor(diff / 1000 / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-
-    if (minutes < 60) return `${minutes}分钟前`
-    if (hours < 24) return `${hours}小时前`
-    if (days < 30) return `${days}天前`
-
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`
-  } catch (e) {
-    console.error('时间格式化错误：', e)
-    return ''
-  }
-}
-
-// 处理JSON字段
-const parseJsonField = (field, defaultValue = []) => {
-  try {
-    if (typeof field === 'string') {
-      return JSON.parse(field || '[]');
+  },
+  status: {
+    method: 'GET',
+    path: '/status',
+    params: {
+      openid: true
     }
-    return Array.isArray(field) ? field : defaultValue;
-  } catch (err) {
-    console.error('解析JSON字段失败:', err);
-    return defaultValue;
   }
-}
+});
 
-// 处理评论内容
-const processCommentContent = (content) => {
-  if (!content) return '';
-  return content.replace(/\[([^\]]*)\]/g, '「$1」');
-}
+// 搜索API
+const searchApi = createApiClient('/api/wxapp/search', {
+  search: {
+    method: 'GET',
+    path: '',
+    params: {
+      keyword: true,
+      search_type: false,
+      page: false,
+      limit: false
+    }
+  }
+});
 
-// 验证图片URL
-const isValidImageUrl = (url) => {
-  if (typeof url !== 'string' || url.trim() === '') return false;
-  return url.startsWith('cloud://') || url.startsWith('http://') || url.startsWith('https://');
-}
-
-// 过滤有效图片URL
-const filterValidImageUrls = (urls) => {
-  return Array.isArray(urls) ? urls.filter(isValidImageUrl) : [];
-}
+// 分类配置
+const CATEGORY_CONFIG = [
+  { id: 'all', name: '全部' },
+  { id: 'study', name: '学习交流' },
+  { id: 'life', name: '校园生活' },
+  { id: 'job', name: '就业创业' },
+  { id: 'club', name: '社团活动' },
+  { id: 'lost', name: '失物招领' }
+];
 
 Page({
+  behaviors: [
+    baseBehavior,
+    postBehavior,
+    commentBehavior,
+    userBehavior,
+    authBehavior
+  ],
+
   data: {
-    motto: 'Hello World',
-    userInfo: {
-      avatarUrl: defaultAvatarUrl,
-      nickName: '',
-    },
-    hasUserInfo: false,
-    canIUseGetUserProfile: wx.canIUse('getUserProfile'),
-    canIUseNicknameComp: wx.canIUse('input.type.nickname'),
-    posts: [],
-    currentPage: 1,
-    pageSize: 10,
-    loading: false,
-    hasMore: true,
-    currentCommentPostId: null,
-    currentCommentPostIndex: null,
-    showCommentInput: false,
-    commentText: '',
-    commentImages: [],
-    isRead: true,
-    showExpandedEditor: false,
-    searchValue: '',
-    showSearchResult: false,
-    searchResults: [],
-    searchLoading: false,
-    searchHasMore: true,
-    searchPage: 1,
-    searchPageSize: 10,
-    baseUrl: app.globalData.config.services.app.base_url,
-    searchHistory: [],
-    maxHistoryItems: 10,
-    openid: '',
-    loadingMore: false,
-    showInput: false,
-    currentPostId: '',
-    commentContent: '',
-    selectedImages: [],
-    isSubmittingComment: false,
-    // 导航栏数据
-    navItems: [
-      { type: 'study', text: '学习交流', icon: '/assets/icons/nav/study.png' },
-      { type: 'life', text: '校园生活', icon: '/assets/icons/nav/life.png' },
-      { type: 'job', text: '就业创业', icon: '/assets/icons/nav/job.png' },
-      { type: 'club', text: '社团活动', icon: '/assets/icons/nav/club.png' },
-      { type: 'lost', text: '失物招领', icon: '/assets/icons/nav/lost.png' }
-    ],
-    currentType: '' // 当前选中的分类
-  },
-  bindViewTap() {
-    wx.navigateTo({
-      url: '../logs/logs'
-    })
-  },
-  onChooseAvatar(e) {
-    const { avatarUrl } = e.detail
-    const { nickName } = this.data.userInfo
-    this.setData({
-      "userInfo.avatarUrl": avatarUrl,
-      hasUserInfo: nickName && avatarUrl && avatarUrl !== defaultAvatarUrl,
-    })
-  },
-  onInputChange(e) {
-    const nickName = e.detail.value
-    const { avatarUrl } = this.data.userInfo
-    this.setData({
-      "userInfo.nickName": nickName,
-      hasUserInfo: nickName && avatarUrl && avatarUrl !== defaultAvatarUrl,
-    })
-  },
-  getUserProfile(e) {
-    // 推荐使用wx.getUserProfile获取用户信息，开发者每次通过该接口获取用户个人信息均需用户确认，开发者妥善保管用户快速填写的头像昵称，避免重复弹窗
-    wx.getUserProfile({
-      desc: '展示用户信息', // 声明获取用户个人信息后的用途，后续会展示在弹窗中，请谨慎填写
-      success: (res) => {
-        console.log(res)
-        this.setData({
-          userInfo: res.userInfo,
-          hasUserInfo: true
-        })
-      }
-    })
-  },
-  onLoad: async function(options) {
-    try {
-      // 获取用户openid
-      const openid = await getOpenID()
-      if (!openid) {
-        throw new Error('获取用户信息失败')
-      }
-
-      // 设置初始数据
-      this.setData({
-        openid,
-        currentPage: 1,
-        pageSize: PAGE_SIZE,
-        hasMore: true,
-        loading: false,
-        posts: [] // 确保清空帖子列表
-      })
-
-      // 加载帖子列表
-      await this.loadPosts(true) // 传入true表示刷新模式
-      
-      // 获取通知状态
-      await this.getIsRead()
-
-      // 加载搜索历史
-      this.loadSearchHistory();
-    } catch (err) {
-      console.error('页面加载失败:', err)
-      wx.showToast({
-        title: err.message || '加载失败',
-        icon: 'none'
-      })
-    }
-  },
-
-  async getIsRead() {
-    try {
-      // 使用API模块获取用户通知状态
-      const result = await api.notification.getStatus();
-      
-      if (result && result.code === 200) {
-        this.setData({
-          isRead: !result.data.has_unread
-        });
-        console.debug("获取通知状态成功:", this.data.isRead);
-      } else {
-        console.debug("获取通知状态失败:", result?.message);
-      }
-    } catch (err) {
-      console.debug("获取通知状态失败:", err);
-    }
-  },
-
-  onShow: async function() {
-    try {
-      // 只在需要时重新加载（比如从发帖页面返回）
-      const needRefresh = wx.getStorageSync('needRefreshPosts') || false;
-      if (needRefresh) {
-        // 重置数据
-        this.setData({
-          posts: [],
-          currentPage: 1,
-          hasMore: true,
-          loading: false
-        });
-
-        // 重新加载帖子列表
-        await this.loadPosts(true);
-        
-        // 清除刷新标记
-        wx.removeStorageSync('needRefreshPosts');
-      }
-      
-      // 获取通知状态
-      await this.getIsRead();
-    } catch (err) {
-      console.error('页面显示失败:', err);
-      wx.showToast({
-        title: err.message || '加载失败',
-        icon: 'none'
-      });
-    }
-  },
-  // 下拉刷新
-  onPullDownRefresh: async function() {
-    try {
-      // 重置数据
-      this.setData({
-        posts: [],
-        currentPage: 1,
-        hasMore: true,
-        loading: false
-      })
-
-      // 重新加载帖子列表
-      await this.loadPosts(true)
-      
-      // 获取通知状态
-      await this.getIsRead()
-    } catch (err) {
-      console.error('下拉刷新失败:', err)
-      wx.showToast({
-        title: err.message || '刷新失败',
-        icon: 'none'
-      })
-    } finally {
-      wx.stopPullDownRefresh()
-    }
-  },
-  // 加载帖子 - 返回Promise以便链式调用
-  async loadPosts(refresh = false) {
-    if (this.data.loading || (!refresh && !this.data.hasMore)) return Promise.resolve()
-
-    try {
-      this.setData({ loading: true })
-
-      // 获取用户OPENID，用于确定点赞状态
-      let OPENID = ''
-      try {
-        const loginResult = await api.user.login()
-        OPENID = loginResult.data?.openid || ''
-        console.log('首页获取到的OPENID:', OPENID)
-      } catch (err) {
-        console.error('获取用户OPENID失败：', err)
-      }
-
-      // 构建请求参数
-      const params = {
-        page: this.data.currentPage,
-        pageSize: this.data.pageSize
-      };
-      
-      // 如果有分类筛选，添加到参数中
-      if (this.data.currentType) {
-        params.category_id = this.data.currentType;
-      }
-      
-      // 使用新的函数名getPostList
-      const result = await api.post.getPostList({
-        page: params.page,
-        pageSize: params.pageSize,
-        category_id: params.category_id
-      })
-
-      // 修改成功判断逻辑
-      if (!result || (!result.success && result.code !== 200)) {
-        throw new Error(result?.message || '获取帖子列表失败')
-      }
-
-      const posts = result.data || []
-      console.log('获取到的帖子数量:', posts.length, '刷新模式:', refresh)
-
-      // 处理帖子数据
-      const processedPosts = posts.map(post => {
-        // 解析JSON字段
-        post.image = filterValidImageUrls(parseJsonField(post.image || post.images));
-        post.tag = parseJsonField(post.tag || post.tags);
-        post.liked_user = parseJsonField(post.liked_user || post.liked_users);
-        post.favorite_user = parseJsonField(post.favorite_user || post.favorite_users);
-        
-        // 处理评论预览
-        if (post.recent_comment && post.recent_comment.length > 0) {
-          post.recent_comment = post.recent_comment.map(comment => ({
-            ...comment,
-            content: processCommentContent(comment.content),
-            image: filterValidImageUrls(parseJsonField(comment.image || comment.images)),
-            // 确保评论昵称字段统一
-            nickname: comment.nickname || comment.nick_name || '匿名用户'
-          }))
-        }
-        
-        return {
-          ...post,
-          // 确保显示昵称，优先使用nickname
-          nickname: post.nickname || post.nick_name || '匿名用户',
-          create_time_formatted: formatTimeDisplay(post.create_time),
-          isLiked: post.liked_user.includes(OPENID),
-          isFavorited: post.favorite_user.includes(OPENID)
-        }
-      })
-
-      // 添加详细日志以便调试
-      console.log('处理后的第一个帖子:', processedPosts.length > 0 ? {
-        id: processedPosts[0].id,
-        nickname: processedPosts[0].nickname,
-        nick_name: processedPosts[0].nick_name,
-        like_count: processedPosts[0].like_count,
-        isLiked: processedPosts[0].isLiked
-      } : '无帖子')
-
-      // 更新页面数据
-      this.setData({
-        posts: refresh ? processedPosts : [...this.data.posts, ...processedPosts],
-        currentPage: refresh ? 2 : this.data.currentPage + 1,
-        hasMore: posts.length === PAGE_SIZE,
-        loading: false
-      })
-
-      return Promise.resolve()
-    } catch (err) {
-      console.error('加载帖子失败：', err)
-      this.setData({ loading: false })
-      wx.showToast({
-        title: err.message || '加载失败',
-        icon: 'none'
-      })
-      return Promise.reject(err)
-    }
-  },
-  // 添加图片预览功能
-  previewImage(e) {
-    try {
-      const { urls, current } = e.currentTarget.dataset
-      
-      if (!urls || !urls.length) {
-        console.error('预览图片失败：无效的图片URL数组');
-        return;
-      }
-      
-      // 过滤掉无效URL，防止预览失败
-      const validUrls = filterValidImageUrls(urls);
-      
-      if (validUrls.length === 0) {
-        console.error('预览图片失败：所有URL都无效');
-        return;
-      }
-      
-      // 确保current是有效的URL
-      let validCurrent = current;
-      if (!validUrls.includes(current)) {
-        validCurrent = validUrls[0];
-        console.log('当前图片URL无效，使用第一张有效图片代替');
-      }
-      
-      console.log(`预览图片: ${validCurrent}, 总共 ${validUrls.length} 张`);
-      
-      wx.previewImage({
-        urls: validUrls,
-        current: validCurrent,
-        fail: err => {
-          console.error('图片预览失败:', err);
-          wx.showToast({
-            title: '图片预览失败',
-            icon: 'none'
-          });
-        }
-      })
-    } catch (err) {
-      console.error('图片预览出错:', err);
-      wx.showToast({
-        title: '图片预览出错',
-        icon: 'none'
-      });
-    }
-  },
-  // 跳转到发帖页面
-  goToPost() {
-    try {
-      wx.navigateTo({
-        url: '/pages/post/post',
-        fail: (err) => {
-          console.error('跳转发帖页失败:', err);
-          wx.showToast({
-            title: '跳转失败',
-            icon: 'none'
-          });
-        }
-      });
-    } catch (err) {
-      console.error('跳转发帖页出错:', err);
-      wx.showToast({
-        title: '跳转失败',
-        icon: 'none'
-      });
-    }
-  },
-  // 跳转到帖子详情
-  goToDetail(e) {
-    const { postId } = e.currentTarget.dataset;
-    if (!postId) {
-      console.error('跳转详情页失败：未提供帖子ID');
-      return;
-    }
-
-    try {
-      wx.navigateTo({
-        url: `/pages/post/detail/detail?id=${postId}`,
-        fail: (err) => {
-          console.error('跳转详情页失败:', err);
-          wx.showToast({
-            title: '跳转失败',
-            icon: 'none'
-          });
-        }
-      });
-    } catch (err) {
-      console.error('跳转详情页出错:', err);
-      wx.showToast({
-        title: '跳转失败',
-        icon: 'none'
-      });
-    }
-  },
-  // 修改点赞处理函数
-  async handleLike(e) {
-    const { id, index } = e.currentTarget.dataset;
-
-    // 防止重复点击
-    if (this.data.isLiking) return;
-    this.setData({ isLiking: true });
-
-    try {
-      // 获取当前帖子状态
-      const currentPost = this.data.posts[index];
-      if (!currentPost) {
-        throw new Error('帖子不存在');
-      }
-
-      // 立即更新UI状态
-      const newIsLiked = !currentPost.isLiked;
-      const newLikeCount = currentPost.like_count + (newIsLiked ? 1 : -1);
-
-      // 保存原始状态，用于失败时回滚
-      const originalState = {
-        isLiked: currentPost.isLiked,
-        likeCount: currentPost.like_count
-      };
-
-      // 先更新UI
-      this.setData({
-        [`posts[${index}].isLiked`]: newIsLiked,
-        [`posts[${index}].like_count`]: newLikeCount
-      });
-
-      // 调用API
-      try {
-        const result = await api.post.likePost(id);
-        
-        // 使用API返回的点赞数更新UI
-        if (result.success && result.data?.like_count !== undefined) {
-          this.setData({
-            [`posts[${index}].like_count`]: result.data.like_count
-          });
-        }
-      } catch (err) {
-        console.error('点赞失败：', err);
-        // 回滚到原始状态
-        this.setData({
-          [`posts[${index}].isLiked`]: originalState.isLiked,
-          [`posts[${index}].like_count`]: originalState.likeCount
-        });
-        
-        // 显示错误信息
-        wx.showToast({
-          title: err.message || '操作失败',
-          icon: 'none'
-        });
-      }
-    } catch (err) {
-      console.error('点赞操作出错：', err);
-      wx.showToast({
-        title: err.message || '操作失败',
-        icon: 'none'
-      });
-    } finally {
-      this.setData({ isLiking: false });
-    }
-  },
-  onAvatarError(e) {
-    const index = e.currentTarget.dataset.index;
+    // 分类导航
+    activeTab: 0,
+    navItems: CATEGORY_CONFIG,
     
-    // 为避免触发不必要的重新渲染，只更新需要的项
-    if (index !== undefined) {
-      console.debug(`头像加载失败，替换为默认头像，索引: ${index}`);
-      // 更新帖子作者头像
-      const postKey = `posts[${index}].avatar`;
-      this.setData({
-        [postKey]: defaultAvatarUrl
-      });
-    } else {
-      console.debug('头像加载失败，无法确定具体位置');
-    }
-  },
-  // 显示评论输入框
-  showCommentInput(e) {
-    const { id, index } = e.currentTarget.dataset;
+    // 通知状态
+    hasUnreadNotification: false,
+    
+    // 搜索相关
+    searchValue: '',
+    searchHistory: [],
+    showSearchResult: false,
+    isSearching: false,
+    
+    // 页面状态
+    loading: false,
+    error: null,
+    
+    // 用户信息
+    userInfo: null,
+    currentOpenid: '',
 
-    console.log("显示评论框，帖子ID:", id, "索引:", index);
-
-    if (!id) {
-      wx.showToast({
-        title: '无法识别帖子',
-        icon: 'none'
-      });
-      return;
-    }
-
-    this.setData({
-      showCommentInput: true,
-      currentPostId: id,  // 确保这里正确存储了帖子ID
-      currentPostIndex: index,
-      commentText: '',
-      commentImages: []
-    });
-  },
-  // 隐藏评论框
-  hideCommentInput() {
-    this.setData({
-      showCommentInput: false,
-      currentPostId: '',  // 重置帖子ID
-      currentPostIndex: -1,
-      commentText: '',
-      commentImages: []
-    });
-  },
-  // 评论输入监听
-  onCommentInput(e) {
-    this.setData({
-      commentText: e.detail.value
-    });
-  },
-  // 选择评论图片
-  chooseCommentImage() {
-    const that = this;
-    wx.chooseImage({
-      count: MAX_IMAGES - (this.data.commentImages?.length || 0),
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success(res) {
-        const tempFilePaths = res.tempFilePaths;
-        const tempFiles = res.tempFiles;
-
-        const currentImages = that.data.commentImages || [];
-        const newImages = tempFilePaths.map((path, index) => ({
-          tempUrl: path,
-          size: tempFiles[index].size
-        }));
-
-        // 确保总数不超过9张
-        const totalImages = [...currentImages, ...newImages].slice(0, MAX_IMAGES);
-
-        that.setData({
-          commentImages: totalImages
-        });
+    // 使用postBehavior中的posts和相关状态
+    
+    // 分类图标数据
+    tabs: [
+      {
+        title: '学习交流',
+        iconName: 'study',
+        icon: '/icons/study.png'
+      },
+      {
+        title: '校园生活',
+        iconName: 'life',
+        icon: '/icons/life.png'
+      },
+      {
+        title: '就业创业',
+        iconName: 'job',
+        icon: '/icons/job.png'
+      },
+      {
+        title: '社团活动',
+        iconName: 'club',
+        icon: '/icons/club.png'
+      },
+      {
+        title: '失物招领',
+        iconName: 'lost',
+        icon: '/icons/lost.png'
       }
-    });
+    ]
   },
-  // 移除已选择的评论图片
-  removeCommentImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.commentImages;
-    images.splice(index, 1);
-    this.setData({
-      commentImages: images
-    });
-  },
-  // 提交评论
-  async submitComment() {
-    const postId = this.data.currentPostId;
-    console.log("准备提交评论，帖子ID:", postId);
 
-    if (!postId) {
-      wx.showToast({
-        title: '未找到帖子ID',
-        icon: 'none'
-      });
-      return;
-    }
-
-    const content = this.data.commentText.trim();
-    const hasImages = this.data.commentImages && this.data.commentImages.length > 0;
-
-    if (!content && !hasImages) {
-      wx.showToast({ title: '评论内容不能为空', icon: 'none' });
-      return;
-    }
-
-    wx.showLoading({ title: '发送中...' });
-
+  async onLoad() {
+    this.setData({ loading: true });
+    
     try {
-      // 准备评论数据
-      const commentData = {
-        post_id: postId,
-        content: content
-      };
+      // 初始化分类
+      await this.initCategories();
       
-      // 处理图片上传
-      if (hasImages) {
-        const imageUrls = [];
-        
-        for (const image of this.data.commentImages) {
-          try {
-            const uploadResult = await this.uploadImage(image.tempUrl);
-            if (uploadResult.success && uploadResult.fileID) {
-              imageUrls.push(uploadResult.fileID);
-            }
-          } catch (err) {
-            console.error('图片上传失败:', err);
-          }
-        }
-        
-        if (imageUrls.length > 0) {
-          commentData.image = imageUrls;
-        }
+      // 登录检查 - 使用async验证以确保服务器端检查
+      if (await this.ensureLogin(false, false)) {
+        // 获取用户信息
+        const userInfo = await this.getCurrentUserInfo(true); // 强制刷新
+        this.setData({ userInfo });
+        // 检查未读通知
+        await this.checkUnreadNotification();
       }
       
-      // 获取用户信息并添加到评论数据
-      const userInfo = wx.getStorageSync('userInfo') || {};
-      commentData.nickname = userInfo.nickName || userInfo.nickname;
-      commentData.avatar = userInfo.avatarUrl || userInfo.avatar;
-      
-      // 提交评论
-      const result = await api.post.createComment(commentData);
-      
-      if (result.success) {
-        // 隐藏加载提示
-        wx.hideLoading();
-        
-        // 显示成功提示
-        wx.showToast({
-          title: '评论成功',
-          icon: 'success'
-        });
-        
-        // 重置输入框
-        this.setData({
-          commentText: '',
-          commentImages: [],
-          showCommentInput: false
-        });
-        
-        // 设置刷新标记
-        wx.setStorageSync('needRefreshPosts', true);
-        
-        // 刷新当前页面
-        await this.loadPosts(true);
-      } else {
-        throw new Error(result.message || '评论失败');
-      }
+      // 不管登录状态，都加载帖子
+      await this.loadPosts();
     } catch (err) {
-      console.error('提交评论失败:', err);
-      wx.hideLoading();
-      wx.showToast({
-        title: err.message || '评论失败',
-        icon: 'none'
-      });
-    }
-  },
-  /**
-   * 上传图片到云存储
-   * @param {string} tempFilePath - 临时文件路径
-   * @returns {Promise<Object>} - 上传结果
-   */
-  async uploadImage(tempFilePath) {
-    return new Promise((resolve, reject) => {
-      const openid = wx.getStorageSync('openid');
-      if (!openid) {
-        return reject(new Error('用户未登录'));
-      }
-      
-      // 生成云路径
-      const timestamp = new Date().getTime();
-      const cloudPath = `comment/${openid}/${timestamp}_${Math.random().toString(36).substr(2, 10)}.${tempFilePath.match(/\.(\w+)$/)[1]}`;
-      
-      console.log(`开始上传图片: ${tempFilePath} -> ${cloudPath}`);
-      
-      // 上传图片
-      wx.cloud.uploadFile({
-        cloudPath: cloudPath,
-        filePath: tempFilePath,
-        success: res => {
-          console.log('图片上传成功:', res);
-          resolve({
-            success: true,
-            fileID: res.fileID
-          });
-        },
-        fail: err => {
-          console.error('图片上传失败:', err);
-          reject(new Error('图片上传失败: ' + err.errMsg));
-        }
-      });
-    });
-  },
-  // 获取用户信息
-  async getUserInfo() {
-    try {
-      // 从本地存储获取
-      const userInfo = wx.getStorageSync('userInfo');
-
-      // 如果有缓存数据，返回缓存的用户信息
-      if (userInfo && userInfo._id) {
-        console.log("从缓存获取到用户信息:", userInfo.nickName);
-        return userInfo;
-      }
-
-      console.log("缓存中无用户信息，尝试登录");
-
-      // 使用API模块登录获取用户信息
-      const loginResult = await api.user.login();
-      
-      if (loginResult.success && loginResult.data) {
-        console.log("登录获取到用户信息:", loginResult.data.nickName);
-        return loginResult.data;
-      }
-
-      console.log("未查询到用户信息");
-      return {};
-    } catch (err) {
-      console.error('获取用户信息失败:', err);
-      return {};
-    }
-  },
-  // 添加查看全部评论跳转功能
-  viewPostDetail(e) {
-    const postId = e.currentTarget.dataset.id;
-    wx.navigateTo({
-      url: `/pages/post/detail/detail?id=${postId}`
-    });
-  },
-  // 显示扩展编辑区
-  showExpandedEditor() {
-    this.setData({
-      showExpandedEditor: true
-    });
-  },
-  // 隐藏扩展编辑区
-  hideExpandedEditor() {
-    this.setData({
-      showExpandedEditor: false
-    });
-  },
-  // 确认评论内容
-  confirmComment() {
-    // 隐藏扩展编辑区并提交评论
-    this.setData({
-      showExpandedEditor: false
-    });
-    this.submitComment();
-  },
-
-  // 收藏处理
-  async handleFavorite(e) {
-    const { id, index } = e.currentTarget.dataset;
-
-    // 防止重复点击
-    if (this.data.isFavoriting) return;
-    this.setData({ isFavoriting: true });
-
-    try {
-      // 获取当前帖子状态
-      const currentPost = this.data.posts[index];
-      if (!currentPost) {
-        throw new Error('帖子不存在');
-      }
-
-      // 立即更新UI状态
-      const newIsFavorited = !currentPost.isFavorited;
-      const newFavoriteCount = currentPost.favorite_count + (newIsFavorited ? 1 : -1);
-
-      // 保存原始状态，用于失败时回滚
-      const originalState = {
-        isFavorited: currentPost.isFavorited,
-        favoriteCount: currentPost.favorite_count
-      };
-
-      // 先更新UI
-      this.setData({
-        [`posts[${index}].isFavorited`]: newIsFavorited,
-        [`posts[${index}].favorite_count`]: newFavoriteCount
-      });
-
-      // 调用API
-      try {
-        const result = await api.post.favoritePost(id);
-        
-        // 使用API返回的收藏数更新UI
-        if (result.success && result.data?.favorite_count !== undefined) {
-          this.setData({
-            [`posts[${index}].favorite_count`]: result.data.favorite_count,
-            [`posts[${index}].isFavorited`]: true
-          });
-        }
-
-        wx.showToast({
-          title: '收藏成功',
-          icon: 'none'
-        });
-      } catch (err) {
-        console.error('收藏失败：', err);
-        // 回滚到原始状态
-        this.setData({
-          [`posts[${index}].isFavorited`]: originalState.isFavorited,
-          [`posts[${index}].favorite_count`]: originalState.favoriteCount
-        });
-        
-        // 显示错误信息
-        wx.showToast({
-          title: err.message || '操作失败',
-          icon: 'none'
-        });
-      }
-    } catch (err) {
-      console.error('收藏操作出错：', err);
-      wx.showToast({
-        title: err.message || '操作失败',
-        icon: 'none'
+      console.debug('首页加载失败:', err);
+      this.setData({ 
+        error: true,
+        errorText: '加载失败，请下拉刷新重试'
       });
     } finally {
-      this.setData({ isFavoriting: false });
+      this.setData({ loading: false });
     }
   },
 
-  // 取消收藏处理
-  async handleUnfavorite(e) {
-    const { id, index } = e.currentTarget.dataset;
+  async onShow() {
+    this.setData({ error: null });
+    
+    // 登录检查 - 使用async验证以确保服务器端检查
+    if (await this.ensureLogin(false, false)) {
+      // 检查未读通知
+      await this.checkUnreadNotification();
+    }
+    
+    // 无论如何都刷新帖子列表
+    this.refreshCategoryPosts();
+  },
 
-    // 防止重复点击
-    if (this.data.isFavoriting) return;
-    this.setData({ isFavoriting: true });
+  onPullDownRefresh() {
+    this.refreshCategoryPosts();
+  },
 
-    try {
-      // 获取当前帖子状态
-      const currentPost = this.data.posts[index];
-      if (!currentPost) {
-        throw new Error('帖子不存在');
+  onReachBottom() {
+    this.loadMoreCategoryPosts();
+  },
+
+  // 获取存储中的用户信息
+  getUserInfoFromStorage() {
+    const userInfo = storage.get('userInfo');
+    if (userInfo) {
+      // 如果没有头像，使用默认头像
+      if (!userInfo.avatar) {
+        userInfo.avatar = '/icons/default-avatar.png';
       }
-
-      // 立即更新UI状态
-      const newFavoriteCount = currentPost.favorite_count - 1;
-
-      // 保存原始状态，用于失败时回滚
-      const originalState = {
-        isFavorited: currentPost.isFavorited,
-        favoriteCount: currentPost.favorite_count
-      };
-
-      // 先更新UI
-      this.setData({
-        [`posts[${index}].isFavorited`]: false,
-        [`posts[${index}].favorite_count`]: newFavoriteCount
-      });
-
-      // 调用API
-      try {
-        const result = await api.post.unfavoritePost(id);
-        
-        // 使用API返回的收藏数更新UI
-        if (result.success && result.data?.favorite_count !== undefined) {
-          this.setData({
-            [`posts[${index}].favorite_count`]: result.data.favorite_count,
-            [`posts[${index}].isFavorited`]: false
-          });
-        }
-
-        wx.showToast({
-          title: '取消收藏',
-          icon: 'none'
-        });
-      } catch (err) {
-        console.error('取消收藏失败：', err);
-        // 回滚到原始状态
-        this.setData({
-          [`posts[${index}].isFavorited`]: originalState.isFavorited,
-          [`posts[${index}].favorite_count`]: originalState.favoriteCount
-        });
-        
-        // 显示错误信息
-        wx.showToast({
-          title: err.message || '操作失败',
-          icon: 'none'
-        });
-      }
-    } catch (err) {
-      console.error('取消收藏操作出错：', err);
-      wx.showToast({
-        title: err.message || '操作失败',
-        icon: 'none'
-      });
-    } finally {
-      this.setData({ isFavoriting: false });
+      this.setData({ userInfo });
     }
   },
 
-  // 处理帖子图片加载错误
-  onPostImageError(e) {
-    try {
-      const postIndex = e.currentTarget.dataset.postIndex;
-      const imageIndex = e.currentTarget.dataset.imageIndex;
-      
-      if (postIndex === undefined || imageIndex === undefined) {
-        console.error('图片加载失败，但未提供完整索引信息');
-        return;
-      }
-      
-      // 获取当前帖子和图片信息
-      const post = this.data.posts[postIndex];
-      if (!post || !post.images) {
-        console.error('找不到帖子或图片数组');
-        return;
-      }
-      
-      // 记录错误日志
-      const imageUrl = post.images[imageIndex] || '未知';
-      console.error(`帖子图片加载失败 - 帖子索引: ${postIndex}, 图片索引: ${imageIndex}, URL: ${imageUrl}`);
-      
-      // 检查图片URL是否有效
-      if (!isValidImageUrl(imageUrl)) {
-        console.error('检测到无效的图片URL，移除:', imageUrl);
-      } else {
-        console.error('有效URL但加载失败，移除:', imageUrl);
-      }
-      
-      // 从图片数组中移除错误的图片
-      const newImages = [...post.images];
-      newImages.splice(imageIndex, 1);
-      
-      this.setData({
-        [`posts[${postIndex}].images`]: newImages
-      });
-      
-      console.log(`已移除错误的图片`);
-    } catch (err) {
-      console.error('处理帖子图片错误时发生异常:', err);
-    }
-  },
-  // 处理评论图片加载错误
-  onCommentImageError(e) {
-    try {
-      const postIndex = e.currentTarget.dataset.postIndex;
-      const commentIndex = e.currentTarget.dataset.commentIndex;
-      const imageIndex = e.currentTarget.dataset.imageIndex;
-      
-      if (postIndex === undefined || commentIndex === undefined || imageIndex === undefined) {
-        console.error('评论图片加载失败，但未提供完整索引信息');
-        return;
-      }
-      
-      // 获取当前帖子、评论和图片信息
-      const post = this.data.posts[postIndex];
-      if (!post) {
-        console.error('找不到帖子');
-        return;
-      }
-      
-      // 找到对应的评论
-      const recentComments = post.recent_comments || [];
-      if (!recentComments || !recentComments[commentIndex]) {
-        console.error('找不到评论');
-        return;
-      }
-      
-      const comment = recentComments[commentIndex];
-      if (!comment.images || !comment.images[imageIndex]) {
-        console.error('找不到评论图片');
-        return;
-      }
-      
-      // 记录错误日志
-      const imageUrl = comment.images[imageIndex] || '未知';
-      console.error(`评论图片加载失败 - 帖子索引: ${postIndex}, 评论索引: ${commentIndex}, 图片索引: ${imageIndex}, URL: ${imageUrl}`);
-      
-      // 检查图片URL是否有效
-      if (!isValidImageUrl(imageUrl)) {
-        console.error('检测到无效的图片URL，移除:', imageUrl);
-      } else {
-        console.error('有效URL但加载失败，移除:', imageUrl);
-      }
-      
-      // 从图片数组中移除错误的图片
-      const newImages = [...comment.images];
-      newImages.splice(imageIndex, 1);
-      
-      // 更新图片数组
-      this.setData({
-        [`posts[${postIndex}].recent_comments[${commentIndex}].images`]: newImages
-      });
-      
-      console.log(`已移除错误的评论图片`);
-    } catch (err) {
-      console.error('处理评论图片错误时发生异常:', err);
-    }
-  },
-  // 跳转到通知页面
-  goToNotification() {
-    try {
-      wx.navigateTo({
-        url: '/pages/notification/notification',
-        success: () => {
-          // 更新通知状态为已读
-          this.setData({
-            isRead: true
-          });
-        },
-        fail: (err) => {
-          console.error('跳转通知页失败:', err);
-          wx.showToast({
-            title: '跳转失败',
-            icon: 'none'
-          });
-        }
-      });
-    } catch (err) {
-      console.error('跳转通知页出错:', err);
-      wx.showToast({
-        title: '跳转失败',
-        icon: 'none'
-      });
-    }
+  // 错误处理方法
+  handleError(err, defaultMsg = '操作失败') {
+    console.error('发生错误:', err);
+    const errMsg = err.message || defaultMsg;
+    this.setData({
+      loading: false,
+      error: errMsg
+    });
   },
   
-  // 跳转到智能助手页面
-  goToAgent: function() {
-    wx.navigateTo({
-      url: '/pages/agent/index'
-    });
+  // 重试按钮处理
+  onRetry() {
+    console.debug('点击重试按钮');
+    this.setData({ error: null });
+    this.loadPosts();
   },
-  // 加载更多
-  async loadMore() {
-    if (this.data.loading || !this.data.hasMore) return
-    
-    await this.loadPosts()
+  
+  // 关闭错误提示
+  onErrorClose() {
+    this.setData({ error: null });
   },
-  onReachBottom: function() {
-    if (this.data.hasMore && !this.data.loading) {
-      this.loadMore()
-    }
-  },
-  onShareAppMessage: function() {
-    return {
-      title: '南开大学校园知识共享平台',
-      path: '/pages/index/index',
-      imageUrl: '/images/share.png',
-      success: function() {
-        wx.showToast({
-          title: '分享成功',
-          icon: 'success'
-        });
-      },
-      fail: function() {
-        wx.showToast({
-          title: '分享失败',
-          icon: 'none'
-        });
-      }
-    }
-  },
-  onShareTimeline: function() {
-    return {
-      title: '南开大学校园知识共享平台',
-      query: '',
-      imageUrl: '/images/share.png',
-      success: function() {
-        wx.showToast({
-          title: '分享成功',
-          icon: 'success'
-        });
-      },
-      fail: function() {
-        wx.showToast({
-          title: '分享失败',
-          icon: 'none'
-        });
-      }
-    }
-  },
-  onTabItemTap: async function() {
-    try {
-      // 重置数据
-      this.setData({
-        posts: [],
-        currentPage: 1,
-        hasMore: true,
-        loading: false,
-        showSearchResult: false,
-        searchText: '',
-        searchResults: []
-      })
 
-      // 重新加载帖子列表
-      await this.loadPosts(true)
+  async loadInitialData() {
+    this.setData({ loading: true, error: null });
+    try {
+      // 并行加载数据
+      await Promise.all([
+        this.loadInitialPosts(),
+        this.checkUnreadNotification(),
+        this.getCurrentUserInfo()
+      ]);
     } catch (err) {
-      console.error('Tab点击刷新失败:', err)
-      wx.showToast({
-        title: err.message || '刷新失败',
-        icon: 'none'
-      })
+      this.handleError(err, '加载初始数据失败');
     }
   },
-  onHide: function() {
-    // 页面隐藏时不需要特殊处理
+
+  // 获取用户信息
+  async getCurrentUserInfo(forceRefresh = false) {
+    try {
+      const userInfo = await this.getUserInfo(forceRefresh);
+      if (userInfo) {
+        this.setData({ userInfo });
+        // 缓存用户信息
+        storage.set('userInfo', userInfo);
+      }
+    } catch (err) {
+      console.debug('获取用户信息失败:', err);
+      // 尝试从缓存获取
+      this.getUserInfoFromStorage();
+    }
   },
-  onUnload: function() {
-    // 页面卸载时不需要特殊处理
+
+  async loadInitialPosts() {
+    try {
+      // 获取当前分类ID
+      const categoryId = this.data.navItems[this.data.activeTab].id;
+      const params = categoryId === 'all' ? {} : { category: categoryId };
+      
+      // 使用postBehavior中的refreshPost方法
+      await this.refreshPost(params);
+      
+      this.setData({ loading: false });
+    } catch (err) {
+      this.handleError(err, '加载帖子失败');
+    }
   },
-  onReady: function() {
-    // 页面首次渲染完成时不需要特殊处理
+
+  async refreshCategoryPosts() {
+    try {
+      const categoryId = this.data.navItems[this.data.activeTab].id;
+      const params = categoryId === 'all' ? {} : { category: categoryId };
+      
+      // 使用postBehavior中的refreshPost方法
+      await this.refreshPost(params);
+      
+      wx.stopPullDownRefresh();
+    } catch (err) {
+      this.handleError(err, '刷新帖子失败');
+      wx.stopPullDownRefresh();
+    }
   },
-  onResize: function() {
-    // 页面尺寸变化时不需要特殊处理
+
+  async loadMoreCategoryPosts() {
+    try {
+      const categoryId = this.data.navItems[this.data.activeTab].id;
+      const params = categoryId === 'all' ? {} : { category: categoryId };
+      
+      // 使用postBehavior中的loadMorePost方法
+      await this.loadMorePost(params);
+    } catch (err) {
+      this.handleError(err, '加载更多帖子失败');
+    }
   },
-  onPageScroll: function() {
-    // 页面滚动时不需要特殊处理
-  },
-  // 搜索框输入
+
   onSearchInput(e) {
     this.setData({
       searchValue: e.detail.value
     });
   },
 
-  // 清空搜索
-  clearSearch() {
+  handleSearch(e) {
+    const value = e.detail.value || this.data.searchValue;
+    if (value) {
+      wx.navigateTo({
+        url: `/pages/search/search?keyword=${encodeURIComponent(value)}`
+      });
+    }
+  },
+
+  onTabChange(e) {
+    const index = e.currentTarget.dataset.index;
+    if (index === this.data.activeTab) return;
+    
     this.setData({
-      searchValue: '',
-      showSearchResult: false,
-      searchResults: [],
-      searchPage: 1,
-      searchHasMore: true
+      activeTab: index,
+      loading: true,
+      error: null
+    });
+    
+    this.refreshCategoryPosts();
+  },
+
+  // 处理通知点击
+  onNotificationTap() {
+    console.debug('进入通知页面');
+    wx.navigateTo({
+      url: '/pages/notification/notification'
     });
   },
 
-  // 执行搜索
-  async handleSearch() {
-    const keyword = this.data.searchValue.trim();
-    if (!keyword) {
-      wx.showToast({
-        title: '请输入搜索内容',
-        icon: 'none'
-      });
-      return;
-    }
+  // 处理头像点击
+  onAvatarTap() {
+    console.debug('进入个人中心');
+    wx.switchTab({
+      url: '/pages/profile/profile'
+    });
+  },
 
-    // 保存搜索历史
-    this.saveSearchHistory(keyword);
-
+  async checkUnreadNotification() {
     try {
-      this.setData({ 
-        searchLoading: true,
-        searchPage: 1,
-        showSearchResult: true 
-      });
-
-      // 获取用户openid用于判断点赞状态
-      const openid = await getOpenID();
-      if (!openid) {
-        throw new Error('获取用户信息失败');
-      }
-
-      // 调用搜索API
-      const result = await api.search.searchPosts({
-        keyword,
-        page: 1,
-        pageSize: this.data.searchPageSize,
+      const openid = storage.get('openid');
+      if (!openid) return false;
+      
+      const res = await notificationApi.status({
         openid
       });
-
-      if (!result || !result.success) {
-        throw new Error(result?.message || '搜索失败');
+      
+      if (res.code === 200 && res.data) {
+        this.setData({
+          hasUnreadNotification: res.data.has_unread
+        });
+        return res.data.has_unread;
       }
-
-      // 处理搜索结果
-      const searchResults = result.data.map(post => {
-        // 解析JSON字段
-        post.images = filterValidImageUrls(parseJsonField(post.images));
-        post.tags = parseJsonField(post.tags);
-        post.liked_users = parseJsonField(post.liked_users);
-        post.favorite_users = parseJsonField(post.favorite_users);
-        
-        // 处理评论预览
-        if (post.recent_comments && post.recent_comments.length > 0) {
-          post.recent_comments = post.recent_comments.map(comment => ({
-            ...comment,
-            content: processCommentContent(comment.content),
-            images: filterValidImageUrls(parseJsonField(comment.images))
-          }));
-        }
-        
-        return {
-          ...post,
-          create_time_formatted: formatTimeDisplay(post.create_time),
-          isLiked: post.liked_users.includes(openid),
-          isFavorited: post.favorite_users.includes(openid)
-        };
-      });
-
-      this.setData({
-        searchResults,
-        searchHasMore: searchResults.length === this.data.searchPageSize,
-        searchLoading: false
-      });
-
+      
+      return false;
     } catch (err) {
-      console.error('搜索失败:', err);
-      this.setData({ searchLoading: false });
-      wx.showToast({
-        title: err.message || '搜索失败',
-        icon: 'none'
-      });
+      console.debug('检查未读通知失败:', err);
+      return false;
     }
   },
 
-  // 加载更多搜索结果
-  async loadMoreSearchResults() {
-    if (this.data.searchLoading || !this.data.searchHasMore) return;
-
-    try {
-      this.setData({ searchLoading: true });
-      const nextPage = this.data.searchPage + 1;
-
-      // 获取用户openid用于判断点赞状态
-      const openid = await getOpenID();
-      if (!openid) {
-        throw new Error('获取用户信息失败');
-      }
-
-      // 调用搜索API
-      const result = await api.search.searchPosts({
-        keyword: this.data.searchValue.trim(),
-        page: nextPage,
-        pageSize: this.data.searchPageSize,
-        openid
-      });
-
-      if (!result || !result.success) {
-        throw new Error(result?.message || '加载更多失败');
-      }
-
-      // 处理搜索结果
-      const newResults = result.data.map(post => {
-        // 解析JSON字段
-        post.images = filterValidImageUrls(parseJsonField(post.images));
-        post.tags = parseJsonField(post.tags);
-        post.liked_users = parseJsonField(post.liked_users);
-        post.favorite_users = parseJsonField(post.favorite_users);
-        
-        // 处理评论预览
-        if (post.recent_comments && post.recent_comments.length > 0) {
-          post.recent_comments = post.recent_comments.map(comment => ({
-            ...comment,
-            content: processCommentContent(comment.content),
-            images: filterValidImageUrls(parseJsonField(comment.images))
-          }));
-        }
-        
-        return {
-          ...post,
-          create_time_formatted: formatTimeDisplay(post.create_time),
-          isLiked: post.liked_users.includes(openid),
-          isFavorited: post.favorite_users.includes(openid)
-        };
-      });
-
-      this.setData({
-        searchResults: [...this.data.searchResults, ...newResults],
-        searchPage: nextPage,
-        searchHasMore: newResults.length === this.data.searchPageSize,
-        searchLoading: false
-      });
-
-    } catch (err) {
-      console.error('加载更多搜索结果失败:', err);
-      this.setData({ searchLoading: false });
-      wx.showToast({
-        title: err.message || '加载失败',
-        icon: 'none'
-      });
-    }
-  },
-
-  // 加载搜索历史
-  loadSearchHistory() {
-    try {
-      const history = wx.getStorageSync('searchHistory') || [];
-      this.setData({ searchHistory: history });
-    } catch (err) {
-      console.error('加载搜索历史失败:', err);
-    }
-  },
-
-  // 保存搜索历史
-  saveSearchHistory(keyword) {
-    try {
-      let history = this.data.searchHistory;
-      // 移除重复项
-      history = history.filter(item => item !== keyword);
-      // 添加到开头
-      history.unshift(keyword);
-      // 限制数量
-      if (history.length > this.data.maxHistoryItems) {
-        history = history.slice(0, this.data.maxHistoryItems);
-      }
-      // 保存到本地和状态
-      wx.setStorageSync('searchHistory', history);
-      this.setData({ searchHistory: history });
-    } catch (err) {
-      console.error('保存搜索历史失败:', err);
-    }
-  },
-
-  // 清空搜索历史
-  clearSearchHistory() {
-    try {
-      wx.removeStorageSync('searchHistory');
-      this.setData({ searchHistory: [] });
-      wx.showToast({
-        title: '已清空搜索历史',
-        icon: 'success'
-      });
-    } catch (err) {
-      console.error('清空搜索历史失败:', err);
-    }
-  },
-
-  // 点击历史记录项
-  onHistoryItemTap(e) {
-    const keyword = e.currentTarget.dataset.keyword;
-    this.setData({ searchValue: keyword }, () => {
-      this.handleSearch();
+  handlePostTap(e) {
+    const { postId } = e.detail;
+    wx.navigateTo({
+      url: `/pages/post/detail/detail?id=${postId}`
     });
   },
 
-  // 导航栏点击事件
-  onNavItemTap(e) {
-    const type = e.currentTarget.dataset.type;
-    console.debug('点击了导航项：', type);
-    
-    // 可以根据类型跳转到不同的页面或者筛选内容
-    switch(type) {
-      case 'study':
-        // 学习交流相关操作
-        this.filterPostsByType('study');
-        break;
-      case 'life':
-        // 校园生活相关操作
-        this.filterPostsByType('life');
-        break;
-      case 'job':
-        // 就业创业相关操作
-        this.filterPostsByType('job');
-        break;
-      case 'club':
-        // 社团活动相关操作
-        this.filterPostsByType('club');
-        break;
-      case 'lost':
-        // 失物招领相关操作
-        this.filterPostsByType('lost');
-        break;
-      default:
-        break;
-    }
+  handleLoadMore() {
+    this.loadMoreCategoryPosts();
   },
 
-  // 根据类型筛选帖子
-  filterPostsByType(type) {
-    wx.showToast({
-      title: `正在筛选${type}类型的帖子`,
-      icon: 'none'
+  handleEmptyBtnTap() {
+    // 跳转到发帖页
+    wx.navigateTo({
+      url: '/pages/post/post'
     });
-    
-    // 清空现有帖子并重置分页
-    this.setData({
-      posts: [],
-      currentPage: 1,
-      hasMore: true,
-      loading: true
-    });
-    
-    // 加载指定类型的帖子
-    this.loadPosts(type);
   },
-})
+
+  handleUserTap(e) {
+    const { userId } = e.detail;
+    this.navigateToUserProfile(userId);
+  }
+});

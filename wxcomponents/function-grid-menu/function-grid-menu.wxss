@@ -1,0 +1,44 @@
+/* wxcomponents/function-grid-menu/function-grid-menu.wxss */
+.function-menu {
+  background-color: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  margin-bottom: 20rpx;
+  overflow: hidden;
+}
+
+.menu-section {
+  padding: 20rpx;
+}
+
+.menu-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-left: 10rpx;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10rpx;
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.menu-icon {
+  width: 50rpx;
+  height: 50rpx;
+  margin-bottom: 10rpx;
+}
+
+.menu-text {
+  font-size: 24rpx;
+  color: #666;
+} 

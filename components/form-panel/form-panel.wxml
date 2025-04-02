@@ -1,0 +1,9 @@
+<view class="form-panel {{customClass}}">
+  <view wx:if="{{title || subtitle}}" class="panel-header">
+    <view wx:if="{{title}}" class="title">{{title}}</view>
+    <view wx:if="{{subtitle}}" class="subtitle">{{subtitle}}</view>
+  </view>
+  <view class="panel-content" style="padding: {{padding}}">
+    <slot></slot>
+  </view>
+</view> 

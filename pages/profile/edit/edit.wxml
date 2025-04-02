@@ -1,66 +1,74 @@
 <!--pages/profile/edit/edit.wxml-->
-<view class="edit-container">
-  <view class="edit-form">
-    <!-- 头像编辑 -->
-    <view class="form-item">
-      <text class="item-label">头像</text>
-      <!-- 微信登录用户 -->
-      <button 
-        wx:if="{{userInfo.loginType === 'wechat'}}"
-        class="avatar-wrapper" 
-        open-type="chooseAvatar" 
-        bind:chooseavatar="onChooseAvatar"
-      >
-        <image 
-          class="avatar" 
-          src="{{userInfo.avatarUrl || '/assets/icons/default-avatar.png'}}" 
-          mode="aspectFill"
-          binderror="onAvatarError"
-        ></image>
-        <view class="change-button">点击更换</view>
-      </button>
+<!-- 顶部消息提示 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 
-      <!-- 邮箱登录用户 -->
-      <button 
-        wx:else
-        class="avatar-wrapper" 
-        bindtap="onChooseImage"
-      >
-        <image 
-          class="avatar" 
-          src="{{userInfo.avatarUrl || '/assets/icons/email-avatar.png'}}" 
-          mode="aspectFill"
-          binderror="onAvatarError"
-        ></image>
-        <view class="change-button">点击更换</view>
-      </button>
-    </view>
+<!-- 确认对话框 -->
+<mp-dialog 
+  title="{{dialogTitle}}" 
+  show="{{dialogShow}}" 
+  bindbuttontap="tapDialogButton" 
+  buttons="{{dialogButtons}}">
+  <view>{{dialogContent}}</view>
+</mp-dialog>
 
-    <!-- 昵称编辑 -->
-    <view class="form-item">
-      <text class="item-label">昵称</text>
-      <input 
-        class="input" 
-        type="text"
-        value="{{newNickName}}"
-        placeholder="请输入昵称" 
-        bindinput="onInputNickName"
-      />
-    </view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <!-- 加载状态 -->
+  <loading 
+    wx:if="{{loading}}" 
+    type="dot-gray"
+    show="{{loading}}"
+  />
 
-    <!-- 个性签名编辑 -->
-    <view class="form-item">
-      <text class="item-label">个性签名</text>
-      <textarea 
-        class="textarea" 
-        value="{{newStatus}}"
-        placeholder="介绍一下自己吧" 
-        bindinput="onInputStatus"
-        maxlength="50"
-      ></textarea>
-    </view>
+  <!-- 内容区域 -->
+  <mp-form-page wx:else title="编辑资料">
+    <mp-form>
+      <mp-cells>
+        <!-- 头像编辑 -->
+        <mp-cell title="头像">
+          <view class="avatar-container">
+            <!-- 使用微信原生的头像选择器 -->
+            <button 
+              class="avatar-btn"
+              open-type="chooseAvatar" 
+              bind:chooseavatar="onChooseAvatar"
+            >
+              <image 
+                class="avatar" 
+                src="{{userInfo.avatarUrl}}" 
+                mode="aspectFill"
+                binderror="onAvatarError"
+              />
+              <view class="avatar-hint">点击更换头像</view>
+            </button>
+          </view>
+        </mp-cell>
+
+        <!-- 昵称编辑 -->
+        <mp-cell title="昵称">
+          <input-field
+            type="text"
+            value="{{newNickName}}"
+            placeholder="请输入昵称"
+            bind:input="onInputNickName"
+          />
+        </mp-cell>
+
+        <!-- 个性签名编辑 -->
+        <mp-cell title="个性签名">
+          <text-area
+            value="{{newStatus}}"
+            placeholder="介绍一下自己吧"
+            bind:input="onInputStatus"
+            maxlength="50"
+            space
+          />
+        </mp-cell>
+      </mp-cells>
+    </mp-form>
 
     <!-- 保存按钮 -->
-    <button class="save-btn" bindtap="saveChanges">保存</button>
-  </view>
-</view>
+    <view slot="button">
+      <button class="weui-btn weui-btn_primary" bindtap="saveChanges">保存</button>
+    </view>
+  </mp-form-page>
+</page-status>

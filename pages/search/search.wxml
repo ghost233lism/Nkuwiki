@@ -1,163 +1,54 @@
 <!-- 美化的搜索页面 -->
-<view class="page-container">
-	<!-- 搜索区域 -->
-	<view class="search-container">
-		<view class="search-box" hover-class="search-box-hover">
-			<image class="search-icon" src="/assets/icons/search/search.png" mode="aspectFit" />
-			<input
-				class="search-input"
-				placeholder="探索关于南开的一切"
-				placeholder-style="color: #999;"
-				value="{{ searchValue }}"
-				bindinput="onSearchInput"
-				bindconfirm="handleSearch"
-				focus="{{ false }}"
-			/>
-			<view class="search-actions">
-				<image 
-					wx:if="{{ searchValue }}" 
-					class="clear-icon" 
-					src="/assets/icons/close.png" 
-					mode="aspectFit" 
-					bindtap="clearSearchInput"
-				/>
-				<image 
-					class="voice-icon {{ isRecording ? 'recording' : '' }}" 
-					src="/assets/icons/search/voice.png" 
-					mode="aspectFit"
-					bindtouchstart="startVoiceSearch"
-					bindtouchend="stopVoiceSearch"
-				/>
-			</view>
-		</view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+	<!-- 搜索栏 -->
+	<mp-searchbar 
+		value="{{searchValue}}"
+		placeholder="搜索校园知识"
+		search="{{search}}"
+		cancel="{{cancel}}"
+	/>
 
-		<!-- 分类切换 -->
-		<scroll-view class="category-list" scroll-x enable-flex>
-			<view 
-				class="category-item {{ currentCategory === item.id ? 'active' : '' }}"
-				wx:for="{{ categories }}"
-				wx:key="id"
-				bindtap="switchCategory"
-				data-category="{{ item.id }}"
-			>
-				<image class="category-icon" src="{{ item.icon }}" mode="aspectFit" />
-				<text class="category-name">{{ item.name }}</text>
-			</view>
-		</scroll-view>
+	<!-- 分类标签 -->
+	<category-tabs
+		categories="{{categories}}"
+		current="{{currentCategory}}"
+		bind:change="onCategoryChange"
+	/>
 
-		<!-- 搜索历史 -->
-		<view class="search-history" wx:if="{{ !searchValue && searchHistory.length > 0 }}">
-			<view class="history-header">
-				<text class="history-title">搜索历史</text>
-				<text class="clear-history" bindtap="clearSearchHistory">清空</text>
-			</view>
-			<view class="history-list">
-				<view 
-					class="history-item"
-					wx:for="{{ searchHistory }}"
-					wx:key="*this"
-					bindtap="onHistoryItemTap"
-					data-keyword="{{ item }}"
-				>
-					<image class="history-icon" src="/assets/icons/search/history.png" mode="aspectFit" />
-					<text class="history-text">{{ item }}</text>
-				</view>
-			</view>
-		</view>
-	</view>
+	<!-- 搜索历史 -->
+	<block wx:if="{{!searchValue && searchHistory.length > 0}}">
+		<search-history
+			items="{{searchHistory}}"
+			bind:clear="clearSearchHistory"
+			bind:tap="onHistoryItemTap"
+		/>
+	</block>
 
-	<!-- 搜索结果区域 -->
-	<view class="content-area">
-		<!-- 加载中 -->
-		<view class="loading-wrapper" wx:if="{{ loading }}">
-			<view class="loading-dots">
-				<view class="loading-dot"></view>
-				<view class="loading-dot"></view>
-				<view class="loading-dot"></view>
-			</view>
-			<text class="loading-text">搜索中...</text>
-		</view>
-
-		<!-- 搜索结果列表 -->
-		<block wx:elif="{{ searchResults.length > 0 }}">
-			<view class="result-list">
-				<view 
-					class="result-item"
-					wx:for="{{ searchResults }}"
-					wx:key="id"
-					bindtap="goToDetail"
-					data-post="{{ item }}"
-				>
-					<!-- 来源标签 -->
-					<view class="result-header">
-						<view class="source-tag {{ item.category }}-tag">
-							<image class="source-icon" src="/assets/icons/search/{{ item.category }}.png" mode="aspectFit" />
-							<text>{{ item.category_name }}</text>
-						</view>
-						<text class="result-time">{{ item.created_at }}</text>
-					</view>
-
-					<!-- 标题和摘要 -->
-					<view class="result-title">{{ item.title }}</view>
-					<view class="result-excerpt">{{ item.excerpt }}</view>
-
-					<!-- 图片预览 -->
-					<view class="image-preview" wx:if="{{ item.images.length > 0 }}">
-						<image 
-							class="preview-img"
-							wx:for="{{ item.images }}"
-							wx:key="*this"
-							wx:for-item="image"
-							src="{{ image }}"
-							mode="aspectFill"
-						/>
-					</view>
-
-					<!-- 底部信息 -->
-					<view class="result-footer">
-						<view class="result-stats">
-							<text class="stat-item">
-								<text class="stat-count">{{ item.view_count }}</text> 浏览
-							</text>
-							<text class="stat-item">
-								<text class="stat-count">{{ item.like_count }}</text> 点赞
-							</text>
-						</view>
-						<view class="result-badges" wx:if="{{ item.badges.length > 0 }}">
-							<text 
-								class="badge {{ badge.type }}-badge"
-								wx:for="{{ item.badges }}"
-								wx:key="type"
-								wx:for-item="badge"
-							>{{ badge.text }}</text>
-						</view>
-					</view>
-				</view>
-			</view>
-
-			<!-- 加载更多 -->
-			<view class="load-more" wx:if="{{ pagination.hasMore }}">
-				<text wx:if="{{ !loading }}">上拉加载更多</text>
-				<view wx:else class="loading-dots">
-					<view class="loading-dot"></view>
-					<view class="loading-dot"></view>
-					<view class="loading-dot"></view>
-				</view>
-			</view>
-		</block>
-
-		<!-- 无搜索结果 -->
-		<view class="empty-state" wx:elif="{{ searchValue && !loading }}">
-			<image class="empty-icon" src="/assets/icons/search/empty.png" mode="aspectFit" />
-			<text class="empty-text">暂无相关内容</text>
-			<text class="empty-sub-text">换个关键词试试吧</text>
-		</view>
-
-		<!-- 默认状态 -->
-		<view class="empty-state" wx:elif="{{ !searchValue && !loading }}">
-			<image class="empty-icon" src="/assets/icons/search/search.png" mode="aspectFit" />
-			<text class="empty-text">探索南开</text>
-			<text class="empty-sub-text">输入关键词开始搜索</text>
-		</view>
-	</view>
-</view>
+	<!-- 搜索结果 -->
+	<post-list 
+		wx:else
+		posts="{{searchResults}}"
+		loading="{{loading}}"
+		has-more="{{pagination.hasMore}}"
+		bind:tap="viewDetail"
+		bind:loadMore="loadMore"
+	>
+		<empty
+			wx:if="{{!loading && searchResults.length === 0}}"
+			type="search"
+			text="未找到相关结果"
+		/>
+	</post-list>
+	
+	<!-- WEUI组件 -->
+	<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+	
+	<mp-dialog 
+		title="{{dialogTitle}}" 
+		show="{{dialogShow}}" 
+		buttons="{{dialogButtons}}" 
+		bindbuttontap="tapDialogButton"
+	>
+		<view>{{dialogContent}}</view>
+	</mp-dialog>
+</page-status>

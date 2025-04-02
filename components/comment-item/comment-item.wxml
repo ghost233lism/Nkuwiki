@@ -1,0 +1,65 @@
+<view class="comment-item" wx:if="{{formattedComment}}">
+  <view class="comment-header">
+    <view class="user-info" bindtap="onTapUser">
+      <image class="avatar" src="{{formattedComment.avatar}}" mode="aspectFill" binderror="onAvatarError"></image>
+      <view class="user-name-time">
+        <view class="nickname">{{formattedComment.nickname || '匿名用户'}}</view>
+        <view class="time">{{formattedComment.create_time_formatted}}</view>
+      </view>
+    </view>
+    
+    <view class="actions">
+      <!-- 回复按钮 -->
+      <view class="action-btn" bindtap="onTapReply">
+        <icon name="comment" size="28"></icon>
+      </view>
+      
+      <!-- 点赞按钮 -->
+      <view class="action-btn {{formattedComment.isLiked ? 'liked' : ''}}" bindtap="onTapLike">
+        <icon name="{{formattedComment.isLiked ? 'like-active' : 'like'}}" size="28" color="{{formattedComment.isLiked ? '#07c160' : ''}}"></icon>
+        <text wx:if="{{formattedComment.like_count > 0}}">{{formattedComment.like_count}}</text>
+      </view>
+      
+      <!-- 删除按钮，仅评论作者可见 -->
+      <view class="action-btn delete" bindtap="onTapDelete" wx:if="{{formattedComment.isOwner}}">
+        <icon name="delete" size="28"></icon>
+      </view>
+    </view>
+  </view>
+  
+  <view class="comment-content">
+    <!-- 评论回复对象 -->
+    <view class="reply-to" wx:if="{{formattedComment.reply_to}}">
+      回复 <text class="reply-name">@{{formattedComment.reply_to.nickname || '匿名用户'}}</text>:
+    </view>
+    
+    <!-- 评论内容 -->
+    <view class="content-text">{{formattedComment.content}}</view>
+    
+    <!-- 评论图片 -->
+    <view class="content-images" wx:if="{{formattedComment.image && formattedComment.image.length > 0}}">
+      <view 
+        class="content-image" 
+        wx:for="{{formattedComment.image}}" 
+        wx:key="*this" 
+        bindtap="onPreviewImage"
+        data-current="{{item}}"
+      >
+        <image src="{{item}}" mode="aspectFill" binderror="onImageError"></image>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 子评论区域 -->
+  <view class="replies" wx:if="{{formattedComment.replies && formattedComment.replies.length > 0}}">
+    <block wx:for="{{formattedComment.replies}}" wx:key="id">
+      <comment-item 
+        comment="{{item}}" 
+        openid="{{openid}}"
+        bind:like="handleChildLike"
+        bind:reply="handleChildReply"
+        bind:delete="handleChildDelete"
+      ></comment-item>
+    </block>
+  </view>
+</view> 

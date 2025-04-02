@@ -1,117 +1,31 @@
-.container {
-  padding: 30rpx;
-  background: #f5f5f5;
-  min-height: 100vh;
+/* 页面容器 */
+page {
+  background-color: #f7f7f7;
 }
 
-.feedback-form {
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 30rpx;
-}
-
-.form-item {
-  margin-bottom: 40rpx;
-}
-
-.label {
-  font-size: 28rpx;
-  color: #333;
-  margin-bottom: 20rpx;
-  display: block;
-}
-
-.radio-item {
-  display: inline-block;
-  margin-right: 40rpx;
-  font-size: 28rpx;
-}
-
-.feedback-content {
-  width: 100%;
-  height: 300rpx;
-  padding: 20rpx;
-  box-sizing: border-box;
-  border: 2rpx solid #eee;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-}
-
-.word-count {
-  font-size: 24rpx;
-  color: #999;
-  text-align: right;
-  margin-top: 10rpx;
-  display: block;
-}
-
-.contact-input {
-  width: 100%;
-  height: 80rpx;
-  padding: 0 20rpx;
-  box-sizing: border-box;
-  border: 2rpx solid #eee;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-}
-
-.image-uploader {
-  margin-top: 20rpx;
-}
-
-.image-list {
+/* 反馈类型单选框 */
+.radio-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
-}
-
-.image-item {
-  position: relative;
-  width: 180rpx;
-  height: 180rpx;
-}
-
-.image-item image {
+  flex-direction: column;
   width: 100%;
-  height: 100%;
-  border-radius: 8rpx;
 }
 
-.delete-btn {
+.weui-cell.weui-check__label {
+  padding: 16rpx 0;
+}
+
+.weui-cell__ft_in-radio {
+  color: #07c160;
+}
+
+.weui-check {
   position: absolute;
-  top: -20rpx;
-  right: -20rpx;
-  width: 40rpx;
-  height: 40rpx;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
+  left: -9999rpx;
 }
 
-.upload-btn {
-  width: 180rpx;
-  height: 180rpx;
-  border: 2rpx dashed #ddd;
-  border-radius: 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 60rpx;
+/* 提交按钮 */
+.weui-btn {
+  width: 90% !important;
+  margin-top: 60rpx !important;
+  margin-bottom: 40rpx !important;
 }
-
-.submit-btn {
-  margin-top: 60rpx;
-  background: #4080FF;
-  color: #fff;
-  border-radius: 8rpx;
-  font-size: 32rpx;
-}
-
-.submit-btn:active {
-  opacity: 0.8;
-} 

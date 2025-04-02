@@ -1,287 +1,350 @@
-const {
-  getStorage,
-  setStorage,
-  removeStorage,
-  getOpenID,
-  formatTime,
-  formatRelativeTime
-} = require('../../utils/util');
-const api = require('../../utils/api/index');
+const { ui, error, ToastType, createApiClient, storage, nav } = require('../../utils/util');
+const baseBehavior = require('../../behaviors/base-behavior');
+const userBehavior = require('../../behaviors/user-behavior');
+const authBehavior = require('../../behaviors/auth-behavior');
+
+// 通知API客户端
+const notificationApi = createApiClient('/api/wxapp/notification', {
+  checkUnread: {
+    method: 'GET',
+    path: '/status',
+    params: {
+      openid: true
+    }
+  }
+});
+
+// 用户API客户端 - 直接在这里定义，避免依赖behavior层
+const userApi = createApiClient('/api/wxapp/user', {
+  sync: {
+    method: 'POST',
+    path: '/sync'
+  },
+  profile: {
+    method: 'GET',
+    path: '/profile',
+    params: {
+      openid: true
+    }
+  }
+});
+
+// behaviors
+const pageBehavior = require('../../behaviors/page-behavior');
+const weuiBehavior = require('../../behaviors/weui-behavior');
+
+// 常量配置
+const MENU_CONFIG = {
+  CONTENT: {
+    title: '我的内容',
+    items: [
+      {
+        id: 'posts',
+        icon: true,
+        iconName: 'draft',
+        title: '我的帖子',
+        path: '/pages/profile/myPosts/myPosts'
+      },
+      {
+        id: 'likes',
+        icon: true,
+        iconName: 'like',
+        title: '我的点赞',
+        path: '/pages/profile/mylike_fav_comment/mylike_fav_comment?tab=0'
+      },
+      {
+        id: 'favorites',
+        icon: true,
+        iconName: 'favorite',
+        title: '我的收藏',
+        path: '/pages/profile/mylike_fav_comment/mylike_fav_comment?tab=1'
+      },
+      {
+        id: 'comments',
+        icon: true,
+        iconName: 'comment',
+        title: '我的评论',
+        path: '/pages/profile/mylike_fav_comment/mylike_fav_comment?tab=2'
+      }
+    ]
+  },
+  SETTINGS: {
+    title: '设置',
+    items: [
+      {
+        id: 'edit',
+        icon: true,
+        iconName: 'profile',
+        title: '编辑资料',
+        path: '/pages/profile/edit/edit'
+      },
+      {
+        id: 'feedback',
+        icon: true,
+        iconName: 'feedback',
+        title: '意见反馈',
+        path: '/pages/profile/feedback/feedback'
+      },
+      {
+        id: 'about',
+        icon: true,
+        iconName: 'about',
+        title: '关于我们',
+        path: '/pages/profile/about/about'
+      }
+    ]
+  }
+};
 
 Page({
+  behaviors: [baseBehavior, userBehavior, authBehavior],
+
   data: {
     userInfo: null,
-    totalLikes: 0
+    stats: {
+      posts: 0,
+      likes: 0,
+      favorites: 0,
+      comments: 0
+    },
+    loading: false,
+    error: false,
+    errorMsg: '',
+    refreshing: false,
+    menuItems: [],
+    settingItems: [],
+    MENU_CONFIG: MENU_CONFIG,
+    hasUnreadNotification: false
   },
 
-  onLoad() {
-    const userInfo = getStorage('userInfo');
-    if (userInfo) {
-      this.setData({ userInfo });
-      this.getUserProfile();
-    }
+  async onLoad() {
+    console.debug('【Profile】页面onLoad触发');
+    // 准备菜单数据
+    this.processMenuItems();
+    
+    // 直接进行验证
+    this.syncUserAndInitPage();
   },
 
   async onShow() {
-    console.debug('个人信息页面显示');
-    try {
-      // 检查是否需要刷新
-      const needRefresh = getStorage('needRefreshProfile') || false;
-      
-      if (needRefresh) {
-        // 清除缓存以确保获取最新数据
-        removeStorage('userInfo');
-        
-        // 清除刷新标记
-        removeStorage('needRefreshProfile');
-      }
-      
-      // 获取最新用户信息
-      await this.getUserProfile();
-    } catch (err) {
-      console.debug('刷新个人信息失败:', err);
-    }
+    console.debug('【Profile】页面onShow触发');
+    // 每次显示页面都主动触发同步和刷新
+    this.syncUserAndInitPage();
   },
 
-  async getUserProfile() {
-    if (!await this.checkLogin()) return;
+  async onPullDownRefresh() {
+    console.debug('【Profile】页面下拉刷新');
+    this.setData({ refreshing: true });
+    await this.syncUserAndInitPage();
+    wx.stopPullDownRefresh();
+    this.setData({ refreshing: false });
+  },
 
+  // 同步用户并初始化页面
+  async syncUserAndInitPage() {
+    this.setData({ loading: true, error: false });
+    console.debug('【Profile】开始同步用户信息');
+    
     try {
-      wx.showLoading({ title: '加载中...' });
-      const result = await api.user.getProfile({ isSelf: true });
+      // 获取openid
+      const openid = storage.get('openid');
+      if (!openid) {
+        console.debug('【Profile】未找到openid，显示未登录状态');
+        this.setData({ 
+          userInfo: null, 
+          loading: false 
+        });
+        return;
+      }
       
-      console.debug('获取用户信息:', result);
+      console.debug('【Profile】发送user/sync请求');
+      // 直接使用API客户端发送同步请求
+      const startTime = Date.now();
+      const res = await userApi.sync({ openid });
+      const endTime = Date.now();
+      console.debug(`【Profile】收到同步响应(${endTime - startTime}ms):`, res);
       
-      if (result?.code === 200 && result.data) {
-        const userData = result.data;
+      if (res.code === 200 && res.data && res.data.id) {
+        // 同步成功，更新用户信息
+        console.debug('【Profile】同步成功，更新用户信息');
+        storage.set('userInfo', res.data);
         
-        // 处理头像
-        userData.avatarUrl = userData.avatar || '/assets/icons/default-avatar.png';
+        // 更新全局数据
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.userInfo = res.data;
+        }
         
         // 更新页面数据
+        const userInfo = res.data;
         this.setData({
-          userInfo: userData,
-          totalLikes: userData.like_count || 0
+          userInfo,
+          stats: {
+            posts: userInfo.post_count || 0,
+            likes: userInfo.like_count || 0,
+            favorites: userInfo.favorite_count || 0,
+            comments: userInfo.comment_count || 0
+          },
+          loading: false
         });
         
-        // 更新存储
-        setStorage('userInfo', userData);
-        console.debug('用户信息已更新:', userData);
+        // 更新菜单项的计数值
+        this.processMenuItems();
+        
+        // 检查未读通知
+        this.checkUnreadNotifications();
       } else {
-        console.debug('获取用户信息失败:', result?.message);
+        console.debug('【Profile】同步请求失败或返回数据不完整:', res);
+        // 同步失败或返回数据不完整，清除登录状态
+        storage.remove('userInfo');
+        storage.remove('openid');
+        
+        // 更新全局数据
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.userInfo = null;
+          app.globalData.openid = null;
+        }
+        
+        // 更新页面状态
+        this.setData({ 
+          userInfo: null, 
+          loading: false 
+        });
       }
     } catch (err) {
-      console.debug('加载用户信息失败:', err);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
+      console.debug('【Profile】同步请求异常:', err);
+      // 异常不清除登录状态，可能是网络问题
+      // 显示错误提示
+      this.setData({ 
+        loading: false,
+        error: true,
+        errorMsg: '网络异常，请稍后再试'
       });
-    } finally {
-      wx.hideLoading();
     }
   },
 
-  // 检查登录状态
-  async checkLogin() {
-    const openid = await getOpenID();
-    if (!openid) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
+  // 检查未读通知
+  async checkUnreadNotifications() {
+    const openid = storage.get('openid');
+    if (!openid) return;
+    
+    try {
+      console.debug('【Profile】检查未读通知');
+      const res = await notificationApi.checkUnread({
+        openid: openid
       });
-      return false;
+      
+      if (res.code === 200) {
+        console.debug('【Profile】未读通知状态:', res.data);
+        this.setData({
+          hasUnreadNotification: res.data.has_unread
+        });
+      }
+    } catch (err) {
+      console.debug('【Profile】检查未读通知失败:', err);
     }
-    return true;
   },
 
-  // 页面跳转函数
-  onFunctionTap(e) {
-    if (!this.data.userInfo) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
+  // 处理菜单项，添加统计数据
+  processMenuItems() {
+    const menuItems = MENU_CONFIG.CONTENT.items.map(item => {
+      // 克隆对象以避免修改原始配置
+      const newItem = { ...item };
+      
+      // 根据ID添加统计数据作为值
+      if (item.id === 'posts') {
+        newItem.value = this.data.stats.posts || 0;
+      } else if (item.id === 'likes') {
+        newItem.value = this.data.stats.likes || 0;
+      } else if (item.id === 'favorites') {
+        newItem.value = this.data.stats.favorites || 0;
+      } else if (item.id === 'comments') {
+        newItem.value = this.data.stats.comments || 0;
+      }
+      
+      return newItem;
+    });
+    
+    this.setData({
+      menuItems,
+      settingItems: MENU_CONFIG.SETTINGS.items
+    });
+  },
+
+  onMenuItemTap(e) {
+    const userInfo = this.data.userInfo;
+    if (!userInfo) {
+      this.showToast('请先登录', 'error');
       return;
     }
 
-    const type = e.currentTarget.dataset.type;
-    const routes = {
-      posts: '/pages/profile/myPosts/myPosts',
-      likes: '/pages/profile/mylike_fav_comment/mylike_fav_comment?type=like',
-      favorites: '/pages/profile/mylike_fav_comment/mylike_fav_comment?type=favorite',
-      comments: '/pages/profile/mylike_fav_comment/mylike_fav_comment?type=comment',
-      feedback: '/pages/profile/feedback/feedback',
-      about: '/pages/profile/about/about'
-    };
-
-    const url = routes[type];
-    if (url) {
-      wx.navigateTo({
-        url,
-        fail: (err) => {
-          console.debug('页面跳转失败:', err);
-          wx.showToast({
-            title: '页面跳转失败',
-            icon: 'none'
-          });
-        }
-      });
+    const index = e.currentTarget.dataset.index;
+    const item = this.data.menuItems[index];
+    
+    if (item && item.path) {
+      nav.navigateTo(item.path);
     }
   },
 
-  // 登录处理
-  async handleLogin() {
-    try {
-      wx.showLoading({ title: '登录中...' });
-      const result = await api.user.login();
-      wx.hideLoading();
+  onSettingItemTap(e) {
+    const userInfo = this.data.userInfo;
+    if (!userInfo) {
+      this.showToast('请先登录', 'error');
+      return;
+    }
 
-      if (result?.success && result.data) {
-        this.setData({ userInfo: result.data });
-        setStorage('userInfo', result.data);
-        
-        wx.showToast({
-          title: '登录成功',
-          icon: 'success'
-        });
-      } else {
-        throw new Error(result?.message || '登录失败');
-      }
-    } catch (err) {
-      console.debug('登录失败:', err);
-      wx.hideLoading();
-      wx.showToast({
-        title: '登录失败',
-        icon: 'none'
-      });
+    const index = e.currentTarget.dataset.index;
+    const item = this.data.settingItems[index];
+    
+    if (item && item.path) {
+      nav.navigateTo(item.path);
     }
   },
 
-  // 退出登录
-  handleLogout() {
-    wx.showModal({
-      title: '提示',
-      content: '确定要退出登录吗？',
-      success: (res) => {
-        if (res.confirm) {
-          removeStorage('userInfo');
-          removeStorage('openid');
-          this.setData({
-            userInfo: null,
-            totalLikes: 0
-          });
-          wx.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          });
-        }
-      }
-    });
+  onAvatarTap() {
+    if (!this.data.userInfo) {
+      this.login();
+      return;
+    }
+    this.navigateToEditProfile();
+  },
+
+  // 新增：导航栏通知按钮点击事件
+  onNotificationTap() {
+    if (!this.data.userInfo) {
+      this.showToast('请先登录', 'error');
+      return;
+    }
+    
+    nav.navigateTo('/pages/notification/notification');
   },
 
   // 编辑资料
-  goToEdit() {
+  navigateToEditProfile() {
     if (!this.data.userInfo) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
       return;
     }
     
-    wx.navigateTo({
-      url: '/pages/profile/edit/edit',
-      fail: (err) => {
-        console.debug('跳转编辑页面失败:', err);
-        wx.showToast({
-          title: '页面跳转失败',
-          icon: 'none'
-        });
-      }
-    });
+    nav.navigateTo('/pages/profile/edit/edit');
   },
 
-  // 更新头像
-  async onChooseAvatar(e) {
-    if (!this.data.userInfo) return;
-    
-    const { avatarUrl } = e.detail;
-    if (!avatarUrl) return;
-
+  async login() {
     try {
-      wx.showLoading({ title: '更新中...' });
-      
-      const result = await api.user.updateProfile({
-        avatar: avatarUrl
-      });
-
-      if (result?.success) {
-        const userInfo = this.data.userInfo;
-        userInfo.avatar = avatarUrl;
-        userInfo.avatarUrl = avatarUrl;
-        
-        this.setData({ userInfo });
-        setStorage('userInfo', userInfo);
-        
-        wx.showToast({
-          title: '更新成功',
-          icon: 'success'
-        });
-      }
+      this.showLoading('登录中...');
+      await this.wxLogin();
+      await this.syncUserAndInitPage();
+      this.showToast('登录成功', 'success');
     } catch (err) {
-      console.debug('更新头像失败:', err);
-      wx.showToast({
-        title: '更新失败',
-        icon: 'none'
-      });
+      this.handleError(err, '登录失败');
     } finally {
-      wx.hideLoading();
+      this.hideLoading();
     }
   },
-
-  // 跳转到关于我们页面
-  onAboutTap() {
-    wx.navigateTo({
-      url: '/pages/profile/about/about',
-      fail: (err) => {
-        console.debug('跳转到关于我们页面失败:', err);
-        wx.showToast({
-          title: '页面跳转失败',
-          icon: 'none'
-        });
-      }
-    });
-  },
-
-  // 清除缓存
-  clearCache() {
-    wx.showModal({
-      title: '提示',
-      content: '确定要清除缓存吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // 保留openid和userInfo
-          const openid = getStorage('openid');
-          const userInfo = getStorage('userInfo');
-          
-          // 清除所有缓存
-          wx.clearStorageSync();
-          
-          // 重新存储关键信息
-          if (openid) setStorage('openid', openid);
-          if (userInfo) setStorage('userInfo', userInfo);
-          
-          wx.showToast({
-            title: '清除成功',
-            icon: 'success'
-          });
-        }
-      }
-    });
-  },
-
-  // 退出登录
-  onLogoutTap() {
-    this.handleLogout();
+  
+  // 处理页面重试
+  onRetry() {
+    console.debug('【Profile】点击重试');
+    this.syncUserAndInitPage();
   }
 });

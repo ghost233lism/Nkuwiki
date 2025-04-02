@@ -1,58 +1,35 @@
-<view class="my-posts-container">
-  <!-- 顶部标题栏 -->
-  <view class="header">
-    <view class="back-icon" bindtap="goBack">
-      <image src="/assets/icons/back.png"></image>
-    </view>
-    <view class="title-text">我的{{mytitle}}</view>
-    <view class="placeholder"></view>
-  </view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <!-- 顶部标题栏和标签栏 -->
+  <nav-tab-bar
+    title="{{pageTitle}}"
+    show-back="{{true}}"
+    tab-titles="{{tabTitles}}"
+    active-tab="{{tabIndex}}"
+    bind:change="switchTab"
+  />
 
-  <!-- 帖子列表 -->
-  <view class="posts-list" wx:if="{{posts.length > 0}}">
-    <view class="post-item" wx:for="{{posts}}" wx:key="_id" bindtap="goToPostDetail" data-id="{{item._id}}">
-      <!-- 帖子内容预览 -->
-      <view class="post-content">
-        <view class="post-title" wx:if="{{item.title}}">{{item.title}}</view>
-        <view class="post-text">{{item.content}}</view>
-        
-        <!-- 如果有图片，显示第一张 -->
-        <view class="post-image" wx:if="{{item.image && item.image.length > 0}}">
-          <image src="{{item.image[0]}}" mode="aspectFill"></image>
-          <view class="image-count" wx:if="{{item.image.length > 1}}">+{{item.image.length - 1}}</view>
-        </view>
-      </view>
-      
-      <!-- 标签列表 -->
-      <view class="tag-list" wx:if="{{item.tag && item.tag.length > 0}}">
-        <text class="tag" wx:for="{{item.tag}}" wx:for-item="tag" wx:key="*this">#{{tag}}</text>
-      </view>
-      
-      <!-- 帖子统计信息 -->
-      <view class="post-stats">
-        <view class="post-time">{{item.formattedTime}}</view>
-        <view class="stats-info">
-          <view class="stat-item">
-            <image src="/assets/icons/index/like.png"></image>
-            <text>{{item.likes || 0}}</text>
-          </view>
-          <view class="stat-item">
-            <image src="/assets/icons/index/comment.png"></image>
-            <text>{{item.comments ? item.comments.length : 0}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <!-- 帖子列表 -->
+    <post-list
+      posts="{{posts}}"
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      hasMore="{{hasMore}}"
+      empty="{{posts.length === 0}}"
+      emptyText="{{emptyText}}"
+      emptyBtnText="去浏览帖子"
+      showEmptyBtn="{{true}}"
+      currentOpenid="{{openid}}"
+      refreshing="{{refreshing}}"
+      bind:postTap="onPostTap"
+      bind:like="onLike"
+      bind:favorite="onFavorite"
+      bind:comment="onComment"
+      bind:userTap="onUserTap"
+      bind:loadMore="loadList"
+      bind:emptyBtnTap="onIndexTap"
+    />
   </view>
-  
-  <!-- 空状态 -->
-  <view class="empty-state" wx:else>
-    <image src="{{userAvatar}}"></image>
-    <text>你还没有任何{{mytitle}}，快去{{mytitle}}吧</text>
-    <!-- <button class="create-btn" bindtap="createNewPost">发布第一条帖子</button> -->
-  </view>
-  
-  <!-- 加载状态 -->
-  <view class="loading" wx:if="{{loading}}">加载中...</view>
-  <view class="no-more" wx:if="{{posts.length > 0 && !hasMore}}">没有更多帖子了</view>
-</view> 
+</page-status> 

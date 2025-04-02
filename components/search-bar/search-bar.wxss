@@ -1,0 +1,38 @@
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx;
+  background: #ffffff;
+}
+
+.search-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  border-radius: 36rpx;
+  padding: 0 24rpx;
+}
+
+.input {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 28rpx;
+  color: #333333;
+  padding: 0 16rpx;
+}
+
+.placeholder {
+  color: #999999;
+}
+
+.clear-icon {
+  padding: 8rpx;
+}
+
+.action {
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #333333;
+} 

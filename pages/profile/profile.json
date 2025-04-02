@@ -1,5 +1,18 @@
 {
   "navigationBarTitleText": "个人中心",
-  "enablePullDownRefresh": false,
-  "usingComponents": {}
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#f7f9fc",
+  "usingComponents": {
+    "loading": "weui-miniprogram/loading/loading",
+    "page-status": "/components/page-status/page-status",
+    "error": "/components/error/error",
+    "user-card": "/components/user-card/user-card",
+    "login-card": "/components/login-card/login-card",
+    "mp-cells": "weui-miniprogram/cells/cells",
+    "mp-cell": "weui-miniprogram/cell/cell",
+    "mp-toptips": "weui-miniprogram/toptips/toptips"
+  }
 }

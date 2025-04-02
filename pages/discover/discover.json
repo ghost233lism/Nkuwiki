@@ -1,6 +1,11 @@
 {
-  "usingComponents": {},
+  "navigationBarTitleText": "发现",
   "enablePullDownRefresh": true,
+  "backgroundColor": "#f7f9fc",
   "backgroundTextStyle": "dark",
-  "backgroundColor": "#f5f5f5"
+  "usingComponents": {
+    "mp-loading": "weui-miniprogram/loading/loading",
+    "icon": "/components/icon/icon",
+    "post-list": "/components/post-list/post-list"
+  }
 }

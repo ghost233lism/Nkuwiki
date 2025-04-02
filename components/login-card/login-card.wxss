@@ -1,0 +1,171 @@
+.login-card {
+  width: 100%;
+  min-height: 70vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 32rpx;
+  box-sizing: border-box;
+  animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content {
+  width: 100%;
+  max-width: 720rpx;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 40rpx;
+  padding: 48rpx 40rpx;
+  box-shadow: 
+    0 20rpx 40rpx -8rpx rgba(0, 0, 0, 0.1),
+    0 8rpx 16rpx -8rpx rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160rpx;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08), rgba(54, 207, 201, 0.08));
+  z-index: 0;
+}
+
+/* 头部样式 */
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 40rpx;
+  z-index: 1;
+}
+
+.avatar {
+  flex-shrink: 0;
+  margin-right: 32rpx;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.15), rgba(54, 207, 201, 0.15));
+  border-radius: 50%;
+  padding: 24rpx;
+  box-shadow: 
+    0 8rpx 20rpx -4rpx rgba(24, 144, 255, 0.3),
+    0 0 8rpx rgba(24, 144, 255, 0.1);
+  border: 2rpx solid rgba(255, 255, 255, 0.8);
+}
+
+.text {
+  flex: 1;
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12rpx;
+  letter-spacing: 1rpx;
+}
+
+.desc {
+  font-size: 28rpx;
+  color: #666;
+  letter-spacing: 1rpx;
+}
+
+/* 功能特性 */
+.features {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32rpx;
+  margin-bottom: 48rpx;
+  padding: 32rpx 0;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.feature-item:active {
+  transform: scale(0.92);
+}
+
+.feature-item icon {
+  font-size: 52rpx;
+  margin-bottom: 16rpx;
+  color: #4080ff;
+  opacity: 0.9;
+}
+
+.feature-item text {
+  font-size: 26rpx;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 按钮样式 */
+button {
+  margin: 0 0 32rpx !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #07c160 !important;
+  height: 88rpx !important;
+  padding: 0 32rpx !important;
+  font-size: 32rpx !important;
+  width: auto !important;
+  min-width: 300rpx !important;
+}
+
+button icon {
+  margin-right: 12rpx;
+  font-size: 36rpx;
+}
+
+/* 协议提示 */
+.agreement {
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+  letter-spacing: 0.5rpx;
+}
+
+.link {
+  color: #4080ff;
+  display: inline;
+  margin: 0 4rpx;
+  position: relative;
+  font-weight: 500;
+}
+
+.link:active {
+  opacity: 0.8;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} 

@@ -1,0 +1,10 @@
+<view class="error-container" wx:if="{{show}}">
+  <view class="error-icon">
+    <icon name="close" size="56" color="#ff4d4f"></icon>
+  </view>
+  <view class="error-text">{{text}}</view>
+  <view class="error-actions">
+    <button class="error-retry" bindtap="retry">重试</button>
+    <button class="error-close" bindtap="close">关闭</button>
+  </view>
+</view> 

@@ -1,4 +1,12 @@
 {
-  "navigationBarTitleText": "关于我们",
-  "usingComponents": {}
+  "navigationBarTitleText": "关于",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "page-status": "/components/page-status/page-status",
+    "loading": "/components/loading/loading",
+    "error": "/components/error/error",
+    "logo-section": "/components/logo-section/logo-section",
+    "mp-cells": "weui-miniprogram/cells/cells",
+    "mp-cell": "weui-miniprogram/cell/cell"
+  }
 } 

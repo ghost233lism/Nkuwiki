@@ -1,0 +1,40 @@
+.nav-tab-container {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background-color: #fff;
+}
+
+.tab-bar {
+  display: flex;
+  justify-content: space-around;
+  border-bottom: 1rpx solid #eee;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab-item.active {
+  color: #07c160;
+  font-weight: bold;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 6rpx;
+  background-color: #07c160;
+  border-radius: 3rpx;
+} 

@@ -1,120 +1,99 @@
-<!-- 页面结构 -->
+<!-- 个人中心页面 -->
 <view class="container">
-  <!-- 顶部标题 -->
-  <view class="header">
-    <text class="title">我的</text>
-    <view class="settings-icon">
-      <image src="/assets/icons/profile/settings.png" />
-    </view>
-  </view>
+  <!-- 自定义导航栏 -->
+  <nav-bar 
+    title="个人中心"
+    textColor="#000000"
+    bind:notification="onNotificationTap"
+    bind:avatar="onAvatarTap"
+  ></nav-bar>
 
-  <!-- 未登录状态 -->
-  <view class="user-card" wx:if="{{!userInfo}}">
-    <view class="user-info">
-      <view class="avatar-container">
-        <image class="avatar" src="/assets/icons/default-avatar.png" />
-      </view>
-      <view class="info-content">
-        <text class="nickname">未登录</text>
-        <button class="login-btn" bindtap="handleLogin">点击登录</button>
-      </view>
-    </view>
-  </view>
+  <page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+    <!-- 加载状态 -->
+    <loading 
+      wx:if="{{loading}}" 
+      type="dot-gray"
+      show="{{loading}}"
+    />
 
-  <!-- 已登录状态 -->
-  <view class="user-card" wx:else>
-    <!-- 用户信息卡片 -->
-    <view class="user-info">
-      <view class="avatar-container">
-        <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
-      </view>
-      <view class="info-content">
-        <text class="nickname">{{userInfo.nickname}}</text>
-        <text class="university">{{userInfo.university}}</text>
-        <text class="status" wx:if="{{userInfo.bio}}">{{userInfo.bio}}</text>
-      </view>
-      <view class="edit-btn" bindtap="goToEdit">编辑资料</view>
-    </view>
+    <!-- 错误状态 -->
+    <error 
+      wx:elif="{{error}}"
+      text="{{errorMsg}}"
+      show="{{error}}"
+      bind:retry="onRetry"
+    />
 
-    <!-- 数据统计 -->
-    <view class="stats-row">
-      <view class="stat-item" bindtap="viewMyPosts" data-type="post">
-        <text class="stat-num">{{userInfo.post_count || 0}}</text>
-        <text class="stat-label">帖子</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{totalLike || 0}}</text>
-        <text class="stat-label">获赞</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{userInfo.follow_count || 0}}</text>
-        <text class="stat-label">关注</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{userInfo.follower_count || 0}}</text>
-        <text class="stat-label">粉丝</text>
-      </view>
-      <view class="stat-item">
-        <text class="stat-num">{{userInfo.token_count || 0}}</text>
-        <text class="stat-label">token</text>
-      </view>
-    </view>
+    <!-- 内容区域 -->
+    <block wx:else>
+      <!-- 用户卡片 -->
+      <user-card
+        wx:if="{{userInfo}}"
+        userInfo="{{userInfo}}"
+        stats="{{stats}}"
+        isCurrentUser="{{true}}"
+        currentUserOpenid="{{userInfo.openid}}"
+        bind:edit="navigateToEditProfile"
+      />
 
-    <!-- 功能按钮组 -->
-    <view class="function-row">
-      <view class="function-item" bindtap="onFunctionTap" data-type="star">
-        <image src="/assets/icons/profile/star.png" />
-        <text>我的收藏</text>
-      </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="history">
-        <image src="/assets/icons/profile/history.png" />
-        <text>浏览历史</text>
-      </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="comment">
-        <image src="/assets/icons/profile/comment.png" />
-        <text>我的评论</text>
-      </view>
-      <view class="function-item" bindtap="onFunctionTap" data-type="like">
-        <image src="/assets/icons/profile/like.png" />
-        <text>我的点赞</text>
-      </view>
-    </view>
+      <!-- 未登录提示 -->
+      <login-card 
+        wx:else
+        bind:login="login"
+      />
 
-    <view class="function-row">
-      <view class="function-item" bindtap="onFunctionTap" data-type="draft">
-        <image src="/assets/icons/profile/draft.png" />
-        <text>草稿箱</text>
+      <!-- 功能菜单 -->
+      <view class="menu-section">
+        <view class="menu-title">{{MENU_CONFIG.CONTENT.title}}</view>
+        <mp-cells ext-class="menu-cells">
+          <mp-cell 
+            wx:for="{{menuItems}}" 
+            wx:key="index"
+            link
+            hover
+            data-index="{{index}}"
+            bindtap="onMenuItemTap"
+          >
+            <view class="menu-item">
+              <view class="menu-item-left">
+                <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
+                <text class="menu-text">{{item.title}}</text>
+              </view>
+              <view class="menu-item-right">
+                <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
+              </view>
+            </view>
+          </mp-cell>
+        </mp-cells>
       </view>
-      <view class="function-item" bindtap="onFeedbackTap" data-type="feedback">
-        <image src="/assets/icons/profile/feedback.png" />
-        <text>意见反馈</text>
-      </view>
-      <view class="function-item"></view>
-      <view class="function-item"></view>
-    </view>
-  </view>
 
-  <!-- 设置列表 -->
-  <view class="settings-list">
-    <view class="settings-item">
-      <image src="/assets/icons/profile/notification.png" />
-      <text>消息通知</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="clearCache">
-      <image src="/assets/icons/profile/clear.png" />
-      <text>清除缓存</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="onAboutTap">
-      <image src="/assets/icons/profile/about.png" />
-      <text>关于我们</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-    <view class="settings-item" bindtap="onLogoutTap" wx:if="{{userInfo}}">
-      <image src="/assets/icons/profile/logout.png" />
-      <text>退出登录</text>
-      <image class="arrow" src="/assets/icons/profile/arrow-right.png" />
-    </view>
-  </view>
+      <!-- 设置菜单 -->
+      <view class="menu-section">
+        <view class="menu-title">{{MENU_CONFIG.SETTINGS.title}}</view>
+        <mp-cells ext-class="menu-cells">
+          <mp-cell 
+            wx:for="{{settingItems}}" 
+            wx:key="index"
+            link
+            hover
+            data-index="{{index}}"
+            bindtap="onSettingItemTap"
+          >
+            <view class="menu-item">
+              <view class="menu-item-left">
+                <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
+                <text class="menu-text">{{item.title}}</text>
+              </view>
+              <view class="menu-item-right">
+                <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
+              </view>
+            </view>
+          </mp-cell>
+        </mp-cells>
+      </view>
+    </block>
+    
+    <!-- WEUI组件 -->
+    <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+  </page-status>
 </view>

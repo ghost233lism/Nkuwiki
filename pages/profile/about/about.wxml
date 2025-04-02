@@ -1,68 +1,59 @@
-<view class="about-container">
-  <!-- 加载中提示 -->
-  <view class="loading-container" wx:if="{{loading}}">
-    <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
-  </view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <!-- 加载状态 -->
+  <loading 
+    wx:if="{{loading}}" 
+    text="加载中..."
+  />
 
-  <!-- 错误提示 -->
-  <view class="error-container" wx:elif="{{error}}">
-    <icon type="warn" size="64"></icon>
-    <text class="error-text">获取信息失败</text>
-    <button class="refresh-btn" bindtap="refresh">重新加载</button>
-  </view>
+  <!-- 错误状态 -->
+  <error 
+    wx:elif="{{error}}"
+    text="获取信息失败"
+    bind:retry="onRetry"
+  />
 
   <!-- 内容区域 -->
   <block wx:else>
     <!-- Logo区域 -->
-    <view class="logo-section">
-      <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-      <text class="app-name">{{companyInfo.app_name}}</text>
-      <text class="version">版本 {{companyInfo.version}}</text>
-    </view>
+    <logo-section
+      app-name="{{companyInfo.app_name}}"
+      version="{{companyInfo.version}}"
+    />
 
     <!-- 公司信息区域 -->
-    <view class="company-info">
-      <view class="info-item">
-        <text class="label">公司名称</text>
-        <text class="content">{{companyInfo.company}}</text>
-      </view>
-      
-      <view class="info-item">
-        <text class="label">项目介绍</text>
-        <text class="content">{{companyInfo.description}}</text>
-      </view>
-      
-      <view class="info-item" bindtap="contactUs">
-        <text class="label">联系邮箱</text>
-        <text class="content">{{companyInfo.email}}</text>
-      </view>
-
-      <view class="info-item">
-        <text class="label">官方网站</text>
-        <text class="content">{{companyInfo.website}}</text>
-      </view>
-
-      <view class="info-item">
-        <text class="label">GitHub</text>
-        <text class="content">{{companyInfo.github}}</text>
-      </view>
-    </view>
+    <mp-cells title="公司信息">
+      <mp-cell title="公司名称" value="{{companyInfo.company}}" />
+      <mp-cell title="项目介绍" value="{{companyInfo.description}}" />
+      <mp-cell 
+        title="联系邮箱" 
+        value="{{companyInfo.email}}"
+        bindtap="contactUs"
+        footer="点击复制"
+      />
+      <mp-cell 
+        title="官方网站" 
+        value="{{companyInfo.website}}"
+        link
+        url="{{companyInfo.website}}"
+      />
+      <mp-cell 
+        title="GitHub" 
+        value="{{companyInfo.github}}"
+        link
+        url="{{companyInfo.github}}"
+      />
+    </mp-cells>
 
     <!-- 项目介绍 -->
-    <view class="company-intro">
-      <view class="intro-title">项目介绍</view>
-      <view class="intro-content">
-        <!-- 服务说明 -->
-        <view class="section">
-          <view class="section-content">{{companyInfo.description}}</view>
-        </view>
-      </view>
-    </view>
+    <mp-cells title="项目介绍">
+      <mp-cell>
+        <view class="about-description">{{companyInfo.description}}</view>
+      </mp-cell>
+    </mp-cells>
 
     <!-- 版权信息 -->
     <view class="copyright">
       <text>{{companyInfo.copyright}}</text>
     </view>
   </block>
-</view>
+</page-status>

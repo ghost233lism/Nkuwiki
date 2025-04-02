@@ -1,0 +1,147 @@
+/* 统一loading组件样式 */
+
+/* 文本样式 */
+.loading-text {
+  font-size: 28rpx;
+  color: #666;
+  margin-top: 10rpx;
+}
+
+.loading-text-large {
+  font-size: 32rpx;
+  color: #333;
+  margin-top: 20rpx;
+}
+
+/* 内联加载样式 */
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+}
+
+.loading-spinner {
+  width: 36rpx;
+  height: 36rpx;
+  border: 4rpx solid rgba(150, 150, 150, 0.3);
+  border-radius: 50%;
+  border-top-color: #666;
+  animation: spin 0.8s linear infinite;
+  margin-right: 16rpx;
+}
+
+/* 全屏加载样式 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+}
+
+.loading-spinner-large {
+  width: 80rpx;
+  height: 80rpx;
+  margin-bottom: 30rpx;
+  border-radius: 50%;
+  position: relative;
+}
+
+.loading-spinner-large:before,
+.loading-spinner-large:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 6rpx solid transparent;
+  border-radius: 50%;
+}
+
+.loading-spinner-large:before {
+  border-top-color: #1890ff;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner-large:after {
+  border-bottom-color: #1890ff;
+  animation: spin 1.5s linear infinite reverse;
+}
+
+/* 点状加载样式 */
+.loading-dots-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx;
+}
+
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+
+.loading-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background-color: #1890ff;
+  margin: 0 10rpx;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* 默认加载样式 */
+.loading-default {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+}
+
+.loading-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-bottom: 10rpx;
+}
+
+/* 动画定义 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  } 
+  40% { 
+    transform: scale(1.0);
+  }
+} 

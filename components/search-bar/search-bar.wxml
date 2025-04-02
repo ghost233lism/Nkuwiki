@@ -1,0 +1,28 @@
+<view class="search-bar">
+  <view class="search-input" style="background-color: {{backgroundColor}}">
+    <icon name="search" size="32" color="#999999" />
+    <input
+      class="input"
+      value="{{inputValue}}"
+      placeholder="{{placeholder}}"
+      placeholder-class="placeholder"
+      focus="{{focus}}"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+      bindconfirm="onConfirm"
+      confirm-type="search"
+    />
+    <icon
+      wx:if="{{inputValue.length > 0}}"
+      name="close"
+      size="32"
+      color="#999999"
+      class="clear-icon"
+      bindtap="onClear"
+    />
+  </view>
+  <view wx:if="{{showAction}}" class="action" bindtap="onAction">
+    {{actionText}}
+  </view>
+</view> 

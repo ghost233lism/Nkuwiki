@@ -1,0 +1,194 @@
+/* 评论区样式 */
+.comment-section {
+  background-color: #fff;
+  padding: 20rpx 30rpx;
+  margin-top: 20rpx;
+  border-radius: 12rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 评论列表 */
+.comment-list {
+  margin-top: 10rpx;
+}
+
+.comment-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-main {
+  display: flex;
+}
+
+.avatar-container {
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 70rpx;
+  height: 70rpx;
+  border-radius: 50%;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.comment-author {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-right: 15rpx;
+}
+
+.comment-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.comment-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 10rpx;
+  word-break: break-all;
+}
+
+/* 评论图片 */
+.comment-images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+}
+
+.comment-image {
+  width: 150rpx;
+  height: 150rpx;
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+  border-radius: 8rpx;
+}
+
+/* 回复预览 */
+.reply-preview {
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  padding: 15rpx;
+  margin-top: 10rpx;
+}
+
+.reply-item {
+  margin-bottom: 10rpx;
+}
+
+.reply-item:last-child {
+  margin-bottom: 0;
+}
+
+.reply-author {
+  font-size: 26rpx;
+  color: #576b95;
+}
+
+.reply-text {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.view-more-replies {
+  font-size: 26rpx;
+  color: #576b95;
+  margin-top: 10rpx;
+}
+
+/* 评论操作区 */
+.comment-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15rpx;
+  padding-left: 90rpx;
+}
+
+.comment-actions-left {
+  display: flex;
+  align-items: center;
+}
+
+.action-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.comment-actions-right {
+  display: flex;
+  align-items: center;
+}
+
+.action-reply, .action-like, .action-delete {
+  display: flex;
+  align-items: center;
+  margin-left: 30rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.action-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 6rpx;
+}
+
+.action-like.liked text.liked-text {
+  color: #ff6b6b;
+}
+
+/* 加载状态 */
+.loading-more, .no-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20rpx 0;
+  font-size: 26rpx;
+  color: #999;
+}
+
+.loading-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 10rpx;
+  border: 2rpx solid #f0f0f0;
+  border-top: 2rpx solid #666;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+} 

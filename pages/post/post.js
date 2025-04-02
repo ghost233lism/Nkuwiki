@@ -1,315 +1,184 @@
-const {get, post, processResponse} = require('../../utils/request');
-const {
-  formatRelativeTime,
-  getStorage,
-  setStorage,
-  processCloudUrl,
-  processPostData
-} = require('../../utils/util');
-const api = require('../../utils/api/index');
+const { ui, error, ToastType, createApiClient, storage } = require('../../utils/util');
+const baseBehavior = require('../../behaviors/base-behavior');
+const postBehavior = require('../../behaviors/post-behavior');
+const userBehavior = require('../../behaviors/user-behavior');
+const formBehavior = require('../../behaviors/form-behavior');
 
+// behaviors
+const pageBehavior = require('../../behaviors/page-behavior');
+const authBehavior = require('../../behaviors/auth-behavior');
+const weuiBehavior = require('../../behaviors/weui-behavior');
+
+// 常量配置
+const CATEGORIES = [
+  { id: 'all', name: '全部' },
+  { id: 'study', name: '学习' },
+  { id: 'life', name: '生活' },
+  { id: 'job', name: '工作' },
+  { id: 'other', name: '其他' }
+];
+
+/** @type {WechatMiniprogram.Page.Instance<IPostPageData>} */
 Page({
+  behaviors: [
+    baseBehavior,
+    postBehavior,
+    userBehavior,
+    formBehavior
+  ],
+
   data: {
-    title: '',
-    content: '',
-    images: [],
-    tempImages: [],
-    showImagePreview: false,
-    currentPreviewIndex: 0,
-    isWikiEnabled: false,
-    isPublic: true,
-    allowComment: true,
-    wikiKnowledge: false,
-    currentStyle: 'formal',
-    previewImages: [],
-    imageSize: {
-      maxWidth: 1080,
-      maxHeight: 1080,
-      quality: 0.8
+    // --- Form Data ---
+    form: {
+      title: '',
+      content: '',
+      images: [],
+      isPublic: true,
+      allowComment: true,
+      wikiKnowledge: false,
+      category: CATEGORIES[0].id
     },
-    isEditingMode: false,
+
+    // --- Form Rules ---
+    rules: {
+      title: [
+        { required: true, message: '请输入标题' },
+        { min: 2, message: '标题至少2个字' },
+        { max: 50, message: '标题最多50个字' }
+      ],
+      content: [
+        { required: true, message: '请输入内容' },
+        { min: 10, message: '内容至少10个字' }
+      ]
+    },
+
+    categories: CATEGORIES,
+    categoryIndex: 0,
+
+    // --- UI State ---
     canSubmit: false,
-    contentWarn: ''
+    submitting: false,
+    error: false,
+    errorMsg: '',
+    
+    // weui-uploader需要的函数
+    selectFile: null,
+    uploadFile: null
   },
 
-  onLoad(options) {
-    // 如果是编辑模式，加载帖子数据
-    if (options.id) {
-      this.loadPostData(options.id);
+  async onLoad() {
+    await this.initPage();
+    
+    // 初始化上传组件
+    this.initUploader();
+  },
+
+  async initPage() {
+    const isLoggedIn = await this.ensureLogin();
+    if (!isLoggedIn) return;
+
+    this.initForm();
+  },
+
+  // 表单验证
+  onFormChange(e) {
+    const { field, value } = e.detail;
+    this.setFormField(field, value);
+    this.validateForm();
+  },
+
+  // 重写图片选择回调，适配表单结构
+  onImageSelect(e) {
+    const updatedImages = this.methods.onImageSelect.call(this, e);
+    this.setFormField('images', updatedImages);
+    this.validateForm();
+  },
+
+  // 重写图片删除回调，适配表单结构
+  onImageDelete(e) {
+    const images = this.methods.onImageDelete.call(this, e);
+    this.setFormField('images', images);
+    this.validateForm();
+  },
+
+  // 复选框组变更回调
+  onCheckboxGroupChange(e) {
+    const values = e.detail.value;
+    
+    this.setFormField('isPublic', values.includes('isPublic'));
+    this.setFormField('allowComment', values.includes('allowComment'));
+    this.setFormField('wikiKnowledge', values.includes('wikiKnowledge'));
+    
+    this.validateForm();
+  },
+
+  // 图片上传
+  async onImagesChange(e) {
+    const images = e.detail.value;
+    this.setFormField('images', images);
+    this.validateForm();
+  },
+
+  // 开关切换
+  onSwitchChange(e) {
+    const { field } = e.currentTarget.dataset;
+    const value = e.detail.value;
+    this.setFormField(field, value);
+    this.validateForm();
+  },
+
+  // 分类选择
+  onCategoryChange(e) {
+    const index = parseInt(e.detail.value);
+    const category = CATEGORIES[index].id;
+    this.setData({
+      categoryIndex: index,
+      'form.category': category
+    });
+    this.validateForm();
+  },
+
+  // 提交表单
+  async submitForm() {
+    if (!this.validateForm()) {
+      this.showToast('请检查表单内容', 'error');
+      return;
     }
-  },
 
-  async loadPostData(id) {
+    this.showLoading('发布中...');
+    this.setData({ submitting: true });
+
     try {
-      wx.showLoading({ title: '加载中...' });
-      const result = await api.post.getPostDetail({ id });
-      
-      if (result.code === 200) {
-        const post = processPostData(result.data);
-        this.setData({
-          title: post.title,
-          content: post.content,
-          images: post.images || [],
-          isPublic: post.is_public,
-          allowComment: post.allow_comment,
-          wikiKnowledge: post.wiki_knowledge,
-          currentStyle: post.style || 'formal',
-          isEditingMode: true,
-          canSubmit: true
-        });
-      } else {
-        wx.showToast({
-          title: result.message || '加载失败',
-          icon: 'none'
-        });
+      const formData = this.getFormData();
+      const result = await this.createPost({
+        title: formData.title,
+        content: formData.content,
+        images: formData.images,
+        category: formData.category,
+        is_public: formData.isPublic,
+        allow_comment: formData.allowComment,
+        wiki_knowledge: formData.wikiKnowledge
+      });
+
+      if (!result) {
+        throw new Error('发布失败');
       }
+
+      this.showToast('发布成功', 'success');
+      setTimeout(() => {
+        wx.navigateBack({
+          delta: 1,
+          success: () => {
+            // 通知列表页刷新
+            getApp().globalData.postsUpdated = true;
+          }
+        });
+      }, 1500);
     } catch (err) {
-      console.debug('加载帖子失败:', err);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
+      this.handleError(err, '发布失败');
     } finally {
-      wx.hideLoading();
-    }
-  },
-
-  onTitleInput(e) {
-    const title = e.detail.value;
-    this.setData({
-      title,
-      canSubmit: title.trim() && this.data.content.trim()
-    });
-  },
-
-  onContentInput(e) {
-    const content = e.detail.value;
-    let warn = '';
-    if (content.length > 3800) {
-      warn = '即将达到字数上限';
-    }
-    
-    this.setData({
-      content,
-      contentWarn: warn,
-      canSubmit: content.trim() && this.data.title.trim()
-    });
-  },
-
-  toggleWiki() {
-    this.setData({
-      isWikiEnabled: !this.data.isWikiEnabled
-    });
-  },
-
-  selectStyle(e) {
-    this.setData({
-      currentStyle: e.currentTarget.dataset.style
-    });
-  },
-
-  togglePublic() {
-    this.setData({
-      isPublic: !this.data.isPublic
-    });
-  },
-
-  toggleComment() {
-    this.setData({
-      allowComment: !this.data.allowComment
-    });
-  },
-
-  toggleWikiKnowledge(e) {
-    this.setData({
-      wikiKnowledge: e.detail.value
-    });
-  },
-
-  showImagePicker() {
-    const remainCount = 9 - this.data.images.length;
-    
-    if (remainCount <= 0) {
-      wx.showToast({
-        title: '最多只能上传9张图片',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    wx.chooseMedia({
-      count: remainCount,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: (res) => {
-        const tempFiles = res.tempFiles;
-        const tempPaths = tempFiles.map(file => file.tempFilePath);
-        
-        this.setData({
-          previewImages: tempPaths,
-          showImagePreview: true,
-          currentPreviewIndex: 0,
-          isEditingMode: false  
-        });
-      }
-    });
-  },
-
-  switchPreviewImage(e) {
-    this.setData({
-      currentPreviewIndex: e.currentTarget.dataset.index
-    });
-  },
-
-  swiperChange(e) {
-    this.setData({
-      currentPreviewIndex: e.detail.current
-    });
-  },
-
-  closePreview() {
-    this.setData({
-      showImagePreview: false,
-      previewImages: []
-    });
-  },
-
-  cropCurrentImage() {
-    const index = this.data.currentPreviewIndex;
-    const imageSrc = this.data.previewImages[index];
-    
-    wx.editImage({
-      src: imageSrc,
-      success: (res) => {
-        const newPreviewImages = [...this.data.previewImages];
-        newPreviewImages[index] = res.tempFilePath;
-        
-        this.setData({
-          previewImages: newPreviewImages
-        });
-      }
-    });
-  },
-
-  confirmPreview() {
-    if (this.data.isEditingMode) {
-      this.setData({
-        images: [...this.data.previewImages],
-        showImagePreview: false,
-        previewImages: [],
-        isEditingMode: false
-      });
-    } else {
-      const currentImages = this.data.images || [];
-      const newImages = [...currentImages, ...this.data.previewImages];
-      
-      this.setData({
-        images: newImages,
-        showImagePreview: false,
-        previewImages: [],
-        isEditingMode: false
-      });
-    }
-  },
-
-  batchEditImages() {
-    this.setData({
-      previewImages: [...this.data.images],
-      showImagePreview: true,
-      currentPreviewIndex: 0,
-      isEditingMode: true
-    });
-  },
-
-  previewImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.images;
-    
-    wx.previewImage({
-      current: images[index],
-      urls: images
-    });
-  },
-
-  deleteImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = [...this.data.images];
-    images.splice(index, 1);
-    
-    this.setData({
-      images
-    });
-  },
-
-  goBack() {
-    wx.navigateBack({
-      delta: 1
-    });
-  },
-
-  async submitPost() {
-    const { title, content, images, isPublic, allowComment, wikiKnowledge, currentStyle } = this.data;
-    
-    if (!title.trim()) {
-      wx.showToast({
-        title: '请输入标题',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    if (!content.trim()) {
-      wx.showToast({
-        title: '请输入内容',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    wx.showLoading({
-      title: '正在发布...',
-      mask: true
-    });
-    
-    try {
-      const params = {
-        title: title.trim(),
-        content: content.trim(),
-        images: JSON.stringify(images),
-        is_public: isPublic,
-        allow_comment: allowComment,
-        wiki_knowledge: wikiKnowledge,
-        style: currentStyle
-      };
-      
-      const result = await api.post.createPost(params);
-      
-      if (result.code === 200) {
-        wx.showToast({
-          title: '发布成功',
-          icon: 'success'
-        });
-        
-        setTimeout(() => {
-          wx.navigateBack({
-            delta: 1
-          });
-        }, 1500);
-      } else {
-        wx.showToast({
-          title: result.message || '发布失败',
-          icon: 'none'
-        });
-      }
-    } catch (err) {
-      console.debug('发布失败:', err);
-      wx.showToast({
-        title: '发布失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      this.setData({ submitting: false });
+      this.hideLoading();
     }
   }
-}); 
+}) 

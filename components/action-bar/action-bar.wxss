@@ -1,0 +1,93 @@
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 100rpx;
+  box-sizing: border-box;
+  z-index: 100;
+}
+
+.action-bar.fixed {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+.action-bar.safe-area {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.action-bar.with-border {
+  border-top: 1rpx solid #EAEAEA;
+}
+
+.action-bar-main {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10rpx;
+  height: 100%;
+  position: relative;
+}
+
+.action-item.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 不同布局样式 */
+.action-item.icon-text {
+  flex-direction: column;
+}
+
+.action-item.icon-only {
+  flex-direction: column;
+}
+
+.action-item.text-only {
+  flex-direction: row;
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 4rpx;
+  line-height: 1;
+}
+
+.action-item.active .action-text {
+  color: #07C160;
+}
+
+.action-count {
+  margin-left: 4rpx;
+  font-size: 22rpx;
+}
+
+/* 不同按钮尺寸 */
+.action-item.small {
+  padding: 0 6rpx;
+}
+
+.action-item.large {
+  padding: 0 16rpx;
+}
+
+/* 额外内容区域 */
+.action-bar-extra {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 10rpx;
+} 

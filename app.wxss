@@ -1,48 +1,342 @@
 /**app.wxss**/
+/* 导入iconfont */
+@font-face {
+  font-family: 'iconfont';  /* Project id 2953625 */
+  src: url('//at.alicdn.com/t/font_2953625_eawt9p9q1h.woff2?t=1638085751117') format('woff2'),
+       url('//at.alicdn.com/t/font_2953625_eawt9p9q1h.woff?t=1638085751117') format('woff'),
+       url('//at.alicdn.com/t/font_2953625_eawt9p9q1h.ttf?t=1638085751117') format('truetype');
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: 32rpx;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-success:before {
+  content: "\e73c";
+}
+
+.icon-error:before {
+  content: "\e69e";
+}
+
+.icon-wechat:before {
+  content: "\e6b5";
+}
+
+.icon-empty:before {
+  content: "\e64d";
+}
+
+/* 全局样式 */
+page {
+  background-color: #f7f9fc;
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica,
+    Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei',
+    sans-serif;
+  color: #333;
+  box-sizing: border-box;
+  --primary-color: #07c160;
+  --danger-color: #ff5252;
+  --success-color: #07c160;
+  --warning-color: #ff9800;
+  --info-color: #2196f3;
+  --gray-color: #999;
+  --light-gray: #f5f5f5;
+}
+
 .container {
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 200rpx 0;
   box-sizing: border-box;
-} 
+  padding: 20rpx;
+}
 
-/* 通用图标样式基础类 */
+/* 通用布局 */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.align-start {
+  align-items: flex-start;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* 文本溢出省略 */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis-2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 通用按钮样式 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  padding: 16rpx 32rpx;
+  border: none;
+  box-shadow: none;
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.btn-danger {
+  background-color: var(--danger-color);
+  color: #fff;
+}
+
+.btn-default {
+  background-color: var(--light-gray);
+  color: #333;
+}
+
+/* 边距辅助 */
+.mt-10 { margin-top: 10rpx; }
+.mt-20 { margin-top: 20rpx; }
+.mt-30 { margin-top: 30rpx; }
+.mb-10 { margin-bottom: 10rpx; }
+.mb-20 { margin-bottom: 20rpx; }
+.mb-30 { margin-bottom: 30rpx; }
+.ml-10 { margin-left: 10rpx; }
+.ml-20 { margin-left: 20rpx; }
+.mr-10 { margin-right: 10rpx; }
+.mr-20 { margin-right: 20rpx; }
+.p-10 { padding: 10rpx; }
+.p-20 { padding: 20rpx; }
+.p-30 { padding: 30rpx; }
+
+/* 图标系统 */
 .icon {
-  width: 40rpx;
-  height: 40rpx;
+  display: inline-block;
+  vertical-align: middle;
 }
 
-/* 搜索相关图标样式 */
-.search-icon, .voice-icon {
-  width: 40rpx;
-  height: 40rpx;
+/* 图标尺寸 */
+.icon-36 { width: 36rpx; height: 36rpx; }
+.icon-40 { width: 40rpx; height: 40rpx; }
+.icon-50 { width: 50rpx; height: 50rpx; }
+.icon-80 { width: 80rpx; height: 80rpx; }
+
+/* 图标间距 */
+.icon-right { margin-right: 8rpx; }
+.icon-right-lg { margin-right: 10rpx; }
+
+/* 输入框样式 */
+.input {
+  width: 100%;
+  height: 88rpx;
+  background: #F5F5F5;
+  border-radius: 44rpx;
+  padding: 0 30rpx;
+  margin-bottom: 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
 }
 
-/* 分类导航图标样式 */
-.category-icon {
-  width: 80rpx;
-  height: 80rpx;
+/* 验证码输入 */
+.code-input-container {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
 }
 
-/* 功能按钮图标样式 */
-.refresh-icon, .source-icon, .recommend-icon {
-  width: 36rpx;
-  height: 36rpx;
+.code-input-container .input {
+  flex: 1;
+  margin-bottom: 0;
 }
 
-/* 结果标题图标 */
-.result-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 10rpx;
+.send-code-btn {
+  width: 200rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #07c160;
+  color: white;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  padding: 0;
+  text-align: center;
+  margin: 0;
+  border: none;
 }
 
-/* 结果操作图标 */
-.action-icon {
-  width: 40rpx;
-  height: 40rpx; 
-  margin-right: 8rpx;
+.send-code-btn.disabled {
+  background: #ccc;
+}
+
+/* 布局工具类 */
+.gap-20 { margin: 20rpx; }
+.p-20 { padding: 20rpx; }
+
+/* 弹性布局 */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 文字截断 */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 功能按钮 */
+.publish-btn {
+  position: fixed;
+  right: 30rpx;
+  bottom: 120rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #07c160;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  border: none;
+  padding: 0;
+}
+
+.publish-btn image {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+/* WEUI组件样式覆盖 */
+/* 按钮 */
+.weui-btn {
+  margin-top: 30rpx !important;
+  margin-bottom: 30rpx !important;
+}
+
+.weui-btn_primary {
+  background-color: #07c160 !important;
+}
+
+/* 表单 */
+.weui-form {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.weui-form__text-area {
+  padding: 30rpx 30rpx 10rpx !important;
+  margin: 0 !important;
+}
+
+.weui-form__title {
+  font-size: 36rpx !important;
+  font-weight: 500 !important;
+}
+
+.weui-form__control-area {
+  margin: 0 !important;
+}
+
+.weui-cells {
+  margin-top: 0 !important;
+  background-color: #fff !important;
+}
+
+.weui-cell {
+  padding: 20rpx 30rpx !important;
+}
+
+.weui-cell_active {
+  background-color: #f8f8f8 !important;
+}
+
+.weui-cell__hd {
+  font-size: 28rpx !important;
+  color: #333 !important;
+}
+
+.weui-cell__bd {
+  font-size: 28rpx !important;
+  color: #333 !important;
+}
+
+/* 上传组件 */
+.weui-uploader {
+  width: 100% !important;
+}
+
+.weui-uploader__input-box {
+  margin-right: 16rpx !important;
+  margin-bottom: 16rpx !important;
+  width: 180rpx !important;
+  height: 180rpx !important;
+  border-radius: 8rpx !important;
+}
+
+.weui-uploader__file {
+  margin-right: 16rpx !important;
+  margin-bottom: 16rpx !important;
+}
+
+.weui-uploader__img {
+  width: 180rpx !important;
+  height: 180rpx !important;
+  border-radius: 8rpx !important;
+}
+
+.transition-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 9999;
 }

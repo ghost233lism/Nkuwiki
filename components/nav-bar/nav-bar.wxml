@@ -1,0 +1,29 @@
+<view class="nav-bar" style="padding-top: {{statusBarHeight}}px; background-color: #ffffff;">
+  <view class="nav-content" style="height: {{navBarHeight}}px;">
+    <view class="left">
+      <view wx:if="{{showBack}}" class="nav-btn" bindtap="onBack">
+        <icon name="back" size="24" color="{{textColor}}" outline="{{false}}" />
+      </view>
+      <view wx:if="{{showHome}}" class="nav-btn" bindtap="onHome">
+        <icon name="home" size="24" color="{{textColor}}" outline="{{false}}" />
+      </view>
+      <view wx:if="{{showLogo}}" class="logo-container">
+        <icon name="logo" size="100" color="{{textColor}}" outline="{{false}}" />
+      </view>
+    </view>
+    <view wx:if="{{title}}" class="title" style="color: {{textColor}};">{{title}}</view>
+    <view class="center-right" style="left: {{notificationLeft}};">
+      <view class="nav-btn" bindtap="onNotification">
+        <icon name="{{hasUnread ? 'notification-unread' : 'notification'}}" size="28" color="{{textColor}}" outline="{{false}}" />
+      </view>
+    </view>
+    <view class="right">
+      <view class="avatar-container" bindtap="onAvatarTap">
+        <icon name="profile" size="28" color="{{textColor}}" outline="{{false}}" />
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 占位元素，防止内容被导航栏遮挡 -->
+<view style="height: {{totalHeight}}px;"></view> 

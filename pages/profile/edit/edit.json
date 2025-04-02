@@ -1,6 +1,17 @@
 {
   "component": true,
-  "usingComponents": {},
+  "usingComponents": {
+    "mp-form-page": "weui-miniprogram/form-page/form-page",
+    "mp-form": "weui-miniprogram/form/form",
+    "mp-cell": "weui-miniprogram/cell/cell",
+    "mp-cells": "weui-miniprogram/cells/cells",
+    "mp-dialog": "weui-miniprogram/dialog/dialog",
+    "mp-toptips": "weui-miniprogram/toptips/toptips",
+    "input-field": "../../../components/input-field/input-field",
+    "text-area": "../../../components/text-area/text-area",
+    "loading": "../../../components/loading/loading",
+    "page-status": "../../../components/page-status/page-status"
+  },
   "navigationBarTitleText": "编辑资料",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black"

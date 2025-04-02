@@ -1,0 +1,24 @@
+.weui-gallery__opr {
+  padding-bottom: 0;
+}
+.weui-gallery__del {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+.weui-gallery:focus {
+  outline: none;
+}
+.weui-gallery__info {
+  padding-top: env(safe-area-inset-top);
+}
+.weui-gallery__del {
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.weui-icon-delete.weui-icon_gallery-delete {
+  background-color: var(--weui-WHITE);
+  /* skyline 不支持 currentColor */
+}
+
+

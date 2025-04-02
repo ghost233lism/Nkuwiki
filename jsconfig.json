@@ -2,12 +2,35 @@
 	"compilerOptions": {
 		"target": "es2015",
 		"module": "commonjs",
-		"baseUrl": "."
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["*"]
+		}
 	},
 	"exclude": [
 		"node_modules",
 		"cloudfunctions/**/*",
-		"**/node_modules/*"
+		"**/node_modules/*",
+		"components/loading-status",
+		"components/page-status",
+		"components/empty-status",
+		"components/error-status",
+		"components/search-page",
+		"wxcomponents/search-input",
+		"wxcomponents/tab-list",
+		"wxcomponents/nav-grid",
+		"wxcomponents/search-results"
 	],
-	"include": ["**/*.js", "**/*.json", "**/*.wxs", "**/*.wxml", "**/*.wxss"]
+	"include": [
+		"pages/**/*.js",
+		"components/**/*.js",
+		"utils/**/*.js",
+		"behaviors/**/*.js",
+		"wxcomponents/towxml/**/*.js",
+		"wxcomponents/function-grid-menu/**/*.js",
+		"**/*.json",
+		"**/*.wxs",
+		"**/*.wxml",
+		"**/*.wxss"
+	]
 }

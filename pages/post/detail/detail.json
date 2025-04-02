@@ -1,7 +1,18 @@
 {
   "navigationBarTitleText": "帖子详情",
   "navigationStyle": "custom",
-  "enablePullDownRefresh": false,
+  "enablePullDownRefresh": true,
   "disableScroll": false,
-  "usingComponents": {}
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#f7f9fc",
+  "usingComponents": {
+    "post-item": "/components/post-item/post-item",
+    "comment-list": "/components/comment-list/comment-list",
+    "comment-item": "/components/comment-item/comment-item",
+    "loading": "/components/loading/loading",
+    "empty": "/components/empty/empty",
+    "mp-dialog": "/miniprogram_npm/weui-miniprogram/dialog/dialog",
+    "mp-toptips": "/miniprogram_npm/weui-miniprogram/toptips/toptips",
+    "mp-actionsheet": "/miniprogram_npm/weui-miniprogram/actionsheet/actionsheet"
+  }
 } 

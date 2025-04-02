@@ -1,0 +1,85 @@
+.nav-bar {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background: #ffffff;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05);
+}
+
+.nav-content {
+  position: relative;
+  height: 100rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+}
+
+.left {
+  position: absolute;
+  left: 10rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.nav-btn {
+  height: 72rpx;
+  width: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 0rpx;
+  width: 160rpx;
+  height: 80rpx;
+}
+
+.title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 34rpx;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+/* 添加中间偏右的通知按钮位置 */
+.center-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.right {
+  position: absolute;
+  right: 20rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100rpx; /* 只需要放置头像，减小宽度 */
+}
+
+.avatar-container {
+  height: 72rpx;
+  width: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+} 

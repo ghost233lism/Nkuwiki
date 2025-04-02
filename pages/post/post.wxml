@@ -1,160 +1,128 @@
-<view class="post-container">
-  <view class="post-header">
-    <view class="back-icon" bindtap="goBack">
-      <image src="/assets/icons/back.png"></image>
-    </view>
-    <view class="header-title">发布帖子</view>
-    <button class="publish-btn" bindtap="submitPost">发布</button>
-  </view>
+<!-- 顶部消息提示 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 
-  <view class="post-form">
-    <view class="input-box">
-      <input 
-        class="title-input" 
-        placeholder="请输入标题" 
-        maxlength="50"
-        bindinput="onTitleInput"
-        value="{{title}}"
-      />
-    </view>
-      
-    <view class="input-box">
-      <textarea 
-        class="content-input" 
-        placeholder="分享你的想法..." 
-        bindinput="onContentInput"
-        value="{{content}}"
-        maxlength="4000"
-      />
-    </view>
-      
-    <view class="editor-toolbar">
-      <view class="toolbar-item">B</view>
-      <view class="toolbar-item">/</view>
-      <view class="toolbar-item">@</view>
-      <view class="toolbar-item wiki-button {{isWikiEnabled ? 'active' : ''}}" bindtap="toggleWiki">
-        <image src="/assets/icons/index/logo.png" mode="aspectFit"></image>
-        <text>Wiki润色</text>
-      </view>
-    </view>
+<!-- 确认对话框 -->
+<mp-dialog 
+  title="{{dialogTitle}}" 
+  show="{{dialogShow}}" 
+  bindbuttontap="tapDialogButton" 
+  buttons="{{dialogButtons}}">
+  <view>{{dialogContent}}</view>
+</mp-dialog>
 
-    <view class="image-upload-container">
-      <view class="upload-title">添加图片</view>
-      
-      <view class="upload-image-grid">
-        <block wx:for="{{images}}" wx:key="index">
-          <view class="upload-image-item">
-            <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}"></image>
-            <view class="delete-image-btn" catchtap="deleteImage" data-index="{{index}}">×</view>
-          </view>
-        </block>
-        
-        <view class="upload-image-item add-button" bindtap="showImagePicker" wx:if="{{images.length < 9}}">
-          <view class="add-icon">+</view>
-          <view class="add-text">添加</view>
-        </view>
-      </view>
-      
-      <view class="image-status-bar">
-        <view class="image-count">已选择 {{images.length}}/9 张图片</view>
-        <view class="edit-all-btn" bindtap="batchEditImages" wx:if="{{images.length > 0}}">批量编辑</view>
-      </view>
-    </view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <!-- 加载状态 -->
+  <loading 
+    wx:if="{{submitting}}" 
+    type="dot-gray"
+    show="{{submitting}}"
+  />
 
-    <view class="topic-section">
-      <text class="section-title">选择话题</text>
-      <view class="topic-list">
-        <view class="topic-tag">#校园生活</view>
-        <view class="topic-tag">#学习交流</view>
-        <view class="topic-tag">#求助</view>
-        <view class="topic-tag add-topic">#添加话题</view>
-      </view>
-    </view>
+  <!-- 错误状态 -->
+  <error 
+    wx:elif="{{error}}"
+    text="{{errorMsg}}"
+    bind:retry="initPage"
+  />
 
-    <view class="wiki-card" wx:if="{{isWikiEnabled}}">
-      <view class="wiki-header">
-        <view class="wiki-title">
-          <image src="/assets/icons/wiki-robot.png" class="wiki-icon"></image>
-          <text>Wiki 润色建议</text>
-        </view>
-        <text class="apply-btn">应用</text>
-      </view>
-      
-      <view class="wiki-content">
-        建议调整：1. 增加段落间的过渡，使文章更加连贯
-        2. 补充更多具体细节，增强文章说服力
-        3. 优化标点符号使用，提升可读性
-      </view>
+  <!-- 表单内容 -->
+  <block wx:else>
+    <mp-form-page title="发布帖子">
+      <mp-form>
+        <mp-cells>
+          <!-- 标题输入 -->
+          <mp-cell 
+            title="标题"
+            prop="title"
+            show-error="{{errors.title ? true : false}}"
+            error="{{errors.title}}"
+          >
+            <input-field
+              type="text"
+              placeholder="请输入标题(2-50字)"
+              value="{{form.title}}"
+              bind:input="onFormChange"
+              data-field="title"
+            />
+          </mp-cell>
 
-      <view class="wiki-divider"></view>
+          <!-- 内容输入 -->
+          <mp-cell 
+            title="内容"
+            prop="content"
+            show-error="{{errors.content ? true : false}}"
+            error="{{errors.content}}"
+          >
+            <text-area
+              placeholder="请输入内容(至少10字)"
+              value="{{form.content}}"
+              bind:input="onFormChange"
+              data-field="content"
+              maxlength="5000"
+              height="400"
+            />
+          </mp-cell>
 
-      <view class="style-section">
-        <text class="style-title">文风选择</text>
-        <view class="style-options">
-          <view class="style-option {{currentStyle === 'formal' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="formal">正式</view>
-          <view class="style-option {{currentStyle === 'casual' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="casual">轻松</view>
-          <view class="style-option {{currentStyle === 'humorous' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="humorous">幽默</view>
-          <view class="style-option {{currentStyle === 'professional' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="professional">专业</view>
-        </view>
-      </view>
-    </view>
-  </view>
+          <!-- 图片上传 -->
+          <mp-cell title="图片">
+            <mp-uploader
+              files="{{form.images}}"
+              binddelete="onImageDelete"
+              bindselect="onImageSelect"
+              select="{{selectFile}}"
+              upload="{{uploadFile}}"
+              max-count="9"
+            />
+          </mp-cell>
 
-  <view class="post-footer">
-    <view class="visibility-options">
-      <view class="visibility-option-pill {{isPublic ? 'active' : ''}}" bindtap="togglePublic">
-        <image src="/assets/icons/profile/notification.png"></image>
-        <text>公开</text>
-      </view>
-      
-      <view class="visibility-option-pill {{allowComment ? 'active' : ''}}" bindtap="toggleComment">
-        <image src="/assets/icons/index/comment.png"></image>
-        <text>允许评论</text>
-      </view>
-      
-      <view class="wiki-switch">
-        <view class="wiki-icon"></view>
-        <text>wiki小知</text>
-        <switch checked="{{wikiKnowledge}}" color="#6252ee" bindchange="toggleWikiKnowledge"></switch>
-      </view>
-    </view>
-  </view>
-</view>
+          <!-- 分类选择 -->
+          <mp-cell title="分类">
+            <picker-field
+              mode="selector"
+              range="{{categories}}"
+              range-key="name"
+              value="{{categoryIndex}}"
+              bind:change="onCategoryChange"
+            />
+          </mp-cell>
 
-<view class="image-preview-modal" wx:if="{{showImagePreview}}">
-  <view class="preview-header">
-    <view class="preview-title">图片预览</view>
-    <view class="preview-close" bindtap="closePreview">×</view>
-  </view>
-  
-  <swiper class="preview-swiper" current="{{currentPreviewIndex}}" bindchange="swiperChange">
-    <swiper-item wx:for="{{previewImages}}" wx:key="index">
-      <image src="{{item}}" mode="aspectFit" class="preview-image"></image>
-    </swiper-item>
-  </swiper>
-  
-  <view class="preview-indicator">{{currentPreviewIndex + 1}}/{{previewImages.length}}</view>
-  
-  <view class="preview-thumbnails" wx:if="{{previewImages.length > 1}}">
-    <scroll-view scroll-x="true" class="thumbnail-scroll">
-      <block wx:for="{{previewImages}}" wx:key="index">
-        <image 
-          class="preview-thumbnail {{currentPreviewIndex === index ? 'active' : ''}}" 
-          src="{{item}}" 
-          mode="aspectFill"
-          data-index="{{index}}"
-          bindtap="switchPreviewImage">
-        </image>
-      </block>
-    </scroll-view>
-  </view>
-  
-  <view class="preview-actions">
-    <view class="preview-button crop-btn" bindtap="cropCurrentImage">裁剪</view>
-    <view class="preview-button confirm-btn" bindtap="confirmPreview">确认</view>
-  </view>
-</view> 
+          <!-- 设置选项 -->
+          <mp-cell title="设置">
+            <mp-checkbox-group multi="{{true}}" bindchange="onCheckboxGroupChange">
+              <mp-checkbox 
+                label="公开帖子" 
+                desc="他人可以看到这个帖子"
+                value="isPublic" 
+                checked="{{form.isPublic}}" 
+              />
+              <mp-checkbox 
+                label="允许评论" 
+                desc="他人可以评论这个帖子"
+                value="allowComment" 
+                checked="{{form.allowComment}}" 
+              />
+              <mp-checkbox 
+                label="知识分享" 
+                desc="标记为校园知识库内容"
+                value="wikiKnowledge" 
+                checked="{{form.wikiKnowledge}}" 
+              />
+            </mp-checkbox-group>
+          </mp-cell>
+        </mp-cells>
+      </mp-form>
+
+      <!-- 底部按钮 -->
+      <view slot="footer">
+        <button
+          type="primary"
+          disabled="{{!canSubmit || submitting}}"
+          loading="{{submitting}}"
+          bind:tap="submitForm"
+        >
+          发布
+        </button>
+      </view>
+    </mp-form-page>
+  </block>
+</page-status> 

@@ -1,114 +1,106 @@
-const formatTime = date => {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours()
-  const minute = date.getMinutes()
-  const second = date.getSeconds()
+/**
+ * 通用工具函数集合
+ */
 
+// ==================== 配置引入 ====================
+// 从全局App获取API配置，避免循环依赖
+const getAPIConfig = () => {
+  try {
+    const app = getApp();
+    return app ? app.globalData.API_CONFIG : {
+      base_url: 'https://nkuwiki.com',
+      api_prefix: '/api',
+      prefixes: {
+        wxapp: '/wxapp',
+        agent: '/agent',
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+  } catch (err) {
+    console.debug('获取API_CONFIG失败，使用默认配置:', err);
+    return {
+      base_url: 'https://nkuwiki.com',
+      api_prefix: '/api',
+      prefixes: {
+        wxapp: '/wxapp',
+        agent: '/agent',
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+  }
+};
+
+// ==================== 日期时间处理 ====================
+
+const formatNumber = n => n.toString().padStart(2, '0')
+
+const formatTime = date => {
+  const [year, month, day, hour, minute, second] = [
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds()
+  ]
   return `${[year, month, day].map(formatNumber).join('/')} ${[hour, minute, second].map(formatNumber).join(':')}`
 }
 
-const formatNumber = n => {
-  n = n.toString()
-  return n[1] ? n : `0${n}`
-}
-
-/**
- * 格式化相对时间
- * @param {any} timestamp - 任何表示时间的值
- * @return {string} 相对时间字符串
- */
 function formatRelativeTime(timestamp) {
-  // 阻止处理已格式化的字符串
-  if (typeof timestamp === 'string' &&
-      (timestamp.includes('小时前') ||
-       timestamp.includes('分钟前') ||
-       timestamp.includes('秒前') ||
-       timestamp.includes('天前') ||
-       timestamp.includes('月前') ||
-       timestamp.includes('年前') ||
-       timestamp === '刚刚发布')) {
-    return timestamp; // 已经是格式化好的相对时间，直接返回
+  if (typeof timestamp === 'string' && /[年月天时分秒]前|刚刚发布/.test(timestamp)) {
+    return timestamp
   }
 
-  // 如果没有传入值，直接返回默认值
-  if (!timestamp) {
-    return '刚刚发布';
-  }
+  if (!timestamp) return '刚刚发布'
 
-  // 标准化日期对象
-  let date;
+  let date
   try {
-    if (timestamp instanceof Date) {
-      date = timestamp;
-    } else if (typeof timestamp === 'string') {
-      // 尝试解析日期字符串
-      date = new Date(timestamp);
-    } else if (typeof timestamp === 'number') {
-      date = new Date(timestamp);
-    } else {
-      // 对象类型可能是云数据库的时间类型
-      console.log('尝试解析复杂时间对象:', JSON.stringify(timestamp));
-      if (timestamp.toDate) {
-        date = timestamp.toDate(); // Firestore时间戳
-      } else {
-        console.error('未知时间格式:', timestamp);
-        return '刚刚发布';
-      }
-    }
+    date = timestamp instanceof Date ? timestamp :
+           typeof timestamp === 'string' || typeof timestamp === 'number' ? new Date(timestamp) :
+           timestamp.toDate ? timestamp.toDate() : new Date()
   } catch (err) {
-    console.error('时间格式化错误:', err, timestamp);
-    return '刚刚发布'; // 出错时使用默认值
+    console.debug('时间格式化错误:', err)
+    return '刚刚发布'
   }
 
-  // 检查日期是否有效
-  if (isNaN(date.getTime())) {
-    console.error('无效日期:', timestamp);
-    return '刚刚发布';
+  if (isNaN(date.getTime())) return '刚刚发布'
+
+  const diff = Date.now() - date.getTime()
+  const seconds = Math.floor(diff / 1000)
+  
+  const timeUnits = [
+    { unit: '年', value: 365 * 24 * 60 * 60 },
+    { unit: '个月', value: 30 * 24 * 60 * 60 },
+    { unit: '天', value: 24 * 60 * 60 },
+    { unit: '小时', value: 60 * 60 },
+    { unit: '分钟', value: 60 },
+    { unit: '秒', value: 1 }
+  ]
+
+  if (seconds < 0) return '刚刚发布'
+  if (seconds < 15) return '刚刚发布'
+
+  for (const { unit, value } of timeUnits) {
+    const count = Math.floor(seconds / value)
+    if (count > 0) return `${count}${unit}前`
   }
 
-  const now = new Date();
-  const diff = now.getTime() - date.getTime(); // 毫秒差
-
-  // 计算时间差
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  const months = Math.floor(days / 30);
-  const years = Math.floor(days / 365);
-
-  // 返回相对时间
-  if (seconds < 0) {
-    return '刚刚发布'; // 未来时间
-  } else if (seconds < 60) {
-    return seconds < 15 ? '刚刚发布' : `${seconds}秒前`;
-  } else if (minutes < 60) {
-    return `${minutes}分钟前`;
-  } else if (hours < 24) {
-    return `${hours}小时前`;
-  } else if (days < 30) {
-    return `${days}天前`;
-  } else if (months < 12) {
-    return `${months}个月前`;
-  } else {
-    return `${years}年前`;
-  }
+  return '刚刚发布'
 }
 
-/**
- * 获取系统信息
- * @returns {Object} 系统信息
- */
+// ==================== 系统信息 ====================
+
 function getSystemInfo() {
   try {
-    // 使用新的API获取系统信息
-    const appBaseInfo = wx.getAppBaseInfo();
-    const deviceInfo = wx.getDeviceInfo();
-    const windowInfo = wx.getWindowInfo();
-    const systemSetting = wx.getSystemSetting();
-    const appAuthorizeSetting = wx.getAppAuthorizeSetting();
+    const appBaseInfo = wx.getAppBaseInfo()
+    const deviceInfo = wx.getDeviceInfo()
+    const windowInfo = wx.getWindowInfo()
+    const systemSetting = wx.getSystemSetting()
+    const appAuthorizeSetting = wx.getAppAuthorizeSetting()
     
     return {
       // 基础信息
@@ -152,211 +144,639 @@ function getSystemInfo() {
       notificationAlertAuthorized: appAuthorizeSetting.notificationAlertAuthorized,
       notificationBadgeAuthorized: appAuthorizeSetting.notificationBadgeAuthorized,
       notificationSoundAuthorized: appAuthorizeSetting.notificationSoundAuthorized
-    };
+    }
   } catch (err) {
-    console.error('获取系统信息失败:', err);
-    return {};
+    console.debug('获取系统信息失败:', err)
+    return {}
   }
 }
 
-/**
- * 获取Storage的封装函数
- * @param {string} key - 存储的键
- * @returns {any} 存储的值
- */
-function getStorage(key) {
-  try {
-    return wx.getStorageSync(key);
-  } catch (e) {
-    console.debug(`获取Storage失败[${key}]:`, e);
-    return null;
+// ==================== 存储操作 ====================
+
+const storage = {
+  get: key => {
+    try {
+      return wx.getStorageSync(key)
+    } catch (e) {
+      console.debug(`获取Storage失败[${key}]:`, e)
+      return null
+    }
+  },
+  
+  set: (key, data) => {
+    try {
+      wx.setStorageSync(key, data)
+      return true
+    } catch (e) {
+      console.debug(`设置Storage失败[${key}]:`, e)
+      return false
+    }
+  },
+  
+  remove: key => {
+    try {
+      wx.removeStorageSync(key)
+      return true
+    } catch (e) {
+      console.debug(`移除Storage失败[${key}]:`, e)
+      return false
+    }
   }
 }
 
-/**
- * 设置Storage的封装函数
- * @param {string} key - 存储的键
- * @param {any} data - 存储的数据
- * @returns {boolean} 是否设置成功
- */
-function setStorage(key, data) {
-  try {
-    wx.setStorageSync(key, data);
-    return true;
-  } catch (e) {
-    console.debug(`设置Storage失败[${key}]:`, e);
-    return false;
+// ==================== UI操作 ====================
+
+const ToastType = {
+  SUCCESS: 'success',
+  LOADING: 'loading',
+  ERROR: 'error',
+  NONE: 'none'
+}
+
+const ui = {
+  showToast: (title, { type = ToastType.NONE, duration = 1500, mask = false } = {}) => {
+    if (type === ToastType.LOADING) {
+      wx.showLoading({ title, mask })
+    } else {
+      wx.showToast({
+        title,
+        icon: type,
+        duration,
+        mask
+      })
+    }
+  },
+
+  hideToast: () => {
+    wx.hideLoading()
+    wx.hideToast()
+  },
+
+  showDialog: ({ title, content, confirmText = '确定', cancelText = '取消', showCancel = true }) => {
+    return new Promise((resolve, reject) => {
+      wx.showModal({
+        title,
+        content,
+        confirmText,
+        cancelText,
+        showCancel,
+        success: res => resolve(res.confirm),
+        fail: err => reject(err)
+      })
+    })
+  },
+
+  showActionSheet: items => {
+    return new Promise((resolve, reject) => {
+      wx.showActionSheet({
+        itemList: items,
+        success: res => resolve(res.tapIndex),
+        fail: err => reject(err)
+      })
+    })
+  },
+
+  copyText: (text, tip = '复制成功') => {
+    wx.setClipboardData({
+      data: text,
+      success: () => ui.showToast(tip)
+    })
   }
 }
 
-/**
- * 移除Storage的封装函数
- * @param {string} key - 存储的键
- * @returns {boolean} 是否移除成功
- */
-function removeStorage(key) {
-  try {
-    wx.removeStorageSync(key);
-    return true;
-  } catch (e) {
-    console.debug(`移除Storage失败[${key}]:`, e);
-    return false;
+// ==================== 导航操作 ====================
+
+const nav = {
+  setTitle: title => wx.setNavigationBarTitle({ title }),
+
+  back: (delta = 1) => wx.navigateBack({ delta }),
+
+  to: (url, params) => {
+    if (params) {
+      const query = Object.entries(params)
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join('&')
+      url += (url.includes('?') ? '&' : '?') + query
+    }
+    wx.navigateTo({ url })
+  },
+
+  // 添加navigateTo作为to方法的别名
+  navigateTo: function(url, params) {
+    return this.to(url, params);
+  },
+
+  redirect: (url, params) => {
+    if (params) {
+      const query = Object.entries(params)
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join('&')
+      url += (url.includes('?') ? '&' : '?') + query
+    }
+    wx.redirectTo({ url })
+  },
+
+  switchTab: url => wx.switchTab({ url }),
+
+  relaunch: url => wx.reLaunch({ url })
+}
+
+// ==================== 错误处理 ====================
+
+const ErrorType = {
+  NETWORK: 'NETWORK_ERROR',    // 网络错误
+  API: 'API_ERROR',           // 接口错误
+  PARAMS: 'PARAMS_ERROR',     // 参数错误
+  VALIDATION: 'VALIDATION_ERROR', // 验证错误
+  AUTH: 'AUTH_ERROR',         // 认证错误
+  PERMISSION: 'PERMISSION_ERROR', // 权限错误
+  DATA: 'DATA_ERROR',         // 数据错误
+  FILE: 'FILE_ERROR',         // 文件错误
+  UNKNOWN: 'UNKNOWN_ERROR'    // 未知错误
+}
+
+const error = {
+  create: (message, code = 400, details = null) => {
+    const err = new Error(message);
+    err.code = code;
+    err.details = details;
+    return err;
+  },
+  
+  report: (err) => {
+    console.debug('错误上报:', err);
+    // 可以在这里添加错误上报逻辑，如发送到服务器
+  },
+  
+  handle: (err, defaultMsg = '操作失败') => {
+    const message = err?.message || (typeof err === 'string' ? err : defaultMsg);
+    ui.showToast(message, { type: ToastType.ERROR });
+    console.debug('错误详情:', err);
+    return { error: true, message };
   }
 }
 
+// ==================== HTTP请求 ====================
+
 /**
- * 获取用户OpenID
- * @param {boolean} showLoading - 是否显示加载中提示，默认为true
- * @returns {Promise<string>} 用户OpenID
+ * GET请求
+ * @param {string} url - 请求URL
+ * @param {object} [params] - 请求参数
+ * @returns {Promise<object>} - 响应数据
  */
-async function getOpenID(showLoading = true) {
-  try {
-    // 先检查本地存储中是否已有openid
-    const cachedOpenID = getStorage('openid');
-    if (cachedOpenID) {
-      console.debug('从缓存获取openid:', cachedOpenID);
-      
-      // 保存到全局变量
-      const app = getApp();
-      if (app && app.globalData) {
-        app.globalData.openid = cachedOpenID;
+const get = async (url, params = {}) => {
+  const openid = storage.get('openid')
+  const finalUrl = url.startsWith('/') ? url : '/' + url
+  const apiUrl = finalUrl.startsWith(getAPIConfig().api_prefix) ? finalUrl : getAPIConfig().api_prefix + finalUrl
+  
+  const requestData = { ...params }
+  if (openid && !requestData.openid) {
+    requestData.openid = openid
+  }
+  
+  let requestUrl = `${getAPIConfig().base_url}${apiUrl}`
+  if (Object.keys(requestData).length) {
+    const queryParams = Object.entries(requestData)
+      .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&')
+    requestUrl += `${apiUrl.includes('?') ? '&' : '?'}${queryParams}`
+  }
+  
+  console.debug('GET请求:', requestUrl)
+  
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: requestUrl,
+      method: 'GET',
+      header: {
+        ...getAPIConfig().headers,
+        ...(openid ? {'X-User-OpenID': openid} : {})
+      },
+      success(res) {
+        console.debug('GET响应:', res.data)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data)
+        } else {
+          reject({
+            code: res.data.code || res.statusCode,
+            message: res.data.message || '请求失败'
+          })
+        }
+      },
+      fail(err) {
+        console.debug('GET请求失败:', err)
+        reject({
+          code: -1,
+          message: err.errMsg || '网络请求失败'
+        })
+      }
+    })
+  })
+}
+
+/**
+ * POST请求
+ * @param {string} url - 请求URL
+ * @param {object} [data] - 请求数据
+ * @returns {Promise<object>} - 响应数据
+ */
+const post = async (url, data = {}) => {
+  const openid = storage.get('openid')
+  const finalUrl = url.startsWith('/') ? url : '/' + url
+  const apiUrl = finalUrl.startsWith(getAPIConfig().api_prefix) ? finalUrl : getAPIConfig().api_prefix + finalUrl
+  const requestUrl = `${getAPIConfig().base_url}${apiUrl}`
+  
+  const requestData = { ...data }
+  if (openid && !requestData.openid) {
+    requestData.openid = openid
+  }
+  
+  console.debug('POST请求:', requestUrl, requestData)
+  
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: requestUrl,
+      method: 'POST',
+      data: requestData,
+      header: {
+        ...getAPIConfig().headers,
+        ...(openid ? {'X-User-OpenID': openid} : {})
+      },
+      success(res) {
+        console.debug('POST响应:', res.data)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data)
+        } else {
+          reject({
+            code: res.data.code || res.statusCode,
+            message: res.data.message || '请求失败'
+          })
+        }
+      },
+      fail(err) {
+        console.debug('POST请求失败:', err)
+        reject({
+          code: -1,
+          message: err.errMsg || '网络请求失败'
+        })
+      }
+    })
+  })
+}
+
+// ==================== API客户端工厂 ====================
+
+// API客户端缓存，避免重复创建相同的客户端
+const apiClientCache = {};
+
+/**
+ * 创建API客户端
+ * @param {String} basePath API基础路径
+ * @param {Object} endpoints API端点配置
+ * @returns {Object} API客户端
+ */
+function createApiClient(basePath, endpoints = {}) {
+  // 标准化基础路径，确保以/开头
+  const normalizedBasePath = basePath.startsWith('/') ? basePath : `/${basePath}`;
+  
+  // 缓存key = 基础路径 + 端点JSON
+  const cacheKey = `${normalizedBasePath}_${JSON.stringify(endpoints)}`;
+  
+  // 如果已缓存，直接返回缓存的客户端
+  if (apiClientCache[cacheKey]) {
+    return apiClientCache[cacheKey];
+  }
+  
+  const client = {};
+  
+  // 构建每个端点的方法
+  for (const [name, config] of Object.entries(endpoints)) {
+    client[name] = async (data = {}) => {
+      // 始终尝试获取openid并添加到请求数据中（如果API需要）
+      if (config.params && config.params.openid) {
+        // 先检查传入的数据中是否已有openid
+        if (!data.openid) {
+          // 尝试从storage获取
+          const openid = storage.get('openid');
+          // 如果存在，添加到请求数据
+          if (openid) {
+            data.openid = openid;
+          }
+          // 如果不存在且是必要参数，下面的必填参数验证会捕获这个错误
+        }
       }
       
-      return cachedOpenID;
+      // 验证必填参数
+      if (config.params) {
+        const missingParams = Object.entries(config.params)
+          .filter(([_, required]) => required === true)
+          .map(([key]) => key)
+          .filter(key => !data.hasOwnProperty(key) || data[key] === undefined || data[key] === null || data[key] === '');
+        
+        if (missingParams.length > 0) {
+          console.debug(`API请求缺少必填参数: ${missingParams.join(', ')}`);
+          return {
+            code: 400,
+            message: `参数错误: 缺少${missingParams.join(', ')}`,
+            data: null
+          };
+        }
+      }
+      
+      // 构建请求路径
+      let url = normalizedBasePath;
+      if (config.path) {
+        url = `${normalizedBasePath}${config.path.startsWith('/') ? config.path : `/${config.path}`}`;
+      }
+      
+      // 设置请求方法（仅支持GET和POST）
+      const method = (config.method || 'GET').toUpperCase();
+      if (method !== 'GET' && method !== 'POST') {
+        console.debug(`不支持的请求方法: ${method}，将使用GET方法`);
+        method = 'GET';
+      }
+      
+      try {
+        // 根据请求方法发送请求
+        let response;
+        if (method === 'GET') {
+          response = await get(url, data);
+        } else {
+          response = await post(url, data);
+        }
+        
+        // 确保返回标准格式
+        if (response && typeof response === 'object' && 'code' in response) {
+          return response;
+        }
+        
+        // 包装非标准响应
+        return {
+          code: 200,
+          message: 'success',
+          data: response
+        };
+      } catch (err) {
+        console.debug(`API请求错误: ${url}`, err);
+        return {
+          code: err.code || 500,
+          message: err.message || '网络请求失败',
+          data: null,
+          error: err
+        };
+      }
+    };
+  }
+  
+  // 缓存并返回客户端
+  apiClientCache[cacheKey] = client;
+  return client;
+}
+
+// ==================== 工具函数 ====================
+
+const debounce = (fn, delay = 500) => {
+  let timer = null
+  return function(...args) {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => fn.apply(this, args), delay)
+  }
+}
+
+const throttle = (fn, delay = 500) => {
+  let last = 0
+  return function(...args) {
+    const now = Date.now()
+    if (now - last > delay) {
+      last = now
+      fn.apply(this, args)
+    }
+  }
+}
+
+const isEmptyObject = obj => 
+  obj && Object.keys(obj).length === 0 && obj.constructor === Object
+
+const isValidArray = arr => 
+  Array.isArray(arr) && arr.length > 0
+
+const parseJsonField = (field, defaultValue = []) => {
+  try {
+    return field ? JSON.parse(field) : defaultValue
+  } catch (e) {
+    console.debug('JSON解析失败:', e)
+    return defaultValue
+  }
+}
+
+/**
+ * 获取应用信息
+ * @param {boolean} forceReload 是否强制刷新
+ * @returns {Promise<Object>} 应用信息对象
+ */
+const getAppInfo = async (forceReload = false) => {
+  try {
+    const app = getApp();
+    if (!app) {
+      throw new Error('无法获取应用实例');
     }
     
-    // 再检查全局变量中是否已有openid
+    return await app.getAboutInfo(forceReload);
+  } catch (err) {
+    console.debug('获取应用信息失败:', err);
+    // 返回默认信息
+    return {
+      version: '0.0.1'
+    };
+  }
+};
+
+/**
+ * 获取微信用户信息
+ * @returns {Promise<Object>} 用户信息
+ */
+const getUserProfile = () => {
+  return new Promise((resolve, reject) => {
+    wx.getUserProfile({
+      desc: '用于完善用户资料',
+      success: res => {
+        const { userInfo } = res;
+        resolve({
+          nickname: userInfo.nickName,
+          avatar: userInfo.avatarUrl,
+          gender: userInfo.gender,
+          country: userInfo.country,
+          province: userInfo.province,
+          city: userInfo.city,
+          language: userInfo.language
+        });
+      },
+      fail: err => {
+        console.debug('获取用户信息失败:', err);
+        reject(new Error('获取用户信息失败'));
+      }
+    });
+  });
+};
+
+// 获取openid
+const getOpenID = async (useCache = true) => {
+  // 优先从缓存获取
+  const cachedOpenid = storage.get('openid');
+  if (useCache && cachedOpenid) {
+    return cachedOpenid;
+  }
+  
+  try {
+    // 调用app实例的wxLogin方法获取
     const app = getApp();
-    if (app && app.globalData && app.globalData.openid) {
-      console.debug('从全局变量获取到openid:', app.globalData.openid);
+    if (!app) {
+      throw new Error('无法获取应用实例');
+    }
+    
+    // 已经登录过，直接返回全局的openid
+    if (app.globalData.openid) {
       return app.globalData.openid;
     }
     
-    // 添加Loading提示，根据参数决定是否显示
-    if (showLoading) {
-      wx.showLoading({
-        title: '登录中...',
-        mask: true
-      });
-    } else {
-      // 确保关闭任何现有loading
-      wx.hideLoading();
+    // 触发登录流程获取openid
+    const res = await app.wxLogin();
+    if (res.code === 200 && res.data && res.data.openid) {
+      return res.data.openid;
     }
     
-    // 确保云环境初始化
-    if (!wx.cloud) {
-      console.error('云开发环境未初始化');
-      if (showLoading) wx.hideLoading();
-      return null;
-    }
-    
-    // 尝试通过wx.login获取临时凭证code
-    try {
-      const loginResult = await new Promise((resolve, reject) => {
-        wx.login({
-          success: res => resolve(res),
-          fail: err => reject(err)
-        });
-      });
-      
-      if (loginResult && loginResult.code) {
-        console.debug('获取到wx.login的code:', loginResult.code);
-        
-        // 调用云函数获取openid
-        const wxCloudResult = await wx.cloud.callFunction({
-          name: 'getOpenID',
-          data: { code: loginResult.code },
-          timeout: 10000 // 设置超时时间为10秒
-        });
-        
-        // 只处理新格式
-        if (wxCloudResult && wxCloudResult.result && 
-            wxCloudResult.result.data && wxCloudResult.result.data.openid) {
-          const openid = wxCloudResult.result.data.openid;
-          console.debug('通过云函数获取到openid:', openid);
-          
-          // 保存到全局变量
-          if (app && app.globalData) {
-            app.globalData.openid = openid;
-          }
-          
-          // 保存到本地存储
-          setStorage('openid', openid);
-          
-          // 隐藏Loading
-          if (showLoading) wx.hideLoading();
-          
-          return openid;
-        } else {
-          console.error('云函数返回结果不包含openid:', wxCloudResult);
-          if (showLoading) wx.hideLoading();
-          return null;
-        }
-      } else {
-        console.error('wx.login获取code失败:', loginResult);
-        if (showLoading) wx.hideLoading();
-        return null;
-      }
-    } catch (err) {
-      console.error('登录过程出错:', err);
-      if (showLoading) wx.hideLoading();
-      return null;
-    }
+    throw new Error(res.message || '获取openid失败');
   } catch (err) {
-    console.error('获取openid过程中出错:', err);
-    if (showLoading) wx.hideLoading();
-    return null;
+    console.debug('获取openid失败:', err);
+    throw err;
   }
 }
 
-function processCloudUrl(url) {
+// ==================== 链接处理 ====================
+
+/**
+ * 解析各种类型的URL
+ * @param {string} url - 原始URL
+ * @returns {string} - 处理后的可用URL
+ */
+const parseUrl = url => {
   if (!url) return '';
-  if (typeof url !== 'string') return '';
   
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-
-  if (url.startsWith('cloud://')) {
-    const matches = url.match(/cloud:\/\/(.*?)\.(.*?)\/(.*)/);
-    return matches?.length === 4 ? `https://${matches[2]}.tcb.qcloud.la/${matches[3]}` : '';
+  // 已经是完整的http/https链接
+  if (/^https?:\/\//.test(url)) {
+    return url;
   }
+  
+  // 处理云存储链接
+  if (/^cloud:\/\//.test(url)) {
+    console.debug('解析云存储链接:', url);
+    
+    try {
+      // 示例: cloud://nkuwiki-xxxx.6e6b-nkuwiki-xxxx-1234567890/path/to/file.jpg
+      // 转换为: https://6e6b-nkuwiki-xxxx-1234567890.tcb.qcloud.la/path/to/file.jpg
+      const cloudRegex = /^cloud:\/\/([^\/]+)\/(.+)$/;
+      const match = url.match(cloudRegex);
+      
+      if (!match) {
+        console.debug('云存储链接格式不匹配:', url);
+        return url;
+      }
+      
+      // 提取环境ID和文件路径
+      const cloudEnvInfo = match[1]; // nkuwiki-xxxx.6e6b-nkuwiki-xxxx-1234567890
+      const filePath = match[2]; // path/to/file.jpg
+      
+      // 分解环境信息以获取完整的环境ID部分
+      const parts = cloudEnvInfo.split('.');
+      let envId = cloudEnvInfo;
+      
+      if (parts.length > 1) {
+        // 如果包含.，取第二部分作为环境ID
+        envId = parts[1];
+      }
+      
+      // 构建https访问链接
+      const result = `https://${envId}.tcb.qcloud.la/${filePath}`;
+      console.debug('解析后的云存储链接:', result);
+      return result;
+    } catch (err) {
+      console.debug('解析云存储链接出错:', err);
+      return url;
+    }
+  }
+  
+  // 对于相对路径，添加基础URL
+  if (url.startsWith('/')) {
+    return `${getAPIConfig().base_url}${url}`;
+  }
+  
   return url;
-}
+};
 
-function processPostData(post) {
-  if (!post) return null;
+/**
+ * 解析图片URL数组
+ * @param {Array|string} url - 图片URL数组或JSON字符串
+ * @returns {Array} - 处理后的图片URL数组
+ */
+const parseImageUrl = url => {
+  let imageArray = [];
   
-  const images = (post.image || post.images || '').toString();
-  const tags = (post.tag || post.tags || '').toString();
-  const likedUsers = (post.liked_user || post.liked_users || '').toString();
-  const favoriteUsers = (post.favorite_user || post.favorite_users || '').toString();
-
-  return {
-    ...post,
-    image: safeParseJSON(images).map(processCloudUrl),
-    tag: safeParseJSON(tags),
-    liked_user: safeParseJSON(likedUsers),
-    favorite_user: safeParseJSON(favoriteUsers),
-    avatar: processCloudUrl(post.avatar)
-  };
-}
-
-function safeParseJSON(str) {
-  try {
-    return JSON.parse(str || '[]');
-  } catch {
-    return [];
+  // 尝试解析JSON字符串
+  if (typeof url === 'string') {
+    try {
+      imageArray = JSON.parse(url);
+    } catch (e) {
+      console.debug('解析图片URL失败:', e);
+      return [];
+    }
+  } else if (Array.isArray(url)) {
+    imageArray = url;
   }
-}
+  
+  // 处理每个URL
+  return imageArray.map(u => parseUrl(u)).filter(Boolean);
+};
 
 module.exports = {
+  // 日期时间
   formatTime,
+  formatNumber,
   formatRelativeTime,
-  getOpenID,
+  
+  // 系统信息
   getSystemInfo,
-  getStorage,
-  setStorage,
-  removeStorage,
-  processCloudUrl,
-  processPostData,
-  safeParseJSON
-};
+  
+  // 存储操作
+  storage,
+  
+  // UI操作
+  ui,
+  ToastType,
+  
+  // 导航操作
+  nav,
+  
+  // 错误处理
+  error,
+  ErrorType,
+  
+  // HTTP请求
+  get,
+  post,
+  
+  // API客户端工厂
+  createApiClient,
+  
+  // 工具函数
+  debounce,
+  throttle,
+  isEmptyObject,
+  isValidArray,
+  parseJsonField,
+  getAppInfo,
+  getUserProfile,
+  getOpenID,
+  parseUrl,
+  parseImageUrl
+}

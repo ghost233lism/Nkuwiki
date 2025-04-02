@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "page-status": "/components/page-status/page-status",
+    "post-item": "/components/post-item/post-item"
+  }
+} 

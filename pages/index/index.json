@@ -2,6 +2,14 @@
   "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
-  "backgroundColor": "#f5f5f5",
-  "usingComponents": {}
+  "backgroundColor": "#f7f9fc",
+  "usingComponents": {
+    "mp-navigation-bar": "/miniprogram_npm/weui-miniprogram/navigation-bar/navigation-bar",
+    "mp-loading": "/miniprogram_npm/weui-miniprogram/loading/loading",
+    "mp-searchbar": "/miniprogram_npm/weui-miniprogram/searchbar/searchbar",
+    "post-list": "/components/post-list/post-list",
+    "empty": "/components/empty/empty",
+    "nav-bar": "/components/nav-bar/nav-bar"
+  },
+  "navigationBarTitleText": "首页"
 }

@@ -1,55 +1,69 @@
-<view class="container">
-  <view class="feedback-form">
-    <!-- 反馈类型选择 -->
-    <view class="form-item">
-      <text class="label">反馈类型</text>
-      <radio-group bindchange="onTypeChange">
-        <label class="radio-item" wx:for="{{feedbackTypes}}" wx:key="value">
-          <radio value="{{item.value}}" checked="{{item.checked}}"/>
-          <text>{{item.label}}</text>
-        </label>
-      </radio-group>
-    </view>
+<!-- 顶部消息提示 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 
-    <!-- 反馈内容 -->
-    <view class="form-item">
-      <text class="label">反馈内容</text>
-      <textarea 
-        class="feedback-content" 
-        placeholder="请详细描述您的问题或建议..."
-        bindinput="onContentInput"
-        maxlength="500"
-      />
-      <text class="word-count">{{content.length}}/500</text>
-    </view>
+<!-- 确认对话框 -->
+<mp-dialog 
+  title="{{dialogTitle}}" 
+  show="{{dialogShow}}" 
+  bindbuttontap="tapDialogButton" 
+  buttons="{{dialogButtons}}">
+  <view>{{dialogContent}}</view>
+</mp-dialog>
 
-    <!-- 联系方式 -->
-    <view class="form-item">
-      <text class="label">联系方式（选填）</text>
-      <input 
-        class="contact-input" 
-        placeholder="请留下您的联系方式，方便我们回复"
-        bindinput="onContactInput"
-      />
-    </view>
+<mp-form-page title="意见反馈">
+  <mp-form>
+    <mp-cells>
+      <!-- 反馈类型 -->
+      <mp-cell title="反馈类型">
+        <radio-group class="radio-group" bindchange="onTypeChange">
+          <label class="weui-cell weui-check__label" wx:for="{{typeOptions}}" wx:key="value">
+            <radio class="weui-check" value="{{item.value}}" checked="{{item.checked}}"/>
+            <view class="weui-cell__bd">{{item.label}}</view>
+            <view class="weui-cell__ft weui-cell__ft_in-radio" wx:if="{{item.checked}}">
+              <icon class="weui-icon-radio" type="success_no_circle" size="16"></icon>
+            </view>
+          </label>
+        </radio-group>
+      </mp-cell>
 
-    <!-- 图片上传 -->
-    <view class="form-item">
-      <text class="label">上传截图（选填）</text>
-      <view class="image-uploader">
-        <view class="image-list">
-          <view class="image-item" wx:for="{{images}}" wx:key="*this">
-            <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-url="{{item}}"/>
-            <view class="delete-btn" bindtap="deleteImage" data-index="{{index}}">×</view>
-          </view>
-          <view class="upload-btn" bindtap="chooseImage" wx:if="{{images.length < 3}}">
-            <text>+</text>
-          </view>
-        </view>
-      </view>
-    </view>
+      <!-- 反馈内容 -->
+      <mp-cell title="反馈内容" required>
+        <text-area
+          value="{{form.content}}"
+          placeholder="请详细描述您遇到的问题或建议"
+          bind:input="onContentInput"
+        />
+      </mp-cell>
 
-    <!-- 提交按钮 -->
-    <button class="submit-btn" bindtap="submitFeedback">提交反馈</button>
+      <!-- 图片上传 -->
+      <mp-cell title="相关截图">
+        <mp-uploader
+          files="{{form.images}}"
+          max-count="{{imageConfig.maxCount}}"
+          bindselect="onImageSelect"
+          binddelete="onImageDelete"
+          select="{{selectFile}}"
+          upload="{{uploadFile}}"
+        />
+      </mp-cell>
+
+      <!-- 联系方式 -->
+      <mp-cell title="联系方式">
+        <input-field
+          value="{{form.contact}}"
+          placeholder="请留下您的联系方式(选填)"
+          bind:input="onContactInput"
+        />
+      </mp-cell>
+    </mp-cells>
+  </mp-form>
+
+  <!-- 提交按钮 -->
+  <view slot="button">
+    <button 
+      class="weui-btn weui-btn_primary"
+      loading="{{submitting}}"
+      bindtap="onSubmit"
+    >提交反馈</button>
   </view>
-</view> 
+</mp-form-page> 

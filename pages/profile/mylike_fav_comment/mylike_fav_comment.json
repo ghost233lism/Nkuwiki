@@ -1,7 +1,12 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "我的互动",
+  "usingComponents": {
+    "page-status": "/components/page-status/page-status",
+    "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar",
+    "post-list": "/components/post-list/post-list"
+  },
   "enablePullDownRefresh": true,
   "backgroundColor": "#f5f5f5",
   "backgroundTextStyle": "dark",
-  "usingComponents": {}
+  "navigationStyle": "custom"
 } 

@@ -1,5 +1,16 @@
 {
   "navigationBarTitleText": "消息通知",
-  "enablePullDownRefresh": false,
-  "usingComponents": {}
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f7f9fc",
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "page-status": "/components/page-status/page-status",
+    "loading": "/components/loading/loading",
+    "error": "/components/error/error",
+    "empty": "/components/empty/empty",
+    "icon": "/components/icon/icon",
+    "post-list": "/components/post-list/post-list",
+    "mp-loading": "/miniprogram_npm/weui-miniprogram/loading/loading",
+    "tab-bar": "/miniprogram_npm/weui-miniprogram/tabbar/tabbar"
+  }
 } 

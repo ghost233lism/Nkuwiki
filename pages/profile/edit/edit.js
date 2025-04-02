@@ -1,39 +1,63 @@
 // pages/profile/edit/edit.js
 const {
-  getStorage,
-  setStorage,
+  ui,
+  error,
+  ToastType,
+  createApiClient,
+  storage,
   getOpenID
 } = require('../../../utils/util');
-const api = require('../../../utils/api/index');
+
+// behaviors
+const pageBehavior = require('../../../behaviors/page-behavior');
+const authBehavior = require('../../../behaviors/auth-behavior');
+const userBehavior = require('../../../behaviors/user-behavior');
+const weuiBehavior = require('../../../behaviors/weui-behavior');
+
 
 Page({
+  behaviors: [pageBehavior, authBehavior, userBehavior, weuiBehavior],
+
   data: {
-    userInfo: null,
+    userInfo: {
+      nickname: '',
+      bio: '',
+      avatar: '',
+      loginType: ''
+    },
     newNickName: '',  // 用于存储修改后的昵称
-    newStatus: ''     // 用于存储修改后的个性签名
+    newStatus: '',    // 用于存储修改后的个性签名
+    loading: true
   },
 
   async onLoad() {
+    await this.loadUserProfile();
+  },
+
+  async loadUserProfile() {
     try {
-      wx.showLoading({ title: '加载中...' });
+      ui.showToast('加载中...', { type: ToastType.LOADING });
+      this.setData({ loading: true });
+
+      // 使用userBehavior中的getCurrentUserInfo方法获取用户信息
+      const userInfo = await this.getCurrentUserInfo();
       
-      const result = await api.user.getProfile({ isSelf: true });
-      if (!result?.success) {
-        throw new Error(result?.message || '获取用户信息失败');
+      if (userInfo) {
+        userInfo.avatarUrl = userInfo.avatar;
+        
+        this.setData({ 
+          userInfo,
+          newNickName: userInfo.nickname || '',
+          newStatus: userInfo.bio || ''
+        });
+      } else {
+        throw new Error('获取用户信息失败');
       }
-      
-      const userInfo = result.data;
-      userInfo.avatarUrl = userInfo.avatar || '/assets/icons/default-avatar.png';
-      
-      this.setData({ 
-        userInfo,
-        newNickName: userInfo.nickname || '',
-        newStatus: userInfo.bio || ''
-      });
     } catch (err) {
-      console.debug('加载失败:', err);
+      error.handle(err, '获取用户信息失败');
       
-      const localUserInfo = getStorage('userInfo');
+      // 从本地存储获取用户信息作为备用
+      const localUserInfo = storage.get('userInfo');
       if (localUserInfo) {
         this.setData({ 
           userInfo: localUserInfo,
@@ -41,86 +65,130 @@ Page({
           newStatus: localUserInfo.bio || ''
         });
       }
-      
-      wx.showToast({
-        title: err.message || '获取用户信息失败',
-        icon: 'none'
-      });
     } finally {
-      wx.hideLoading();
+      this.setData({ loading: false });
+      ui.hideToast();
     }
   },
 
-  // 微信用户的头像选择处理
-  onChooseAvatar(e) {
-    const { avatarUrl } = e.detail;
-    this.updateAvatar(avatarUrl);
+  // 头像加载错误处理
+  onAvatarError() {
+    this.setData({ 
+      'userInfo.avatarUrl': '' 
+    });
   },
 
-  // 邮箱用户的头像选择处理
-  async onChooseImage() {
+  // 处理微信头像选择
+  async onChooseAvatar(e) {
     try {
-      const res = await wx.chooseImage({
-        count: 1,
-        sizeType: ['compressed'],
-        sourceType: ['album', 'camera']
-      });
+      ui.showToast('更新中...', { type: ToastType.LOADING });
+      const { avatarUrl } = e.detail;
       
-      if (res.tempFilePaths?.[0]) {
-        this.updateAvatar(res.tempFilePaths[0]);
+      // 获取openid
+      const openid = storage.get('openid');
+      if (!openid) {
+        this.showToptips({ msg: '用户未登录', type: 'error' });
+        ui.hideToast();
+        return;
       }
-    } catch (err) {
-      console.debug('选择图片失败:', err);
-      wx.showToast({
-        title: '选择图片失败',
-        icon: 'none'
-      });
-    }
-  },
-
-  // 统一的头像更新处理
-  async updateAvatar(avatarUrl) {
-    try {
-      wx.showLoading({ title: '更新中...' });
       
-      const openid = await getOpenID();
-      if (!openid) throw new Error('用户未登录');
-
-      const cloudPath = `avatars/${openid}_${Date.now()}.jpg`;
-      const uploadResult = await wx.cloud.uploadFile({
-        cloudPath,
-        filePath: avatarUrl
-      });
+      // 压缩图片，减小体积
+      let compressedImagePath = avatarUrl;
+      try {
+        const compressRes = await wx.compressImage({
+          src: avatarUrl,
+          quality: 80
+        });
+        if (compressRes && compressRes.tempFilePath) {
+          compressedImagePath = compressRes.tempFilePath;
+          console.debug('图片压缩成功');
+        }
+      } catch (compressErr) {
+        // 压缩失败，使用原图继续
+        console.debug('图片压缩失败，使用原图:', compressErr);
+      }
+      
+      // 生成云存储路径，添加时间戳避免缓存问题
+      const timestamp = Date.now();
+      const cloudPath = `avatars/${openid}_${timestamp}.jpg`;
+      
+      // 定义最大重试次数
+      const maxRetries = 3;
+      let retryCount = 0;
+      let uploadResult = null;
+      
+      // 带重试的上传逻辑
+      while (retryCount < maxRetries && !uploadResult) {
+        try {
+          if (retryCount > 0) {
+            console.debug(`上传重试第${retryCount}次`);
+            // 显示重试信息
+            wx.showLoading({
+              title: `重试第${retryCount}次...`,
+              mask: true
+            });
+          }
+          
+          // 设置上传超时
+          uploadResult = await Promise.race([
+            wx.cloud.uploadFile({
+              cloudPath,
+              filePath: compressedImagePath
+            }),
+            new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('上传超时')), 15000); // 15秒超时
+            })
+          ]);
+          
+        } catch (uploadErr) {
+          console.debug(`上传失败 (${retryCount + 1}/${maxRetries}):`, uploadErr);
+          retryCount++;
+          
+          // 最后一次重试也失败
+          if (retryCount >= maxRetries) {
+            throw new Error(`上传失败(已重试${maxRetries}次): ${uploadErr.message || '网络错误'}`);
+          }
+          
+          // 重试前等待一段时间
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
       
       if (!uploadResult?.fileID) {
-        throw new Error('上传头像失败: 未获取到文件ID');
+        throw new Error('云存储返回结果格式错误');
       }
-
-      const result = await api.user.updateProfile({
+      
+      console.debug('上传成功，fileID:', uploadResult.fileID);
+      
+      // 使用behavior中的updateProfile方法更新头像信息
+      const res = await this.updateProfile({
         avatar: uploadResult.fileID
       });
       
-      if (!result?.success) {
-        throw new Error(result?.message || '更新用户信息失败');
+      // 更新头像显示
+      this.setData({
+        'userInfo.avatarUrl': uploadResult.fileID,
+        'userInfo.avatar': uploadResult.fileID
+      });
+      
+      // 更新本地用户信息
+      const userInfo = storage.get('userInfo');
+      if (userInfo) {
+        userInfo.avatar = uploadResult.fileID;
+        storage.set('userInfo', userInfo);
       }
       
-      const userInfo = this.data.userInfo;
-      userInfo.avatarUrl = uploadResult.fileID;
-      userInfo.avatar = uploadResult.fileID;
-      this.setData({ userInfo });
-      setStorage('userInfo', userInfo);
-
-      wx.showToast({
-        title: '更新成功',
-        icon: 'success'
-      });
+      // 显示成功提示
+      this.showToptips({ msg: '头像更新成功', type: 'success' });
+      
     } catch (err) {
-      console.debug('更新头像失败:', err);
-      wx.showToast({
-        title: err.message || '更新失败',
-        icon: 'none'
+      console.debug('头像更新失败:', err);
+      this.showToptips({ 
+        msg: err.message || '更新头像失败，请稍后再试', 
+        type: 'error' 
       });
     } finally {
+      ui.hideToast();
       wx.hideLoading();
     }
   },
@@ -135,15 +203,15 @@ Page({
   // 处理个性签名输入
   onInputStatus(e) {
     this.setData({
-      newStatus: e.detail.value.trim()
+      newStatus: e.detail.value
     });
   },
 
   // 保存修改
   async saveChanges() {
     try {
-      wx.showLoading({ title: '保存中...' });
-      
+      ui.showToast('保存中...', { type: ToastType.LOADING });
+
       const updateData = {};
       if (this.data.newNickName !== this.data.userInfo.nickname) {
         updateData.nickname = this.data.newNickName;
@@ -153,43 +221,34 @@ Page({
       }
 
       if (Object.keys(updateData).length === 0) {
-        wx.showToast({
-          title: '未做任何修改',
-          icon: 'none'
-        });
+        this.showToptips({ msg: '未做任何修改', type: 'info' });
+        ui.hideToast();
         return;
       }
 
-      const result = await api.user.updateProfile(updateData);
-      if (!result?.success && result?.code !== 200) {
-        throw new Error(result?.message || '保存失败');
+      // 发送更新请求
+      const res = await this.updateProfile(updateData);
+      
+      // 更新本地存储的用户信息
+      const userInfo = storage.get('userInfo');
+      if (userInfo) {
+        if (updateData.nickname) userInfo.nickname = updateData.nickname;
+        if (updateData.bio) userInfo.bio = updateData.bio;
+        storage.set('userInfo', userInfo);
       }
-
+      
       // 设置需要刷新个人资料页面的标记
-      setStorage('needRefreshProfile', true);
+      storage.set('needRefreshProfile', true);
       
-      wx.showToast({
-        title: '保存成功',
-        icon: 'success'
-      });
-      
-      // 延迟返回上一页，确保提示能显示
+      // 直接等待一段时间后导航返回，不进行Toast切换操作
+      // 因为updateProfile方法已经显示了成功提示
       setTimeout(() => {
-        wx.navigateBack({
-          delta: 1,
-          fail: (err) => {
-            console.debug('返回上一页失败:', err);
-          }
-        });
+        wx.navigateBack({ delta: 1 });
       }, 1000);
+      
     } catch (err) {
-      console.debug('保存失败:', err);
-      wx.showToast({
-        title: err.message || '保存失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      ui.hideToast(); // 失败时才需要手动隐藏loading
+      error.handle(err, '保存失败');
     }
   }
 })

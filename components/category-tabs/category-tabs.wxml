@@ -1,0 +1,19 @@
+<scroll-view 
+  scroll-x="{{scrollable}}" 
+  class="tabs {{customClass}}"
+  scroll-with-animation
+  enhanced
+  show-scrollbar="{{false}}"
+>
+  <view class="tabs-content">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="onTabTap"
+    >
+      <text>{{item.name}}</text>
+    </view>
+  </view>
+</scroll-view> 

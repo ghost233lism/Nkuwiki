@@ -1,183 +1,269 @@
-const { 
-    getNotificationList, 
-    markAsRead, 
-    markReadBatch,
-    getUnreadCount
-} = require("../../utils/api/notification");
-const { formatRelativeTime, getStorage } = require("../../utils/util");
+const { ui, error, ToastType, formatRelativeTime, storage, get, post, createApiClient } = require('../../utils/util');
+const baseBehavior = require('../../behaviors/base-behavior');
+const userBehavior = require('../../behaviors/user-behavior');
+
+// 通知类型配置
+const NotificationType = {
+  LIKE: 'like',
+  COMMENT: 'comment', 
+  FOLLOW: 'follow',
+  FAVORITE: 'favorite'
+};
+
+const NotificationConfig = {
+  [NotificationType.LIKE]: {
+    icon: 'like',
+    action: '点赞了你的',
+    targetType: ['post', 'comment']
+  },
+  [NotificationType.COMMENT]: {
+    icon: 'comment',
+    action: '评论了你的',
+    targetType: ['post']
+  },
+  [NotificationType.FOLLOW]: {
+    icon: 'user',
+    action: '关注了你',
+    targetType: ['user']
+  },
+  [NotificationType.FAVORITE]: {
+    icon: 'star',
+    action: '收藏了你的',
+    targetType: ['post']
+  }
+};
+
+// 通知API
+const notificationApi = createApiClient('/api/wxapp/notification', {
+  list: { 
+    method: 'GET', 
+    path: '/list',
+    params: {
+      openid: true,
+      type: false,
+      is_read: false,
+      limit: false,
+      offset: false
+    }
+  },
+  count: { 
+    method: 'GET', 
+    path: '/count',
+    params: {
+      openid: true,
+      type: false
+    }
+  },
+  markRead: { 
+    method: 'POST', 
+    path: '/mark-read',
+    params: {
+      notification_id: true,
+      openid: true
+    }
+  },
+  markReadBatch: { 
+    method: 'POST', 
+    path: '/mark-read-batch',
+    params: {
+      notification_ids: true,
+      openid: true
+    }
+  },
+  delete: { 
+    method: 'POST', 
+    path: '/delete',
+    params: {
+      notification_id: true,
+      openid: true
+    }
+  }
+});
 
 Page({
-    data: {
-        activeTab: "like",
-        action: "点赞",
-        notifications: {
-            like: [],
-            favourite: [],
-            comment: []
-        },
-        loading: false,
-        pagination: {
-            limit: 20,
-            offset: 0,
-            hasMore: true
-        }
-    },
+  behaviors: [baseBehavior, userBehavior],
 
-    async loadNotifications(type = null, refresh = false) {
-        if (this.data.loading) return;
-        
-        try {
-            this.setData({ loading: true });
-            
-            // 如果是刷新，重置分页
-            if (refresh) {
-                this.setData({
-                    'pagination.offset': 0,
-                    'pagination.hasMore': true,
-                    [`notifications.${type || this.data.activeTab}`]: []
-                });
-            }
-            
-            const params = {
-                type: type || this.data.activeTab,
-                limit: this.data.pagination.limit,
-                offset: this.data.pagination.offset
-            };
-            
-            const res = await getNotificationList(params);
-            
-            if (res.code === 200 && res.data) {
-                const notifications = res.data.map(item => ({
-                    id: item.id,
-                    avatar: item.sender_avatar || '/assets/icons/default-avatar.png',
-                    name: item.sender_name,
-                    time: formatRelativeTime(item.created_at),
-                    postId: item.post_id,
-                    postTitle: item.post_title,
-                    content: item.content,
-                    isRead: item.is_read
-                }));
-                
-                // 更新数据
-                this.setData({
-                    [`notifications.${type || this.data.activeTab}`]: refresh 
-                        ? notifications 
-                        : [...this.data.notifications[type || this.data.activeTab], ...notifications],
-                    'pagination.offset': this.data.pagination.offset + notifications.length,
-                    'pagination.hasMore': notifications.length === this.data.pagination.limit
-                });
-            } else {
-                wx.showToast({
-                    title: res.message || '加载失败',
-                    icon: 'none'
-                });
-            }
-        } catch (err) {
-            console.debug('加载通知失败:', err);
-            wx.showToast({
-                title: '加载失败',
-                icon: 'none'
-            });
-        } finally {
-            this.setData({ loading: false });
-        }
-    },
+  data: {
+    activeTab: 0,
+    tabs: [
+      { title: '未读', type: 'unread' }, 
+      { title: '已读', type: 'read' }
+    ],
+    notifications: [],
+    page: 1,
+    limit: 15,
+    hasMore: true,
+    loading: false,
+    error: null,
+    NotificationType,
+    NotificationConfig
+  },
 
-    async markAllRead() {
-        try {
-            const currentNotifications = this.data.notifications[this.data.activeTab];
-            if (!currentNotifications || currentNotifications.length === 0) return;
-            
-            const notificationIds = currentNotifications
-                .filter(item => !item.isRead)
-                .map(item => item.id);
-            
-            if (notificationIds.length === 0) {
-                wx.showToast({
-                    title: '没有未读消息',
-                    icon: 'none'
-                });
-                return;
-            }
-            
-            const res = await markReadBatch({ notification_id: notificationIds });
-            
-            if (res.code === 200) {
-                // 更新本地数据状态
-                const updatedNotifications = currentNotifications.map(item => ({
-                    ...item,
-                    isRead: true
-                }));
-                
-                this.setData({
-                    [`notifications.${this.data.activeTab}`]: updatedNotifications
-                });
-                
-                wx.showToast({
-                    title: '已全部标记为已读',
-                    icon: 'success'
-                });
-            } else {
-                wx.showToast({
-                    title: res.message || '操作失败',
-                    icon: 'none'
-                });
-            }
-        } catch (err) {
-            console.debug('标记已读失败:', err);
-            wx.showToast({
-                title: '操作失败',
-                icon: 'none'
-            });
-        }
-    },
+  onLoad: async function() {
+    const isLoggedIn = await this.ensureLogin();
+    if (!isLoggedIn) return;
+    await this.loadList();
+  },
 
-    async switchTab(event) {
-        const tab = event.target.dataset.tab;
-        if (tab === this.data.activeTab) return;
-        
-        let action = '';
-        switch (tab) {
-            case 'like':
-                action = '点赞';
-                break;
-            case 'favourite':
-                action = '收藏';
-                break;
-            case 'comment':
-                action = '评论';
-                break;
-        }
-        
-        this.setData({ activeTab: tab, action });
-        
-        // 如果该标签下没有数据，加载数据
-        if (!this.data.notifications[tab] || this.data.notifications[tab].length === 0) {
-            await this.loadNotifications(tab, true);
-        }
-    },
+  onPullDownRefresh() {
+    this.loadList(true).finally(() => {
+      wx.stopPullDownRefresh();
+    });
+  },
 
-    async onLoad() {
-        await this.loadNotifications();
-    },
-
-    async onPullDownRefresh() {
-        await this.loadNotifications(this.data.activeTab, true);
-        wx.stopPullDownRefresh();
-    },
-
-    async onReachBottom() {
-        if (this.data.pagination.hasMore) {
-            await this.loadNotifications();
-        }
-    },
-
-    goToPost(event) {
-        const postId = event.currentTarget.dataset.postId;
-        if (postId) {
-            wx.navigateTo({
-                url: `/pages/post/detail/detail?id=${postId}`
-            });
-        }
+  onReachBottom() {
+    if (this.data.hasMore && !this.data.loading) {
+      this.loadList();
     }
+  },
+
+  onTabsChange(e) {
+    const index = e.detail.index;
+    this.setData({ 
+      activeTab: index,
+      notifications: [],
+      page: 1,
+      hasMore: true
+    });
+    this.loadList(true);
+  },
+
+  async loadList(refresh = false) {
+    if (this.data.loading) return;
+
+    const { activeTab, tabs, page, limit } = this.data;
+    const type = tabs[activeTab].type;
+
+    this.showLoading('加载中...');
+    this.setData({ loading: true });
+
+    try {
+      const res = await notificationApi.list({
+        openid: storage.get('openid'),
+        is_read: type === 'read',
+        limit,
+        offset: (refresh ? 0 : page - 1) * limit
+      });
+
+      if (res.code !== 200) {
+        throw error.create(res.message || '加载失败');
+      }
+
+      const formattedList = (res.data || []).map(item => ({
+        ...item,
+        relative_time: formatRelativeTime(item.create_time),
+        config: NotificationConfig[item.type] || {}
+      }));
+
+      this.setData({
+        notifications: refresh ? formattedList : [...this.data.notifications, ...formattedList],
+        page: (refresh ? 1 : page) + 1,
+        hasMore: formattedList.length === limit
+      });
+    } catch (err) {
+      this.handleError(err, '加载通知失败');
+    } finally {
+      this.hideLoading();
+      this.setData({ loading: false });
+    }
+  },
+
+  async markAllRead() {
+    const unreadList = this.data.notifications.filter(n => !n.is_read);
+    if (!unreadList.length) return;
+
+    const notification_ids = unreadList.map(n => n.id);
+    
+    this.showLoading('标记中...');
+
+    try {
+      const res = await notificationApi.markReadBatch({ 
+        openid: storage.get('openid'),
+        notification_ids 
+      });
+      
+      if (res.code !== 200) {
+        throw error.create(res.message || '标记失败');
+      }
+      
+      if (this.data.activeTab === 0) {
+        await this.loadList(true);
+      }
+
+      this.showToast('已全部标记为已读', 'success');
+    } catch (err) {
+      this.handleError(err, '标记失败');
+    } finally {
+      this.hideLoading();
+    }
+  },
+
+  async onNotificationTap(e) {
+    const { id, type, target_id, target_type, is_read } = e.currentTarget.dataset;
+    
+    // 标记为已读
+    if (!is_read) {
+      try {
+        await notificationApi.markRead({ 
+          openid: storage.get('openid'),
+          notification_id: id 
+        });
+      } catch (err) {
+        console.debug('标记通知已读失败:', err);
+      }
+    }
+
+    // 跳转到目标页面
+    const url = this.getTargetUrl(type, target_id, target_type);
+    if (url) {
+      this.navigateTo(url);
+    }
+  },
+
+  getTargetUrl(type, target_id, target_type) {
+    switch (target_type) {
+      case 'post':
+        return `/pages/post/detail/detail?id=${target_id}${type === NotificationType.COMMENT ? '&focus=comment' : ''}`;
+      case 'comment':
+        return `/pages/post/detail/detail?id=${target_id}&comment_id=${target_id}`;
+      case 'user':
+        return `/pages/profile/profile?id=${target_id}`;
+      default:
+        return '';
+    }
+  },
+
+  async onNotificationDelete(e) {
+    const { id } = e.currentTarget.dataset;
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这条通知吗？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        
+        this.showLoading('删除中...');
+        
+        try {
+          const res = await notificationApi.delete({ 
+            openid: storage.get('openid'),
+            notification_id: id 
+          });
+          
+          if (res.code !== 200) {
+            throw error.create(res.message || '删除失败');
+          }
+          
+          const notifications = this.data.notifications.filter(n => n.id !== id);
+          this.setData({ notifications });
+    
+          this.showToast('删除成功', 'success');
+        } catch (err) {
+          this.handleError(err, '删除失败');
+        } finally {
+          this.hideLoading();
+        }
+      }
+    });
+  }
 });

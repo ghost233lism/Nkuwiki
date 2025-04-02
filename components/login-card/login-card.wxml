@@ -1,0 +1,36 @@
+<view class="login-card {{customClass}}">
+  <view class="content">
+    <view class="header">
+      <view class="avatar">
+        <icon icon="user" size="96"></icon>
+      </view>
+      <view class="text">
+        <view class="title">登录后体验更多功能</view>
+        <view class="desc">登录后可以发帖、评论、收藏等</view>
+      </view>
+    </view>
+
+    <view class="features">
+      <view class="feature-item" wx:for="{{features}}" wx:key="text">
+        <icon icon="{{item.icon}}" size="48"></icon>
+        <text>{{item.text}}</text>
+      </view>
+    </view>
+
+    <button 
+      type="primary"
+      bindtap="onLogin"
+      loading="{{loading}}"
+    >
+      <icon wx:if="{{!loading}}" name="wechat" size="36" color="#fff"></icon>
+      微信一键登录
+    </button>
+
+    <view class="agreement">
+      <text class="tips">登录即表示您同意</text>
+      <text class="link" bindtap="onAgreementTap" data-type="user">《用户协议》</text>
+      <text>和</text>
+      <text class="link" bindtap="onAgreementTap" data-type="privacy">《隐私政策》</text>
+    </view>
+  </view>
+</view> 
