@@ -11,6 +11,6 @@
     "icon": "/components/icon/icon",
     "post-list": "/components/post-list/post-list",
     "mp-loading": "/miniprogram_npm/weui-miniprogram/loading/loading",
-    "tab-bar": "/miniprogram_npm/weui-miniprogram/tabbar/tabbar"
+    "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar"
   }
 } 

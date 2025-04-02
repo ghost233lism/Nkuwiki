@@ -9,8 +9,8 @@
 
   <block wx:else>
     <!-- 顶部标签栏 -->
-    <tab-bar 
-      tabs="{{tabs}}" 
+    <nav-tab-bar 
+      tabTitles="{{[tabs[0].title, tabs[1].title]}}" 
       activeTab="{{activeTab}}" 
       bind:change="onTabsChange"
     />
@@ -76,4 +76,4 @@
       </button>
     </view>
   </block>
-</page-status>
+</page-status> 
