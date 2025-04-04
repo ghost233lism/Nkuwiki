@@ -22,9 +22,9 @@ Component({
       value: ''
     },
     
-    // 图标大小，单位rpx
+    // 图标大小，单位rpx，可接收数字或字符串
     size: {
-      type: Number,
+      type: null, // 使用null允许接收任意类型
       value: 40
     },
     
@@ -176,9 +176,23 @@ Component({
       
       const updateData = {};
       
-      // 处理尺寸
-      if (this.properties.size) {
-        updateData.sizeNumber = this.properties.size / 2;
+      // 处理尺寸 - 支持字符串和数字类型
+      if (this.properties.size !== undefined) {
+        let sizeValue = this.properties.size;
+        
+        // 将字符串转换为数字
+        if (typeof sizeValue === 'string') {
+          // 移除可能的单位（如"px"、"rpx"等）
+          sizeValue = parseFloat(sizeValue.replace(/[^0-9.]/g, ''));
+        }
+        
+        // 确保有效数字
+        if (!isNaN(sizeValue) && sizeValue > 0) {
+          updateData.sizeNumber = sizeValue / 2;
+        } else {
+          // 默认大小
+          updateData.sizeNumber = 20;
+        }
       }
       
       // 处理图标名称 - 优先级：name > type > icon

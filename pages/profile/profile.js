@@ -1,37 +1,9 @@
-const { ui, error, ToastType, createApiClient, storage, nav } = require('../../utils/util');
+const { ui, error, ToastType, storage, nav, formatRelativeTime } = require('../../utils/util');
 const baseBehavior = require('../../behaviors/baseBehavior');
-const userBehavior = require('../../behaviors/user-behavior');
-const authBehavior = require('../../behaviors/auth-behavior');
-
-// 通知API客户端
-const notificationApi = createApiClient('/api/wxapp/notification', {
-  checkUnread: {
-    method: 'GET',
-    path: '/status',
-    params: {
-      openid: true
-    }
-  }
-});
-
-// 用户API客户端 - 直接在这里定义，避免依赖behavior层
-const userApi = createApiClient('/api/wxapp/user', {
-  sync: {
-    method: 'POST',
-    path: '/sync'
-  },
-  profile: {
-    method: 'GET',
-    path: '/profile',
-    params: {
-      openid: true
-    }
-  }
-});
-
-// behaviors
-const pageBehavior = require('../../behaviors/page-behavior');
-const weuiBehavior = require('../../behaviors/weui-behavior');
+const userBehavior = require('../../behaviors/userBehavior');
+const authBehavior = require('../../behaviors/authBehavior');
+const notificationBehavior = require('../../behaviors/notificationBehavior');
+const weuiBehavior = require('../../behaviors/weuiBehavior');
 
 // 常量配置
 const MENU_CONFIG = {
@@ -97,7 +69,7 @@ const MENU_CONFIG = {
 };
 
 Page({
-  behaviors: [baseBehavior, userBehavior, authBehavior],
+  behaviors: [baseBehavior, userBehavior, authBehavior, notificationBehavior, weuiBehavior],
 
   data: {
     userInfo: null,
@@ -114,7 +86,10 @@ Page({
     menuItems: [],
     settingItems: [],
     MENU_CONFIG: MENU_CONFIG,
-    hasUnreadNotification: false
+    hasUnreadNotification: false,
+    // 用户详情页相关数据
+    userId: '',
+    otherUserInfo: null
   },
 
   async onLoad() {
@@ -128,8 +103,19 @@ Page({
 
   async onShow() {
     console.debug('【Profile】页面onShow触发');
-    // 每次显示页面都主动触发同步和刷新
-    this.syncUserAndInitPage();
+    
+    // 检查是否需要刷新资料
+    const needRefresh = storage.get('needRefreshProfile');
+    if (needRefresh) {
+      console.debug('【Profile】检测到需要刷新资料标记');
+      // 清除标记
+      storage.remove('needRefreshProfile');
+      // 强制刷新用户信息
+      await this.syncUserAndInitPage();
+    } else {
+      // 常规显示
+      this.syncUserAndInitPage();
+    }
   },
 
   async onPullDownRefresh() {
@@ -147,7 +133,7 @@ Page({
     
     try {
       // 获取openid
-      const openid = storage.get('openid');
+      const openid = this.getStorage('openid');
       if (!openid) {
         console.debug('【Profile】未找到openid，显示未登录状态');
         this.setData({ 
@@ -157,26 +143,18 @@ Page({
         return;
       }
       
-      console.debug('【Profile】发送user/sync请求');
-      // 直接使用API客户端发送同步请求
+      console.debug('【Profile】发送用户同步请求');
+      // 使用authBehavior中的方法进行同步
       const startTime = Date.now();
-      const res = await userApi.sync({ openid });
+      const userInfo = await this._syncUserInfo();
       const endTime = Date.now();
-      console.debug(`【Profile】收到同步响应(${endTime - startTime}ms):`, res);
+      console.debug(`【Profile】收到同步响应(${endTime - startTime}ms)`);
       
-      if (res.code === 200 && res.data && res.data.id) {
+      if (userInfo && userInfo.id) {
         // 同步成功，更新用户信息
         console.debug('【Profile】同步成功，更新用户信息');
-        storage.set('userInfo', res.data);
-        
-        // 更新全局数据
-        const app = getApp();
-        if (app && app.globalData) {
-          app.globalData.userInfo = res.data;
-        }
         
         // 更新页面数据
-        const userInfo = res.data;
         this.setData({
           userInfo,
           stats: {
@@ -194,10 +172,11 @@ Page({
         // 检查未读通知
         this.checkUnreadNotifications();
       } else {
-        console.debug('【Profile】同步请求失败或返回数据不完整:', res);
+        console.debug('【Profile】同步请求失败或返回数据不完整');
         // 同步失败或返回数据不完整，清除登录状态
-        storage.remove('userInfo');
-        storage.remove('openid');
+        this.setStorage('userInfo', null);
+        this.setStorage('openid', null);
+        this.setStorage('isLoggedIn', false);
         
         // 更新全局数据
         const app = getApp();
@@ -224,25 +203,31 @@ Page({
     }
   },
 
-  // 检查未读通知
+  // 检查是否有未读通知
   async checkUnreadNotifications() {
     const openid = storage.get('openid');
-    if (!openid) return;
-    
+    if (!openid) return false;
+
     try {
       console.debug('【Profile】检查未读通知');
-      const res = await notificationApi.checkUnread({
-        openid: openid
-      });
+      const result = await this._checkUnreadNotification();
       
-      if (res.code === 200) {
-        console.debug('【Profile】未读通知状态:', res.data);
+      if (result && result.hasUnread) {
         this.setData({
-          hasUnreadNotification: res.data.has_unread
+          hasUnreadNotification: true,
+          unreadCount: result.count
         });
+        return true;
+      } else {
+        this.setData({
+          hasUnreadNotification: false,
+          unreadCount: 0
+        });
+        return false;
       }
     } catch (err) {
-      console.debug('【Profile】检查未读通知失败:', err);
+      console.debug('检查未读通知失败:', err);
+      return false;
     }
   },
 
@@ -345,5 +330,58 @@ Page({
   onRetry() {
     console.debug('【Profile】点击重试');
     this.syncUserAndInitPage();
+  },
+
+  // 用户详情页相关方法
+  async loadUserData() {
+    if (!this.data.userId) return;
+    
+    this.setData({ loading: true, error: false });
+    
+    try {
+      // 使用userBehavior中的_getUserProfileById方法
+      const userInfo = await this._getUserProfileById(this.data.userId);
+      
+      if (userInfo) {
+        this.setData({
+          otherUserInfo: {
+            ...userInfo,
+            create_time_formatted: formatRelativeTime(userInfo.create_time)
+          },
+          loading: false
+        });
+      } else {
+        throw error.create('获取用户信息失败');
+      }
+    } catch (err) {
+      console.debug('用户页面加载失败:', err);
+      this.setData({
+        error: true,
+        errorMsg: err.message || '加载用户信息失败',
+        loading: false
+      });
+    }
+  },
+
+  async handleFollow() {
+    if (!this.checkLogin()) return;
+    
+    this.showLoading('处理中...');
+    
+    try {
+      // 使用userBehavior中的_toggleFollow方法
+      const result = await this._toggleFollow(this.data.userId);
+      
+      if (result) {
+        this.showToast(result.is_followed ? '关注成功' : '取消关注成功', 'success');
+        this.loadUserData(); // 刷新用户数据
+      } else {
+        throw error.create('关注操作失败');
+      }
+    } catch (err) {
+      this.handleError(err, '关注操作失败');
+    } finally {
+      this.hideLoading();
+    }
   }
 });

@@ -6,7 +6,6 @@
       <view class="post-info">
         <view class="author-name" bindtap="_onAuthorTap">{{post.nickname || '未知用户'}}</view>
         <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>
-        <view class="post-time">{{formattedTime}}</view>
       </view>
     </view>
     <view wx:if="{{showFollow && post.openid && post.openid !== userInfo.openid}}" class="follow-container">
@@ -42,32 +41,35 @@
   </view>
 
   <view class="post-footer">
+    <view class="post-footer-row">
+      <text class="post-time-container">{{formattedTime}}</text>
+      <view class="post-actions" wx:if="{{showAction}}">
+        <view class="action-item {{isLiked ? 'active' : ''}}" catchtap="_onLikeTap">
+          <icon name="{{isLiked ? 'like-active' : 'like'}}" color="{{isLiked ? '#1aad19' : '#666'}}" size="24"></icon>
+          <text class="action-text">{{post.like_count || 0}}</text>
+        </view>
+        
+        <view class="action-item {{isFavorited ? 'active' : ''}}" catchtap="_onFavoriteTap">
+          <icon name="{{isFavorited ? 'favorite-active' : 'favorite'}}" color="{{isFavorited ? '#1aad19' : '#666'}}" size="24"></icon>
+          <text class="action-text">{{post.favorite_count || 0}}</text>
+        </view>
+        
+        <view class="action-item" catchtap="_onCommentTap">
+          <icon name="comment" color="#666" size="24"></icon>
+          <text class="action-text">{{post.comment_count || 0}}</text>
+        </view>
+        
+        <button class="share-button action-item" open-type="share">
+          <icon name="share" color="#666" size="24"></icon>
+          <text class="action-text">分享</text>
+        </button>
+      </view>
+    </view>
+    
     <view wx:if="{{post.tags && post.tags.length > 0}}" class="post-tags">
       <view wx:for="{{post.tags}}" wx:key="index" class="post-tag" data-tag="{{item}}" catchtap="_onTagTap">
         #{{item}}
       </view>
-    </view>
-
-    <view wx:if="{{showAction}}" class="post-actions">
-      <view class="action-item {{isLiked ? 'active' : ''}}" catchtap="_onLikeTap">
-        <icon name="{{isLiked ? 'like-active' : 'like'}}" color="{{isLiked ? '#1aad19' : '#666'}}" size="{{32}}"></icon>
-        <text class="action-text">{{post.like_count || 0}}</text>
-      </view>
-      
-      <view class="action-item {{isFavorited ? 'active' : ''}}" catchtap="_onFavoriteTap">
-        <icon name="{{isFavorited ? 'favorite-active' : 'favorite'}}" color="{{isFavorited ? '#1aad19' : '#666'}}" size="{{32}}"></icon>
-        <text class="action-text">{{post.favorite_count || 0}}</text>
-      </view>
-      
-      <view class="action-item" catchtap="_onCommentTap">
-        <icon name="comment" color="#666" size="{{32}}"></icon>
-        <text class="action-text">{{post.comment_count || 0}}</text>
-      </view>
-      
-      <button class="share-button action-item" open-type="share">
-        <icon name="share" color="#666" size="{{32}}"></icon>
-        <text class="action-text">分享</text>
-      </button>
     </view>
   </view>
 

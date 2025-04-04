@@ -231,6 +231,9 @@ Page({
       // 显示成功提示
       this.showToast('发布成功', ToastType.SUCCESS);
       
+      // 设置需要刷新首页帖子列表的标记
+      this.setStorage('needRefreshPosts', true);
+      
       // 延迟返回
       setTimeout(() => {
         try {

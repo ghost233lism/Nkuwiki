@@ -120,6 +120,21 @@ Page({
     // 设置最近显示时间
     this.updateState({ lastShowTime: now });
     
+    // 检查是否刚发布了新帖子
+    const needRefreshPosts = this.getStorage('needRefreshPosts');
+    if (needRefreshPosts) {
+      console.debug('检测到新发布的帖子，刷新列表');
+      // 清除标记
+      this.setStorage('needRefreshPosts', false);
+      
+      // 刷新帖子列表
+      const postList = this.selectComponent('.post-list-container post-list');
+      if (postList) {
+        postList.loadInitialData();
+      }
+      return;
+    }
+    
     // 如果距离上次刷新时间少于10秒，不刷新内容
     if (now - lastShowTime < 10000) {
       console.debug('距离上次刷新时间小于10秒，跳过刷新');

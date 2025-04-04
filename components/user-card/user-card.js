@@ -60,6 +60,7 @@ Component({
         ...user,
         nickname: user.nickname || user.nickName || '未知用户',
         avatar: user.avatar || user.avatarUrl || '/assets/icons/default-avatar.png',
+        bio: user.bio || user.signature || '',
         // 合并统计数据
         post_count: stats?.posts || user.post_count || 0,
         like_count: stats?.likes || user.like_count || 0,

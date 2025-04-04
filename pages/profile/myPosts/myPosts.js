@@ -35,13 +35,12 @@ const postApi = createApiClient('/api/wxapp/post', {
 });
 
 // behaviors
-const pageBehavior = require('../../../behaviors/page-behavior');
-const listBehavior = require('../../../behaviors/list-behavior');
-const postBehavior = require('../../../behaviors/post-behavior');
-const authBehavior = require('../../../behaviors/auth-behavior');
+const baseBehavior = require('../../../behaviors/baseBehavior');
+const postBehavior = require('../../../behaviors/postBehavior');
+const authBehavior = require('../../../behaviors/authBehavior');
 
 Page({
-  behaviors: [pageBehavior, listBehavior, postBehavior, authBehavior],
+  behaviors: [baseBehavior, postBehavior, authBehavior],
 
   data: {
     posts: [],

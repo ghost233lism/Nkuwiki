@@ -9,14 +9,14 @@ const {
 } = require('../../../utils/util');
 
 // behaviors
-const pageBehavior = require('../../../behaviors/page-behavior');
-const authBehavior = require('../../../behaviors/auth-behavior');
-const userBehavior = require('../../../behaviors/user-behavior');
-const weuiBehavior = require('../../../behaviors/weui-behavior');
+const baseBehavior = require('../../../behaviors/baseBehavior');
+const authBehavior = require('../../../behaviors/authBehavior');
+const userBehavior = require('../../../behaviors/userBehavior');
+const weuiBehavior = require('../../../behaviors/weuiBehavior');
 
 
 Page({
-  behaviors: [pageBehavior, authBehavior, userBehavior, weuiBehavior],
+  behaviors: [baseBehavior, authBehavior, userBehavior, weuiBehavior],
 
   data: {
     userInfo: {
@@ -160,8 +160,8 @@ Page({
       
       console.debug('上传成功，fileID:', uploadResult.fileID);
       
-      // 使用behavior中的updateProfile方法更新头像信息
-      const res = await this.updateProfile({
+      // 使用behavior中的_updateUserProfile方法更新头像信息
+      const res = await this._updateUserProfile({
         avatar: uploadResult.fileID
       });
       
@@ -177,6 +177,9 @@ Page({
         userInfo.avatar = uploadResult.fileID;
         storage.set('userInfo', userInfo);
       }
+      
+      // 设置需要刷新个人资料页面的标记
+      storage.set('needRefreshProfile', true);
       
       // 显示成功提示
       this.showToptips({ msg: '头像更新成功', type: 'success' });
@@ -227,7 +230,7 @@ Page({
       }
 
       // 发送更新请求
-      const res = await this.updateProfile(updateData);
+      const res = await this._updateUserProfile(updateData);
       
       // 更新本地存储的用户信息
       const userInfo = storage.get('userInfo');
@@ -241,7 +244,7 @@ Page({
       storage.set('needRefreshProfile', true);
       
       // 直接等待一段时间后导航返回，不进行Toast切换操作
-      // 因为updateProfile方法已经显示了成功提示
+      // 因为_updateUserProfile方法已经显示了成功提示
       setTimeout(() => {
         wx.navigateBack({ delta: 1 });
       }, 1000);

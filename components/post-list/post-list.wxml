@@ -34,9 +34,4 @@
     <view class="loading-icon"></view>
     <text>{{loadingText || '加载中...'}}</text>
   </view>
-  
-  <!-- 没有更多数据 -->
-  <view wx:if="{{!hasMore && post.length > 0}}" class="no-more">
-    <text>{{noMoreText}}</text>
-  </view>
 </page-status>

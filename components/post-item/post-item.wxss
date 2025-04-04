@@ -57,6 +57,13 @@
   color: #999;
 }
 
+.post-time-container {
+  font-size: 24rpx;
+  color: #999;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .follow-container {
   display: flex;
   align-items: center;
@@ -161,8 +168,16 @@
   margin-top: 16rpx;
 }
 
-.post-tags {
+.post-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16rpx;
+  width: 100%;
+}
+
+.post-tags {
+  margin-top: 16rpx;
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
@@ -178,23 +193,23 @@
 
 .post-actions {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  padding-top: 16rpx;
-  border-top: 1rpx solid #f0f0f0;
-  gap: 24rpx;
+  gap: 20rpx;
+  float: right;
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  gap: 4rpx;
-  padding: 8rpx;
+  gap: 2rpx;
+  transform: scale(0.75);
+  padding-left: 10rpx;
 }
 
 .action-text {
-  font-size: 24rpx;
+  font-size: 20rpx;
   color: #666;
+  margin-left: 2rpx;
 }
 
 .action-item.active .action-text {
@@ -205,7 +220,7 @@
 .share-button {
   background: none;
   border: none;
-  padding: 8rpx;
+  padding: 0;
   line-height: 1;
   border-radius: 0;
   margin: 0;

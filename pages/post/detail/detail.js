@@ -1,8 +1,8 @@
 const { ui, ToastType } = require('../../../utils/util');
 const baseBehavior = require('../../../behaviors/baseBehavior');
-const postBehavior = require('../../../behaviors/post-behavior');
-const userBehavior = require('../../../behaviors/user-behavior');
-const authBehavior = require('../../../behaviors/auth-behavior');
+const postBehavior = require('../../../behaviors/postBehavior');
+const userBehavior = require('../../../behaviors/userBehavior');
+const authBehavior = require('../../../behaviors/authBehavior');
 
 Page({
   behaviors: [baseBehavior, postBehavior, userBehavior, authBehavior],

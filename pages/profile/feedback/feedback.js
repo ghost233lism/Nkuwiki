@@ -26,12 +26,12 @@ const feedbackApi = createApiClient('/api/wxapp/feedback', {
 });
 
 // behaviors
-const pageBehavior = require('../../../behaviors/page-behavior');
-const authBehavior = require('../../../behaviors/auth-behavior');
-const weuiBehavior = require('../../../behaviors/weui-behavior');
+const baseBehavior = require('../../../behaviors/baseBehavior');
+const authBehavior = require('../../../behaviors/authBehavior');
+const weuiBehavior = require('../../../behaviors/weuiBehavior');
 
 Page({
-  behaviors: [pageBehavior, authBehavior, weuiBehavior],
+  behaviors: [baseBehavior, authBehavior, weuiBehavior],
 
   data: {
     // 表单数据

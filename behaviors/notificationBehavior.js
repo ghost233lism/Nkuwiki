@@ -6,9 +6,11 @@ const { createApiClient, storage } = require('../utils/util');
 
 // 通知API客户端
 const notificationApi = createApiClient('/api/wxapp/notification', {
-  count: { method: 'GET', path: '/count', params: { openid: true } }
-  // list: { method: 'GET', path: '/list', params: { openid: true } }, // 可按需添加列表接口
-  // read: { method: 'POST', path: '/read', params: { openid: true, notification_id: true } } // 可按需添加已读接口
+  getList: { method: 'GET', path: '', params: { openid: true } },
+  read: { method: 'POST', path: '/read', params: { openid: true, notification_id: true } },
+  readAll: { method: 'POST', path: '/read-all', params: { openid: true } },
+  summary: { method: 'GET', path: '/summary', params: { openid: true } },
+  delete: { method: 'POST', path: '/delete', params: { openid: true, notification_id: true } }
 });
 
 module.exports = Behavior({
@@ -25,7 +27,7 @@ module.exports = Behavior({
       }
 
       try {
-        const res = await notificationApi.count({ openid });
+        const res = await notificationApi.summary({ openid });
         if (res.code === 200 && res.data) {
           return {
             hasUnread: res.data.unread_count > 0,
@@ -50,14 +52,8 @@ module.exports = Behavior({
       const openid = storage.get('openid');
       if (!openid) return null;
 
-      // 如果API定义中没有list方法，需要先添加
-      if (!notificationApi.list) {
-        console.debug('通知列表：API未定义');
-        return null;
-      }
-
       try {
-        const res = await notificationApi.list({ openid, ...params });
+        const res = await notificationApi.getList({ openid, ...params });
         return res.code === 200 ? res.data : null;
       } catch (err) {
         console.debug('获取通知列表失败:', err);
@@ -75,12 +71,6 @@ module.exports = Behavior({
       const openid = storage.get('openid');
       if (!openid) return false;
 
-      // 如果API定义中没有read方法，需要先添加
-      if (!notificationApi.read) {
-        console.debug('标记已读：API未定义');
-        return false;
-      }
-
       try {
         const res = await notificationApi.read({ 
           openid, 
@@ -89,6 +79,45 @@ module.exports = Behavior({
         return res.code === 200;
       } catch (err) {
         console.debug('标记通知已读失败:', err);
+        return false;
+      }
+    },
+    
+    /**
+     * 标记所有通知为已读
+     * @returns {Promise<boolean>} 是否成功
+     */
+    async _markAllNotificationsAsRead() {
+      const openid = storage.get('openid');
+      if (!openid) return false;
+
+      try {
+        const res = await notificationApi.readAll({ openid });
+        return res.code === 200;
+      } catch (err) {
+        console.debug('标记所有通知已读失败:', err);
+        return false;
+      }
+    },
+    
+    /**
+     * 删除通知
+     * @param {string} notificationId - 通知ID
+     * @returns {Promise<boolean>} 是否成功
+     */
+    async _deleteNotification(notificationId) {
+      if (!notificationId) return false;
+      const openid = storage.get('openid');
+      if (!openid) return false;
+      
+      try {
+        const res = await notificationApi.delete({
+          openid,
+          notification_id: notificationId
+        });
+        return res.code === 200;
+      } catch (err) {
+        console.debug('删除通知失败:', err);
         return false;
       }
     }

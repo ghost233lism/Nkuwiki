@@ -827,6 +827,7 @@ API接口的参数类型规范如下：
     "location": "位置信息",
     "nickname": "用户昵称",
     "avatar": "用户头像URL",
+    "bio": "用户个人简介",
     "view_count": 1,
     "like_count": 0,
     "comment_count": 0,
@@ -869,6 +870,7 @@ API接口的参数类型规范如下：
       "openid": "发布用户openid",
       "nickname": "用户昵称",
       "avatar": "用户头像URL",
+      "bio": "用户个人简介",
       "category_id": 1,
       "title": "帖子标题",
       "content": "帖子内容",
@@ -957,11 +959,16 @@ API接口的参数类型规范如下：
 
 ### 2.5 删除帖子
 
-**接口**：`Post /api/wxapp/post/delete`  
+**接口**：`POST /api/wxapp/post/delete`  
 **描述**：删除帖子（标记删除）  
-**参数**：
-- `post_id` - 查询参数，帖子ID（必填，整数类型）
-- `openid` - 查询参数，用户openid（必填，用于验证操作权限）
+**请求体**：
+
+```json
+{
+  "post_id": 1, // 必填，整数类型
+  "openid": "用户openid" // 必填，用于验证操作权限
+}
+```
 
 **响应**：
 
@@ -969,11 +976,10 @@ API接口的参数类型规范如下：
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "success": true,
-    "message": "帖子已删除"
+  "data": null,
+  "details": {
+    "message": "删除帖子成功"
   },
-  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
@@ -1416,13 +1422,13 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 
 ### 4.1 获取通知列表
 
-**接口**：`GET /api/wxapp/notification/list`  
-**描述**：获取用户的通知列表  
+**接口**：`GET /api/wxapp/notification`  
+**描述**：获取用户的通知列表，同时返回用户未读通知数量  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
 - `type` - 查询参数，通知类型：如comment-评论, like-点赞, follow-关注等（可选）
-- `is_read` - 查询参数，是否已读：true/false（可选）
-- `limit` - 查询参数，返回记录数量限制，默认20
+- `is_read` - 查询参数，是否已读：1-已读，0-未读（可选）
+- `limit` - 查询参数，返回记录数量限制，默认10
 - `offset` - 查询参数，分页偏移量，默认0
 
 **响应**：
@@ -1432,34 +1438,35 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "code": 200,
   "message": "success",
   "data": {
-    "data": [
+    "list": [
       {
         "id": 1,
-        "openid": "接收者用户openid",
-        "title": "收到新评论",
+        "sender": {"openid": "发送者openid"},
+        "receiver": "接收者用户openid",
         "content": "用户评论了你的帖子「帖子标题」",
         "type": "comment",
-        "is_read": false,
-        "sender": {"openid": "发送者openid"},
+        "is_read": 0,
         "target_id": "123",
         "target_type": "comment",
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00",
-        "status": 1
+        "create_time": "2023-01-01 12:00:00"
       }
     ],
-    "pagination": {
-      "total": 20,
-      "limit": 20,
-      "offset": 0
-    }
+    "unread_count": 5
+  },
+  "pagination": {
+    "total": 20,
+    "limit": 10,
+    "offset": 0,
+    "has_more": true
   },
   "details": {
-    "message": "获取用户通知列表成功"
+    "message": "获取通知列表成功"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：响应中同时包含通知列表和未读通知数量，无需额外调用获取未读数量接口
 
 ### 4.2 获取通知详情
 
@@ -1476,32 +1483,28 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "message": "success",
   "data": {
     "id": 1,
-    "openid": "接收者用户openid",
-    "title": "收到新评论",
+    "sender": {"openid": "发送者openid"},
+    "receiver": "接收者用户openid",
     "content": "用户评论了你的帖子「帖子标题」",
     "type": "comment",
-    "is_read": false,
-    "sender": {"openid": "发送者openid"},
+    "is_read": 0,
     "target_id": "123",
     "target_type": "comment",
     "create_time": "2023-01-01 12:00:00",
     "update_time": "2023-01-01 12:00:00",
-    "status": 1
+    "is_deleted": 0
   },
-  "details": {
-    "message": "获取通知详情成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 4.3 获取未读通知数量
+### 4.3 获取通知汇总信息
 
-**接口**：`GET /api/wxapp/notification/count`  
-**描述**：获取用户未读通知数量  
+**接口**：`GET /api/wxapp/notification/summary`  
+**描述**：获取用户各类型通知汇总信息  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
-- `type` - 查询参数，通知类型：如comment-评论, like-点赞, follow-关注等（可选）
 
 **响应**：
 
@@ -1510,25 +1513,29 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "code": 200,
   "message": "success",
   "data": {
-    "count": 5
+    "unread_count": 5,
+    "type_counts": {
+      "system": 2,
+      "comment": 10,
+      "like": 8,
+      "follow": 3,
+      "favorite": 2
+    }
   },
-  "details": {
-    "message": "获取未读通知数量成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
 ### 4.4 标记通知已读
 
-**接口**：`POST /api/wxapp/notification/mark-read`  
+**接口**：`POST /api/wxapp/notification/read`  
 **描述**：标记单个通知为已读  
 **请求体**：
 
 ```json
 {
-  "notification_id": "123",
-  "openid": "用户openid"
+  "notification_id": 1  // 必填，通知ID
 }
 ```
 
@@ -1540,29 +1547,24 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "message": "success",
   "data": null,
   "details": {
-    "message": "标记已读成功"
+    "message": "已标记通知为已读"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 4.5 批量标记通知已读
+### 4.5 批量标记全部通知已读
 
-**接口**：`POST /api/wxapp/notification/mark-read-batch`  
-**描述**：批量标记通知为已读  
-**说明**：只能标记属于自己（openid）的通知为已读，否则会返回403权限错误  
+**接口**：`POST /api/wxapp/notification/read-all`  
+**描述**：批量标记用户所有通知为已读  
 **请求体**：
 
 ```json
 {
-  "openid": "用户openid",
-  "notification_ids": [1, 2, 3]
+  "openid": "用户openid", // 必填
+  "type": "comment"       // 可选，通知类型，不传则标记所有类型
 }
 ```
-
-**请求参数说明**：
-- `openid` - 字符串，必填，用户的openid
-- `notification_ids` - 整数数组，必填，要标记为已读的通知ID列表
 
 **响应**：
 
@@ -1572,21 +1574,7 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "message": "success",
   "data": null,
   "details": {
-    "message": "成功标记 3 条通知为已读"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-**错误响应**：
-
-```json
-{
-  "code": 403,
-  "message": "Permission denied",
-  "data": null,
-  "details": {
-    "message": "无权限操作此通知"
+    "message": "已标记所有通知为已读"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
@@ -1595,13 +1583,12 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 ### 4.6 删除通知
 
 **接口**：`POST /api/wxapp/notification/delete`  
-**描述**：删除通知  
+**描述**：删除通知（标记删除）  
 **请求体**：
 
 ```json
 {
-  "notification_id": "123",
-  "openid": "用户openid"
+  "notification_id": 1  // 必填，通知ID
 }
 ```
 
@@ -1619,7 +1606,47 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 }
 ```
 
-### 4.7 通知触发机制
+### 4.7 创建通知
+
+**接口**：`POST /api/wxapp/notification`  
+**描述**：创建新通知  
+**请求体**：
+
+```json
+{
+  "receiver": "接收者用户openid",
+  "sender": "发送者信息",
+  "type": "通知类型",
+  "content": "通知内容",
+  "target_id": "目标ID",
+  "target_type": "目标类型"
+}
+```
+
+**请求参数说明**：
+- `receiver` - 字符串，必填，接收通知的用户openid
+- `sender` - 任意类型，可选，发送者信息，默认为"system"
+- `type` - 字符串，必填，通知类型：comment/like/follow/favorite等
+- `content` - 字符串，必填，通知内容
+- `target_id` - 字符串，可选，目标ID，如帖子ID、评论ID等
+- `target_type` - 字符串，可选，目标类型，如post/comment/user等
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "notification_id": 123,
+    "message": "创建通知成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 4.8 通知触发机制
 
 系统会在以下情况自动触发通知：
 
@@ -1637,44 +1664,23 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 4. **收藏通知**：
    - 当用户A收藏用户B的帖子时，用户B会收到收藏通知
 
-### 4.8 通知数据结构
+### 4.9 通知数据结构
 
 通知记录包含以下字段：
 
 | 字段 | 类型 | 描述 |
 | --- | --- | --- |
 | id | int | 通知ID |
-| openid | string | 接收通知的用户ID |
-| title | string | 通知标题 |
+| receiver | string | 接收通知的用户ID |
+| sender | object/string | 发送者信息，包含openid或为"system" |
 | content | string | 通知内容 |
 | type | string | 通知类型(comment/like/follow/favorite) |
-| is_read | boolean | 是否已读 |
-| sender | object | 发送者信息，包含openid |
+| is_read | int | 是否已读：0-未读，1-已读 |
 | target_id | string | 目标ID (帖子ID、评论ID等) |
 | target_type | string | 目标类型 (post/comment/user等) |
 | create_time | datetime | 创建时间 |
 | update_time | datetime | 更新时间 |
-| status | int | 状态：1-正常, 0-禁用 |
-
-### 4.9 通知自动发送
-
-以下接口会自动触发通知发送：
-
-1. **评论相关**：
-   - `POST /api/wxapp/comment` - 创建评论时，会向帖子作者发送评论通知
-   - 如果是回复评论，还会向被回复的评论作者发送通知
-
-2. **点赞相关**：
-   - `POST /api/wxapp/post/like` - 点赞帖子时，会向帖子作者发送点赞通知
-   - `POST /api/wxapp/comment/like` - 点赞评论时，会向评论作者发送点赞通知
-
-3. **收藏相关**：
-   - `POST /api/wxapp/post/favorite` - 收藏帖子时，会向帖子作者发送收藏通知
-
-4. **关注相关**：
-   - `POST /api/wxapp/user/follow` - 关注用户时，会向被关注用户发送关注通知
-
-每个通知都包含相应的标题、内容、发送者信息和目标信息。
+| is_deleted | int | 是否删除：0-未删除，1-已删除 |
 
 ## 五、反馈接口
 
@@ -1692,6 +1698,7 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "content": "反馈内容",
   "type": "suggestion",
   "contact": "联系方式",
+  "image": ["图片URL1", "图片URL2"],
   "device_info": {
     "system": "iOS 14.7.1",
     "model": "iPhone 12",
@@ -1706,7 +1713,68 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 - `content` - 字符串，必填，反馈内容
 - `type` - 字符串，可选，反馈类型：suggestion-建议，bug-问题报告，question-咨询，other-其他
 - `contact` - 字符串，可选，联系方式
+- `image` - 数组，可选，图片URL列表
 - `device_info` - 对象，可选，设备信息
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "feedback_id": 1,
+    "message": "反馈创建成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.2 获取反馈列表
+
+**接口**：`GET /api/wxapp/feedback/list`  
+**描述**：获取用户的反馈列表  
+**参数**：
+- `openid` - 查询参数，用户openid（必填）
+- `type` - 查询参数，反馈类型（可选）
+- `status` - 查询参数，反馈状态（可选）
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "feedbacks": [
+      {
+        "id": 1,
+        "openid": "用户openid",
+        "content": "反馈内容",
+        "type": "suggestion",
+        "contact": "联系方式",
+        "image": ["图片URL1", "图片URL2"],
+        "status": 1,
+        "reply": null,
+        "create_time": "2023-01-01 12:00:00",
+        "update_time": "2023-01-01 12:00:00"
+      }
+    ]
+  },
+  "details": {
+    "message": "获取反馈列表成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.3 获取反馈详情
+
+**接口**：`GET /api/wxapp/feedback/detail`  
+**描述**：获取反馈详情  
+**参数**：
+- `feedback_id` - 查询参数，反馈ID（必填）
 
 **响应**：
 
@@ -1720,31 +1788,39 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
     "content": "反馈内容",
     "type": "suggestion",
     "contact": "联系方式",
-    "device_info": {
-      "system": "iOS 14.7.1",
-      "model": "iPhone 12",
-      "platform": "ios",
-      "brand": "Apple"
-    },
+    "image": ["图片URL1", "图片URL2"],
     "status": 1,
+    "reply": null,
     "create_time": "2023-01-01 12:00:00",
     "update_time": "2023-01-01 12:00:00"
   },
-  "details": {
-    "message": "提交反馈成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 5.2 获取反馈列表
+### 5.4 更新反馈
 
-**接口**：`GET /api/wxapp/feedback/list`  
-**描述**：获取用户的反馈列表  
-**参数**：
-- `openid` - 查询参数，用户openid（必填）
-- `limit` - 查询参数，每页数量，默认10
-- `offset` - 查询参数，偏移量，默认0
+**接口**：`POST /api/wxapp/feedback/update`  
+**描述**：更新反馈内容  
+**请求体**：
+
+```json
+{
+  "feedback_id": 1,
+  "content": "更新后的反馈内容",
+  "type": "bug",
+  "contact": "更新的联系方式",
+  "image": ["新的图片URL1", "新的图片URL2"]
+}
+```
+
+**请求参数说明**：
+- `feedback_id` - 整数，必填，反馈ID
+- `content` - 字符串，可选，反馈内容
+- `type` - 字符串，可选，反馈类型
+- `contact` - 字符串，可选，联系方式
+- `image` - 数组，可选，图片URL列表
 
 **响应**：
 
@@ -1752,34 +1828,38 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "data": [
-      {
-        "id": 1,
-        "openid": "用户openid",
-        "content": "反馈内容",
-        "type": "suggestion",
-        "contact": "联系方式",
-        "device_info": {
-          "system": "iOS 14.7.1",
-          "model": "iPhone 12",
-          "platform": "ios",
-          "brand": "Apple"
-        },
-        "status": 1,
-        "admin_reply": null,
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00"
-      }
-    ],
-    "pagination": {
-      "total": 5,
-      "limit": 10,
-      "offset": 0
-    }
-  },
+  "data": null,
   "details": {
-    "message": "获取反馈列表成功"
+    "message": "反馈更新成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.5 删除反馈
+
+**接口**：`POST /api/wxapp/feedback/delete`  
+**描述**：删除反馈  
+**请求体**：
+
+```json
+{
+  "feedback_id": 1
+}
+```
+
+**请求参数说明**：
+- `feedback_id` - 整数，必填，反馈ID
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "message": "反馈删除成功"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
@@ -1823,19 +1903,21 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
       "type": "user"
     }
   ],
-  "details": {
-    "keyword": "测试",
-    "search_type": "all"
-  },
   "pagination": {
     "total": 50,
     "page": 1,
     "page_size": 10,
     "total_pages": 5
   },
+  "details": {
+    "keyword": "测试",
+    "search_type": "all"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：搜索操作会自动记录用户的搜索历史，无需额外调用接口。
 
 ### 6.2 获取搜索建议
 
@@ -1879,19 +1961,19 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "data": [
     {
       "keyword": "测试帖子",
-      "search_time": "2023-01-01 12:00:00",
-      "openid": "用户openid"
+      "search_time": "2023-01-01 12:00:00"
     },
     {
       "keyword": "测试用户",
-      "search_time": "2023-01-01 11:00:00",
-      "openid": "用户openid"
+      "search_time": "2023-01-01 11:00:00"
     }
   ],
   "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：搜索历史结果已经去重，并按最近搜索时间排序。
 
 ### 6.4 清空搜索历史
 
@@ -1950,6 +2032,8 @@ nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收�
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：热门搜索统计的是最近7天内的搜索次数。
 
 ## 七、智能体接口
 
