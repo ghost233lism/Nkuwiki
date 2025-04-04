@@ -6,7 +6,7 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "loading": "weui-miniprogram/loading/loading",
+    "loading": "/components/loading/loading",
     "page-status": "/components/page-status/page-status",
     "error": "/components/error/error",
     "user-card": "/components/user-card/user-card",

@@ -1,3 +1,5 @@
+const { storage } = require("../../utils/util");
+
 Component({
   properties: {
     title: {
@@ -36,7 +38,7 @@ Component({
   lifetimes: {
     attached() {
       // 获取系统信息
-      const systemInfo = wx.getSystemInfoSync()
+      const systemInfo = storage.get('systemInfo')
       const statusBarHeight = systemInfo.statusBarHeight
       
       // 根据不同平台设置导航栏高度
@@ -106,7 +108,7 @@ Component({
       this.triggerEvent('notification', { });
     },
 
-    onAvatarClick() {
+    onAvatarTap() {
       this.triggerEvent('avatar', { });
     }
   }

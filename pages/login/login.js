@@ -14,6 +14,11 @@ Page({
   },
   async onLoad() {
     await this.getVersionInfo();
+    const res = await this._syncUserInfo();
+    if(res.details.message === '用户已存在'){
+      this.setStorage('isLoggedIn', true);
+      this.reLaunch('/pages/index/index');
+    }
     // 初始化页面状态，确保组件状态正确
     this.updateState({
       loading: false,
@@ -22,8 +27,6 @@ Page({
       success: false,
       errorText: '出错了，请稍后再试'
     });
-    
-    this.setStorage('isLoggedIn', false);
   },
 
   // 从storage中获取版本信息
@@ -70,7 +73,7 @@ Page({
     this.updateState({ isLogging: true, error: false, errorText: '' });
     try {
       const res = await this._syncUserInfo();
-      if (res) {
+      if (res.code === 200) {
         // 设置登录状态
         this.setStorage('isLoggedIn', true);
         console.debug('isloggedin', this.getStorage('isLoggedIn'));

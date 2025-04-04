@@ -13,7 +13,7 @@
     </view>
     <view wx:if="{{title}}" class="title" style="color: {{textColor}};">{{title}}</view>
     <view class="center-right" style="left: {{notificationLeft}};">
-      <view class="nav-btn" bindtap="onNotification">
+      <view class="nav-btn" bindtap="onNotificationClick">
         <icon name="{{hasUnread ? 'notification-unread' : 'notification'}}" size="28" color="{{textColor}}" outline="{{false}}" />
       </view>
     </view>

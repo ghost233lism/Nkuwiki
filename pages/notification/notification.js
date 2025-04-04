@@ -1,6 +1,7 @@
-const { ui, error, ToastType, formatRelativeTime, storage } = require('../../utils/util');
+const { ui, error, formatRelativeTime, storage } = require('../../utils/util');
 const baseBehavior = require('../../behaviors/baseBehavior');
-const userBehavior = require('../../behaviors/userBehavior');
+const authBehavior = require('../../behaviors/authBehavior');
+const userBehavior = require('../../behaviors/userBehavior'); 
 const notificationBehavior = require('../../behaviors/notificationBehavior');
 
 // 通知类型配置
@@ -35,7 +36,7 @@ const NotificationConfig = {
 };
 
 Page({
-  behaviors: [baseBehavior, userBehavior, notificationBehavior],
+  behaviors: [baseBehavior, authBehavior, userBehavior, notificationBehavior],
 
   data: {
     activeTab: 0,
@@ -54,9 +55,20 @@ Page({
   },
 
   onLoad: async function() {
-    const isLoggedIn = await this._ensureLogin();
-    if (!isLoggedIn) return;
-    await this.loadList();
+    console.debug('通知页面加载');
+    
+    try {
+      // 检查登录状态
+      if (!(await this._checkLogin(true))) {
+        return;
+      }
+      
+      // 加载通知列表
+      await this.loadList();
+    } catch (err) {
+      console.debug('通知页面加载异常:', err);
+      this.showToast('加载失败，请重试', 'error');
+    }
   },
 
   onPullDownRefresh() {
@@ -86,7 +98,7 @@ Page({
     const { activeTab, tabs, page, limit } = this.data;
     const type = tabs[activeTab].type;
 
-    this._showLoading('加载中...');
+    this.showLoading('加载中...');
     this.setData({ loading: true });
 
     try {
@@ -96,79 +108,80 @@ Page({
         offset: (refresh ? 0 : page - 1) * limit
       };
       
-      const list = await this._getNotificationList(params);
+      // 使用behavior获取通知列表
+      const result = await this._getNotificationList(params);
       
-      if (!list) {
-        throw error.create('加载失败');
+      if (!result) {
+        throw new Error('加载失败');
       }
-
-      const formattedList = (list || []).map(item => ({
+      
+      // 格式化通知显示
+      const formattedList = result.list.map(item => ({
         ...item,
         relative_time: formatRelativeTime(item.create_time),
         config: NotificationConfig[item.type] || {}
       }));
 
+      // 更新UI
       this.setData({
         notifications: refresh ? formattedList : [...this.data.notifications, ...formattedList],
         page: (refresh ? 1 : page) + 1,
-        hasMore: formattedList.length === limit
+        hasMore: formattedList.length === limit && result.pagination?.has_more
       });
     } catch (err) {
-      this._handleError(err, '加载通知失败');
+      this.handleError(err, '加载通知失败');
     } finally {
-      this._hideLoading();
+      this.hideLoading();
       this.setData({ loading: false });
     }
   },
 
+  // 标记所有通知为已读
   async markAllAsRead() {
-    if (this.data.activeTab !== 0) {
-      return;
-    }
+    if (this.data.activeTab !== 0) return;
 
+    this.showLoading('处理中...');
+    
     try {
-      this._showLoading('处理中...');
-      
-      const success = await this._markAllNotificationsAsRead();
-      
-      if (!success) {
-        throw error.create('操作失败');
+      // 使用behavior标记所有通知为已读
+      if (await this._markAllNotificationsAsRead()) {
+        // 成功后刷新列表
+        this.setData({
+          notifications: [],
+          page: 1,
+          hasMore: true
+        });
+        await this.loadList(true);
+        this.showToast('已全部标记为已读', 'success');
+      } else {
+        throw new Error('操作失败');
       }
-      
-      this.setData({
-        notifications: [],
-        page: 1,
-        hasMore: true
-      });
-      await this.loadList(true);
-      
-      this._showToast('已全部标记为已读', 'success');
     } catch (err) {
-      this._handleError(err, '操作失败');
+      this.handleError(err, '操作失败');
     } finally {
-      this._hideLoading();
+      this.hideLoading();
     }
   },
 
+  // 处理通知点击
   async onNotificationTap(e) {
     const { id, type, target_id, target_type, is_read } = e.currentTarget.dataset;
     
     // 标记为已读
     if (!is_read) {
-      try {
-        await this._markNotificationAsRead(id);
-      } catch (err) {
+      await this._markNotificationAsRead(id).catch(err => {
         console.debug('标记通知已读失败:', err);
-      }
+      });
     }
 
     // 跳转到目标页面
     const url = this.getTargetUrl(type, target_id, target_type);
     if (url) {
-      this._navigateTo(url);
+      this.navigateTo(url);
     }
   },
 
+  // 获取目标URL
   getTargetUrl(type, target_id, target_type) {
     switch (target_type) {
       case 'post':
@@ -182,6 +195,7 @@ Page({
     }
   },
 
+  // 删除通知
   async onNotificationDelete(e) {
     const { id } = e.currentTarget.dataset;
 
@@ -191,23 +205,22 @@ Page({
       success: async (res) => {
         if (!res.confirm) return;
         
-        this._showLoading('删除中...');
+        this.showLoading('删除中...');
         
         try {
-          const success = await this._deleteNotification(id);
-          
-          if (!success) {
-            throw error.create('删除失败');
+          // 使用behavior删除通知
+          if (await this._deleteNotification(id)) {
+            // 更新本地列表
+            const notifications = this.data.notifications.filter(n => n.id !== id);
+            this.setData({ notifications });
+            this.showToast('删除成功', 'success');
+          } else {
+            throw new Error('删除失败');
           }
-          
-          const notifications = this.data.notifications.filter(n => n.id !== id);
-          this.setData({ notifications });
-    
-          this._showToast('删除成功', 'success');
         } catch (err) {
-          this._handleError(err, '删除失败');
+          this.handleError(err, '删除失败');
         } finally {
-          this._hideLoading();
+          this.hideLoading();
         }
       }
     });

@@ -12,8 +12,9 @@
     <!-- 加载状态 -->
     <loading 
       wx:if="{{loading}}" 
-      type="dot-gray"
-      show="{{loading}}"
+      show="{{true}}"
+      type="fullscreen"
+      text="加载中..."
     />
 
     <!-- 错误状态 -->

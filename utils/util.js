@@ -375,7 +375,7 @@ const nav = {
     });
   },
 
-  relaunch: url => {
+  reLaunch: url => {
     if (!url) {
       console.error('导航错误: url不能为空');
       return Promise.reject(new Error('导航错误: url不能为空'));

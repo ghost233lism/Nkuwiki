@@ -6,18 +6,11 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "page-status": "/components/page-status/page-status",
-    "post-item": "/components/post-item/post-item",
-    "comment-list": "/components/comment-list/comment-list",
-    "comment-item": "/components/comment-item/comment-item",
-    "comment-input": "/components/comment-input/comment-input",
-    "loading": "/components/loading/loading",
-    "empty": "/components/empty/empty",
-    "mp-dialog": "/miniprogram_npm/weui-miniprogram/dialog/dialog",
     "mp-toptips": "/miniprogram_npm/weui-miniprogram/toptips/toptips",
+    "mp-dialog": "/miniprogram_npm/weui-miniprogram/dialog/dialog",
     "mp-actionsheet": "/miniprogram_npm/weui-miniprogram/actionsheet/actionsheet",
-    "action-bar": "/components/action-bar/action-bar",
+    "loading": "/components/loading/loading",
     "icon": "/components/icon/icon",
-    "user-card": "/components/user-card/user-card"
+    "post-item": "/components/post-item/post-item"
   }
 } 

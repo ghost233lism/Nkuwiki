@@ -54,6 +54,7 @@ module.exports = Behavior({
         await this._initOpenid();
       }
       try {
+        console.debug('同步用户信息...');
         const res = await userApi.sync();
         if (res.code === 200 && res.data?.id) {
           // 存储用户信息
@@ -61,7 +62,8 @@ module.exports = Behavior({
           storage.set('isLoggedIn', true);
           storage.set('lastSyncTime', Date.now());
           
-          return res.data;
+          console.debug('同步用户信息成功，已设置登录状态为true');
+          return res;
         } else {
           const errorMsg = res.message || '同步用户信息失败';
           console.error('同步用户信息失败:', res);
@@ -79,23 +81,48 @@ module.exports = Behavior({
      * @returns {Promise<Boolean>} 返回 Promise<true> 表示已登录, Promise<false> 表示未登录或验证失败
      */
     async _checkLogin(showInteraction = true) {
+      // 先检查本地存储的登录状态
       const isLoggedIn = storage.get('isLoggedIn');
-      console.debug('isLoggedIn', isLoggedIn);
-      if(isLoggedIn) return true;
+      const openid = storage.get('openid');
       
+      console.debug('检查登录状态:', { isLoggedIn, openid });
+      
+      // 如果已登录并且有openid，直接返回true
+      if (isLoggedIn && openid) {
+        return true;
+      }
+      
+      // 如果未登录但有openid，尝试同步一次用户信息
+      if (openid && !isLoggedIn) {
+        try {
+          console.debug('尝试同步用户信息');
+          const res = await this._syncUserInfo();
+          if (res && res.code === 200) {
+            console.debug('同步成功，已登录');
+            return true;
+          }
+        } catch (err) {
+          console.debug('同步失败，未登录', err);
+        }
+      }
+      
+      // 如果需要显示交互，则显示登录提示
       if (showInteraction) {
         try {
-            const res = await ui.showModal({
-              content: '您尚未登录或登录已过期，是否前往登录页面？',
-              confirmText: '去登录',
-              showCancel: true
-            });
-            if (res.confirm) {
-              nav.navigateTo('/pages/login/login');
-            }
-          } catch (modalErr) {throw modalErr;}
+          const res = await ui.showModal({
+            content: '您尚未登录或登录已过期，是否前往登录页面？',
+            confirmText: '去登录',
+            showCancel: true
+          });
+          if (res.confirm) {
+            nav.navigateTo('/pages/login/login');
+          }
+        } catch (modalErr) {
+          throw modalErr;
         }
-        return false;
+      }
+      
+      return false;
     },
 
     /**

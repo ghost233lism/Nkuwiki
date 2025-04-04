@@ -1,6 +1,6 @@
 <page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
   <!-- 页面状态 -->
-  <loading wx:if="{{loading}}" />
+  <loading wx:if="{{loading}}" show="{{true}}" type="fullscreen" text="加载中..." />
   <error 
     wx:elif="{{error}}" 
     text="{{error}}"
@@ -57,7 +57,7 @@
 
         <!-- 加载更多 -->
         <view class="load-more" wx:if="{{hasMore}}">
-          <loading size="small" />
+          <loading show="{{true}}" type="inline" size="small" />
         </view>
       </block>
 

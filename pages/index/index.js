@@ -235,9 +235,7 @@ Page({
   // 处理通知点击
   onNotificationTap() {
     console.debug('进入通知页面');
-    this.navigateTo({
-      url: '/pages/notification/notification'
-    });
+    this.navigateTo('/pages/notification/notification');
   },
 
   // 处理头像点击

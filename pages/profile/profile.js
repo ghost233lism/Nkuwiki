@@ -179,16 +179,19 @@ Page({
         this.checkUnreadNotifications();
       } else {
         console.debug('【Profile】获取用户资料失败或返回数据不完整');
-        // 同步失败或返回数据不完整，清除登录状态
-        this.setStorage('userInfo', null);
-        this.setStorage('openid', null);
-        this.setStorage('isLoggedIn', false);
-        
-        // 更新全局数据
-        const app = getApp();
-        if (app && app.globalData) {
-          app.globalData.userInfo = null;
-          app.globalData.openid = null;
+        // 只有在确认是认证问题时才重置登录状态
+        if (profileRes && (profileRes.code === 401 || profileRes.code === 403)) {
+          console.debug('【Profile】认证失败，清除登录状态');
+          this.setStorage('userInfo', null);
+          this.setStorage('openid', null);
+          this.setStorage('isLoggedIn', false);
+          
+          // 更新全局数据
+          const app = getApp();
+          if (app && app.globalData) {
+            app.globalData.userInfo = null;
+            app.globalData.openid = null;
+          }
         }
         
         // 更新页面状态
@@ -308,7 +311,7 @@ Page({
       return;
     }
     
-    nav.navigateTo('/pages/notification/notification');
+    this.navigateTo('/pages/notification/notification');
   },
 
   // 编辑资料
@@ -317,7 +320,7 @@ Page({
       return;
     }
     
-    nav.navigateTo('/pages/profile/edit/edit');
+    this.navigateTo('/pages/profile/edit/edit');
   },
 
   async login() {

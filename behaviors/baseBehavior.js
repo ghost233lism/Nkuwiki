@@ -592,7 +592,19 @@ module.exports = Behavior({
     reLaunch(url, params) { 
       try {
         console.debug('重启并跳转到:', url);
-        return nav.reLaunch(url, params)
+        // 如果url是对象，且有url属性，则提取出来
+        if (typeof url === 'object' && url.url) {
+          console.debug('将对象转换为url字符串:', url);
+          const urlStr = url.url;
+          return nav.reLaunch(urlStr)
+            .catch(err => {
+              console.error('重启跳转失败:', err);
+              ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
+              throw err;
+            });
+        }
+        
+        return nav.reLaunch(url)
           .catch(err => {
             console.error('重启跳转失败:', err);
             ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
