@@ -1,312 +1,93 @@
-.login-container {
-  height: 100vh;
-  padding: 40rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  background-color: #fff;
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 80rpx;
-}
-
-.logo {
-  width: 160rpx;
-  height: 160rpx;
-  margin-bottom: 20rpx;
-}
-
-.title {
-  font-size: 48rpx;
-  font-weight: bold;
-  margin-bottom: 10rpx;
-  color: #333;
-}
-
-.subtitle {
-  font-size: 28rpx;
-  color: #666;
-}
-
-.login-form {
-  width: 100%;
-  margin-bottom: 80rpx;
-}
-
-.input {
-  width: 100%;
-  height: 88rpx;
-  background: #F5F5F5;
-  border-radius: 44rpx;
-  padding: 0 30rpx;
-  margin-bottom: 20rpx;
-  box-sizing: border-box;
-}
-
-.code-input {
-  display: flex;
-  gap: 20rpx;
-}
-
-.code-input .input {
-  flex: 1;
-}
-
-.send-btn {
-  width: 200rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #4B6EFF;
-  color: white;
-  border-radius: 44rpx;
-  font-size: 28rpx;
-  padding: 0;
-}
-
-.send-btn.disabled {
-  background: #ccc;
-}
-
-.login-btn {
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #4B6EFF;
-  color: white;
-  border-radius: 44rpx;
-  margin-top: 40rpx;
-}
-
-.divider {
-  font-size: 24rpx;
-  color: #999;
-  margin: 0 10rpx;
-}
-
-.wx-login-btn {
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  background: #07C160;
-  color: white;
-  border-radius: 44rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32rpx;
-  box-shadow: 0 8rpx 16rpx rgba(7, 193, 96, 0.2);
-  transition: all 0.3s ease;
-}
-
-.wx-login-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 4rpx 8rpx rgba(7, 193, 96, 0.2);
-}
-
-.wx-login-btn[disabled] {
-  background: #07C160;
-  opacity: 1;
-  color: white;
-}
-
-.wx-login-btn::after {
-  border: none;
-}
-
-.wx-icon {
-  width: 40rpx;
-  height: 40rpx;
-  margin-right: 10rpx;
-}
-
-/* 加载动画容器 */
-.loading-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 登录页面样式 */
+page {
+  background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+  overflow: hidden;
   height: 100%;
-}
-
-/* 加载动画 */
-.loading-spinner {
-  width: 36rpx;
-  height: 36rpx;
-  border: 4rpx solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 0.8s linear infinite;
-  margin-right: 16rpx;
-}
-
-/* 加载文字 */
-.loading-text {
-  color: #fff;
-  font-size: 30rpx;
-}
-
-/* 旋转动画 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.footer {
   position: fixed;
-  bottom: 60rpx;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.tips {
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 10rpx;
-}
-
-.links {
-  display: flex;
-  align-items: center;
-}
-
-.link {
-  font-size: 24rpx;
-  color: #4B6EFF;
-}
-
-.avatar-button {
-  margin-top: 40rpx;
-  background-color: #f8f8f8;
-  color: #333;
-}
-
-/* 全屏加载遮罩 */
-.loading-mask {
-  position: fixed;
-  top: 0;
   left: 0;
+  top: 0;
   right: 0;
   bottom: 0;
-  background-color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
 }
 
-.loading-content {
+.container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40rpx;
-}
-
-.loading-spinner-large {
-  width: 80rpx;
-  height: 80rpx;
-  margin-bottom: 30rpx;
-  border-radius: 50%;
+  justify-content: flex-start;
+  height: 100%;
+  padding: 40rpx 30rpx 120rpx;
+  box-sizing: border-box;
   position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 
-.loading-spinner-large:before,
-.loading-spinner-large:after {
+/* 背景装饰元素，降低层级和透明度 */
+.container::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 6rpx solid transparent;
+  top: -100rpx;
+  left: -100rpx;
+  width: 400rpx;
+  height: 400rpx;
   border-radius: 50%;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.04) 100%);
+  z-index: 0;
+  pointer-events: none;
 }
 
-.loading-spinner-large:before {
-  border-top-color: #07C160;
-  animation: spin 1s linear infinite;
-}
-
-.loading-spinner-large:after {
-  border-bottom-color: #07C160;
-  animation: spin 1.5s linear infinite reverse;
-}
-
-.loading-text-large {
-  font-size: 34rpx;
-  color: #333;
-  margin-top: 20rpx;
-  font-weight: 500;
-  animation: pulse 2s infinite;
-}
-
-/* 点状加载动画 */
-.loading-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20rpx;
-}
-
-.loading-dot {
-  width: 16rpx;
-  height: 16rpx;
-  background-color: #07C160;
+.container::after {
+  content: '';
+  position: absolute;
+  bottom: -100rpx;
+  right: -100rpx;
+  width: 400rpx;
+  height: 400rpx;
   border-radius: 50%;
-  margin: 0 8rpx;
-  animation: bounceDot 1.4s infinite ease-in-out both;
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.08) 0%, rgba(82, 196, 26, 0.04) 100%);
+  z-index: 0;
+  pointer-events: none;
 }
 
-.loading-dot:nth-child(1) {
-  animation-delay: -0.32s;
-  background-color: #5d6df1;
-}
-
-.loading-dot:nth-child(2) {
-  animation-delay: -0.16s;
-  background-color: #07C160;
-}
-
-.loading-dot:nth-child(3) {
-  background-color: #3fcca8;
-}
-
-@keyframes bounceDot {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-/* 可以添加额外的样式类，当登录成功时应用 */
-.loading-success .loading-dot:nth-child(1),
-.loading-success .loading-dot:nth-child(2),
-.loading-success .loading-dot:nth-child(3) {
-  background-color: #07C160;
-}
-
-.loading-success .loading-text-large {
-  color: #07C160;
-}
-
-.loading-full-content {
+/* 主内容样式 */
+.main-content {
+  width: 100%;
+  max-width: 750rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
+  flex: 1;
+  z-index: 2; /* 确保内容在装饰元素之上 */
+}
+
+/* 底部版权信息 */
+.footer {
   width: 100%;
-  padding: 40rpx;
-  box-sizing: border-box;
-} 
+  text-align: center;
+  padding: 20rpx 0;
+  z-index: 2;
+  position: absolute;
+  bottom: 30rpx;
+  left: 0;
+  right: 0;
+}
+
+.copyright {
+  font-size: 24rpx;
+  color: #a0a0a0;
+  opacity: 1;
+  letter-spacing: 1rpx;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* 覆盖微信原生按钮样式 */
+button[type=primary] {
+  background-color: #07c160 !important;
+}
+
+button.button-hover {
+  background-color: #06ad56 !important;
+}

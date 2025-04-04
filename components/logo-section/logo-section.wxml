@@ -1,0 +1,12 @@
+<view class="logo-section {{isAnimating ? 'animate' : ''}}" bindtap="onTap">
+  <view class="logo-wrapper">
+    <icon name="logo" size="{{logoSize}}" class="logo" outline="{{false}}"></icon>
+    <view class="glow"></view>
+  </view>
+  
+  <view class="app-info">
+    <text class="app-name">{{appName}}</text>
+    <text class="subtitle">{{subtitle}}</text>
+    <text class="version">v{{version}}</text>
+  </view>
+</view> 

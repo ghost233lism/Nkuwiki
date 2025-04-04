@@ -1,0 +1,270 @@
+.page-status {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 120rpx;
+  box-sizing: border-box;
+}
+
+/* 正常内容 */
+.page-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 全屏容器 */
+.fullscreen {
+  min-height: 70vh !important;
+  justify-content: center;
+}
+
+/* 图标样式 */
+.icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  margin-bottom: 20rpx;
+}
+
+.icon-wrapper.success {
+  background-color: rgba(7, 193, 96, 0.1);
+}
+
+.icon-wrapper.error {
+  background-color: rgba(255, 82, 82, 0.1);
+}
+
+.icon-wrapper .iconfont {
+  font-size: 60rpx;
+}
+
+.icon-wrapper .iconfont.icon-success {
+  color: #07c160;
+}
+
+.icon-wrapper .iconfont.icon-error {
+  color: #ff5252;
+}
+
+.icon-wrapper .iconfont.icon-empty {
+  color: #999999;
+}
+
+.icon-wrapper .iconfont.icon-search-empty {
+  color: #999999;
+}
+
+.icon-wrapper .iconfont.icon-network-empty {
+  color: #ff9800;
+}
+
+/* 加载状态 */
+.loading-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(0, 0, 0, 0.1);
+  border-top-color: #07c160;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-dots.small {
+  transform: scale(0.7);
+}
+
+.loading-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #07c160;
+  margin: 0 8rpx;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  } 
+  40% { 
+    transform: scale(1.0);
+  }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #666;
+  margin-top: 20rpx;
+}
+
+/* 成功状态 */
+.success-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+}
+
+.success-text {
+  font-size: 28rpx;
+  color: #07c160;
+  font-weight: 500;
+}
+
+/* 错误状态 */
+.error-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #ff5252;
+  text-align: center;
+  margin-bottom: 20rpx;
+  padding: 0 40rpx;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.retry-btn, .close-btn, .empty-btn {
+  min-width: 160rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  border-radius: 32rpx;
+  margin: 0 10rpx;
+  font-size: 26rpx;
+  padding: 0 30rpx;
+}
+
+.retry-btn {
+  background-color: #07c160;
+  color: #fff;
+}
+
+.close-btn {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.empty-btn {
+  background-color: #07c160;
+  color: #fff;
+  margin-top: 20rpx;
+}
+
+/* 空数据状态 */
+.empty-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+/* 加载更多 */
+.load-more {
+  width: 100%;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.load-more-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.load-more-text {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 10rpx;
+}
+
+.no-more-text {
+  width: 100%;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+  padding: 20rpx 0;
+}
+
+.load-more-end {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+}
+
+/* 按钮重置样式 */
+button {
+  padding: 0;
+  line-height: 1;
+  border-radius: 0;
+  background: none;
+}
+
+button::after {
+  border: none;
+}
+
+.page-status button.empty-btn::after,
+.page-status button.retry-btn::after,
+.page-status button.close-btn::after {
+  border: none;
+} 

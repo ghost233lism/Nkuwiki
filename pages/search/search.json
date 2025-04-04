@@ -4,6 +4,13 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "towxml": "/wxcomponents/towxml/towxml"
+    "page-status": "/components/page-status/page-status",
+    "mp-searchbar": "weui-miniprogram/searchbar/searchbar",
+    "mp-toptips": "weui-miniprogram/toptips/toptips",
+    "mp-dialog": "weui-miniprogram/dialog/dialog",
+    "category-tabs": "/components/category-tabs/category-tabs",
+    "search-history": "/components/search-history/search-history",
+    "post-list": "/components/post-list/post-list",
+    "empty": "/components/empty/empty"
   }
 }

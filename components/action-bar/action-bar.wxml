@@ -1,0 +1,37 @@
+<view 
+  class="action-bar {{fixed ? 'fixed' : ''}} {{safeAreaInsetBottom ? 'safe-area' : ''}} {{showBorder ? 'with-border' : ''}}"
+  style="background-color: {{background}};"
+>
+  <!-- 操作按钮区域 -->
+  <view class="action-bar-main">
+    <view 
+      wx:for="{{actions}}"
+      wx:key="id"
+      class="action-item {{item.active ? 'active' : ''}} {{item.disabled ? 'disabled' : ''}} {{buttonType}}"
+      bindtap="handleAction"
+      data-index="{{index}}"
+    >
+      <!-- 只有在icon-text或icon-only模式下才显示图标 -->
+      <block wx:if="{{buttonType === 'icon-text' || buttonType === 'icon-only'}}">
+        <icon 
+          name="{{item.active && item.activeIcon ? item.activeIcon : item.icon}}"
+          size="{{getIconSize()}}"
+          color="{{item.active ? '#07C160' : ''}}"
+        />
+      </block>
+      
+      <!-- 只有在icon-text或text-only模式下才显示文字 -->
+      <block wx:if="{{buttonType === 'icon-text' || buttonType === 'text-only'}}">
+        <view class="action-text">
+          {{item.text}}
+          <text wx:if="{{item.count !== undefined}}" class="action-count">{{item.count}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+  
+  <!-- 额外内容区域（可选） -->
+  <view wx:if="{{showExtra}}" class="action-bar-extra">
+    <slot name="extra"></slot>
+  </view>
+</view> 

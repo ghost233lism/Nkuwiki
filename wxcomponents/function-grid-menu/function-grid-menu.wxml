@@ -1,0 +1,13 @@
+<view class="function-menu">
+  <view class="menu-section">
+    <view class="menu-title">{{title}}</view>
+    <view class="menu-grid">
+      <block wx:for="{{menuItems}}" wx:key="type">
+        <view class="menu-item" bindtap="onMenuItemTap" data-type="{{item.type}}">
+          <image class="menu-icon" src="{{item.icon}}" />
+          <text class="menu-text">{{item.text}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+</view> 

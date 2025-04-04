@@ -1,0 +1,26 @@
+<view class="input-field {{isFocus ? 'is-focus' : ''}} {{disabled ? 'disabled' : ''}}" style="{{customStyle}}">
+  <input
+    class="input"
+    type="{{type}}"
+    value="{{inputValue}}"
+    password="{{password}}"
+    placeholder="{{placeholder}}"
+    placeholder-class="placeholder"
+    disabled="{{disabled}}"
+    readonly="{{readonly}}"
+    maxlength="{{maxlength}}"
+    focus="{{focus}}"
+    confirm-type="{{confirmType}}"
+    confirm-hold="{{confirmHold}}"
+    bindinput="onInput"
+    bindfocus="onFocus"
+    bindblur="onBlur"
+    bindconfirm="onConfirm"
+  />
+  <view wx:if="{{showClear && inputValue.length > 0 && isFocus}}" class="clear-icon" bindtap="onClear">
+    <icon name="close" size="32" color="#999999" />
+  </view>
+  <view wx:if="{{showCounter}}" class="counter">
+    {{inputValue.length}}/{{maxlength}}
+  </view>
+</view> 

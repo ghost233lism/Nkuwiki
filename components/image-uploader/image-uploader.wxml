@@ -1,0 +1,111 @@
+<view class="image-uploader">
+  <!-- 已上传的图片 -->
+  <view wx:if="{{uploadedImages.length > 0}}" class="image-list">
+    <view 
+      wx:for="{{uploadedImages}}" 
+      wx:key="index" 
+      class="image-item"
+      style="width: {{width}}; height: {{height}};"
+    >
+      <image 
+        src="{{item}}" 
+        mode="aspectFill" 
+        style="width: 100%; height: 100%;"
+        bindtap="previewImage"
+        data-index="{{index}}"
+        data-type="uploaded"
+      ></image>
+      <view 
+        class="delete-btn" 
+        catchtap="deleteImage" 
+        data-index="{{index}}"
+        data-type="uploaded"
+      >
+        <icon name="close" size="28"></icon>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 本地待上传的图片 -->
+  <view wx:if="{{localImages.length > 0}}" class="image-list">
+    <view 
+      wx:for="{{localImages}}" 
+      wx:key="index" 
+      class="image-item"
+      style="width: {{width}}; height: {{height}};"
+    >
+      <image 
+        src="{{item}}" 
+        mode="aspectFill" 
+        style="width: 100%; height: 100%;"
+        bindtap="previewImage"
+        data-index="{{index}}"
+        data-type="local"
+      ></image>
+      <view 
+        class="delete-btn" 
+        catchtap="deleteImage" 
+        data-index="{{index}}"
+        data-type="local"
+      >
+        <icon name="close" size="28"></icon>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 上传按钮 -->
+  <view 
+    wx:if="{{showUploadBtn && getTotalImageCount() < maxCount && !disabled}}" 
+    class="upload-btn"
+    style="width: {{width}}; height: {{height}};"
+    bindtap="chooseImage"
+  >
+    <icon name="add" size="40"></icon>
+    <text>添加图片</text>
+  </view>
+  
+  <!-- 上传进度 -->
+  <view wx:if="{{isUploading}}" class="upload-progress">
+    <progress percent="{{uploadProgress}}" stroke-width="4" color="#07C160" active></progress>
+    <text>正在上传 {{uploadProgress}}%</text>
+  </view>
+  
+  <!-- 错误提示 -->
+  <view wx:if="{{errors.length > 0}}" class="error-tips">
+    <text>部分图片上传失败，请重试</text>
+  </view>
+</view>
+
+<view class="image-preview" wx:if="{{showPreview}}">
+  <view class="preview-header">
+    <view class="preview-title">图片预览</view>
+    <view class="preview-close" bindtap="closePreview">×</view>
+  </view>
+  
+  <swiper class="preview-swiper" current="{{currentIndex}}" bindchange="swiperChange">
+    <swiper-item wx:for="{{previewUrls}}" wx:key="*this">
+      <image src="{{item}}" mode="aspectFit" class="preview-image"></image>
+    </swiper-item>
+  </swiper>
+  
+  <view class="preview-indicator">{{currentIndex + 1}}/{{previewUrls.length}}</view>
+  
+  <view class="preview-thumbnail" wx:if="{{previewUrls.length > 1}}">
+    <scroll-view scroll-x="true" class="thumbnail-scroll">
+      <block wx:for="{{previewUrls}}" wx:key="*this">
+        <image 
+          class="thumbnail-item {{currentIndex === index ? 'active' : ''}}" 
+          src="{{item}}" 
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="switchPreviewImage"
+        ></image>
+      </block>
+    </scroll-view>
+  </view>
+  
+  <view class="preview-action">
+    <view class="action-btn crop-btn" bindtap="cropImage">裁剪</view>
+    <view class="action-btn confirm-btn" bindtap="confirmPreview">确认</view>
+  </view>
+</view> 

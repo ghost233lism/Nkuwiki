@@ -1,0 +1,261 @@
+.post-item {
+  background: #fff;
+  margin-bottom: 20rpx;
+  padding: 30rpx 24rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.post-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.post-header-left {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.author-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  margin-right: 16rpx;
+  background-color: #f5f5f5;
+}
+
+.post-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.author-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6rpx;
+}
+
+.author-bio {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+  max-width: 400rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.post-time-container {
+  font-size: 24rpx;
+  color: #999;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.follow-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.follow-btn {
+  padding: 4rpx 24rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  background-color: #1aad19;
+  color: #fff;
+  min-width: 120rpx;
+  text-align: center;
+}
+
+.follow-btn.followed {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.post-content-wrapper {
+  margin-bottom: 20rpx;
+}
+
+.post-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 12rpx;
+  color: #333;
+  line-height: 1.4;
+}
+
+.post-content {
+  padding: 0;
+}
+
+.post-text {
+  margin-bottom: 16rpx;
+}
+
+.post-body {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  display: block;
+}
+
+.post-body.collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.read-more {
+  color: #1aad19;
+  font-size: 26rpx;
+  margin-top: 8rpx;
+  display: inline-block;
+}
+
+.post-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 16rpx;
+  position: relative;
+}
+
+.single-image .post-image {
+  max-width: 500rpx;
+  max-height: 400rpx;
+  width: auto;
+  height: auto;
+  border-radius: 8rpx;
+}
+
+.double-image .post-image,
+.multi-image .post-image {
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 8rpx;
+  object-fit: cover;
+}
+
+.image-count {
+  position: absolute;
+  right: 10rpx;
+  bottom: 10rpx;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 24rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.post-footer {
+  margin-top: 16rpx;
+}
+
+.post-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+  width: 100%;
+}
+
+.post-tags {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.post-tag {
+  color: #1aad19;
+  font-size: 24rpx;
+  background-color: rgba(26, 173, 25, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  float: right;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+  transform: scale(0.75);
+  padding-left: 10rpx;
+}
+
+.action-text {
+  font-size: 20rpx;
+  color: #666;
+  margin-left: 2rpx;
+}
+
+.action-item.active .action-text {
+  color: #1aad19;
+}
+
+/* 分享按钮重置样式 */
+.share-button {
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+  border-radius: 0;
+  margin: 0;
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+}
+
+.share-button::after {
+  border: none;
+}
+
+.comment-preview {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.comment-item {
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+}
+
+.comment-author {
+  color: #1aad19;
+  font-weight: 500;
+}
+
+.comment-content {
+  color: #333;
+}
+
+.view-more {
+  color: #1aad19;
+  font-size: 24rpx;
+  margin-top: 10rpx;
+  text-align: right;
+} 

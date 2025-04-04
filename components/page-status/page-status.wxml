@@ -1,0 +1,59 @@
+<view class="page-status {{customClass}}" style="{{containerStyle}}">
+  <!-- 加载状态 -->
+  <view class="loading-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isLoading}}">
+    <view class="loading-spinner" wx:if="{{loadingType !== 'dots'}}"></view>
+    <view class="loading-dots" wx:else>
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+    </view>
+    <view class="loading-text">{{loadingText}}</view>
+  </view>
+
+  <!-- 成功状态 -->
+  <view class="success-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isSuccess}}">
+    <view class="icon-wrapper success">
+      <icon name="success" size="60" color="#07c160"></icon>
+    </view>
+    <view class="success-text">{{successText}}</view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isError}}">
+    <view class="icon-wrapper error">
+      <icon name="error" size="60" color="#ff5252"></icon>
+    </view>
+    <view class="error-text">{{_state.errorMsg}}</view>
+    <view class="error-actions">
+      <button class="retry-btn" bindtap="onErrorRetry">{{retryText || '重试'}}</button>
+      <button class="close-btn" bindtap="onErrorClose">关闭</button>
+    </view>
+  </view>
+
+  <!-- 空数据状态 -->
+  <view class="empty-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isEmpty}}">
+    <view class="icon-wrapper">
+      <icon name="{{emptyType === 'search' ? 'search-empty' : emptyType === 'network' ? 'network-empty' : 'empty'}}" size="60" color="#999999"></icon>
+    </view>
+    <view class="empty-text">{{emptyText}}</view>
+    <button wx:if="{{showEmptyBtn && emptyBtnText}}" class="empty-btn" bindtap="onEmptyBtnTap">{{emptyBtnText}}</button>
+  </view>
+  
+  <!-- 正常内容 -->
+  <view class="page-content" wx:if="{{!_state.isLoading && !_state.isError && !_state.isEmpty && !_state.isSuccess}}">
+    <slot></slot>
+  </view>
+  
+  <!-- 加载更多状态 - 只在有内容且明确指定hasMore时显示 -->
+  <view class="load-more" wx:if="{{!_state.isLoading && !_state.isError && !_state.isEmpty && !_state.isSuccess && hasMore !== undefined}}">
+    <view wx:if="{{hasMore}}" class="load-more-loading" bindtap="onLoadMore">
+      <view class="loading-dots small">
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+      </view>
+      <text class="load-more-text">{{loadMoreText}}</text>
+    </view>
+    <view wx:else class="no-more-text">{{noMoreText}}</view>
+  </view>
+</view> 

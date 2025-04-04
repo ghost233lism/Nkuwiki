@@ -1,0 +1,14 @@
+<view class="search-history" wx:if="{{history.length > 0 && !showResults}}">
+  <view class="history-header">
+    <text class="history-title">搜索历史</text>
+    <text class="clear-history" bindtap="clearHistory">清空历史</text>
+  </view>
+  <view class="history-list">
+    <block wx:for="{{history}}" wx:key="index">
+      <view class="history-item" bindtap="onItemTap" data-keyword="{{item}}">
+        <icon type="search" size="14" color="#999" />
+        <text>{{item}}</text>
+      </view>
+    </block>
+  </view>
+</view> 

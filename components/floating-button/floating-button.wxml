@@ -1,0 +1,10 @@
+<view 
+  class="floating-button {{type}} {{size}} {{position}} {{disabled ? 'disabled' : ''}}"
+  hover-class="{{disabled ? '' : 'button-hover'}}"
+  bindtap="onClick"
+>
+  <view class="floating-button-content">
+    <icon name="{{icon}}" size="{{size === 'large' ? 52 : 36}}" color="{{type === 'primary' ? '#ffffff' : ''}}"></icon>
+    <text wx:if="{{text}}" class="floating-button-text">{{text}}</text>
+  </view>
+</view> 

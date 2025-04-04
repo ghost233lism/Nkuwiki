@@ -1,0 +1,14 @@
+.weui-toptips {
+  display: flex;
+}
+.weui-toptips_success {
+  background-color: var(--weui-BRAND);
+}
+.weui-toptips_error {
+  background-color: var(--weui-RED);
+}
+.weui-toptips_info {
+  background-color: var(--weui-BLUE);
+}
+
+

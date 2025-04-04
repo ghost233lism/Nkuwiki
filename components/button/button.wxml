@@ -1,0 +1,11 @@
+<button 
+  class="weui-btn {{type ? 'weui-btn_' + type : ''}} {{size ? 'weui-btn_' + size : ''}} {{plain ? 'weui-btn_plain' : ''}} {{disabled ? 'weui-btn_disabled' : ''}} {{customClass}}"
+  hover-class="{{disabled ? '' : 'weui-btn_active'}}"
+  bindtap="onClick"
+>
+  <view class="btn-content">
+    <icon wx:if="{{loading}}" class="loading btn-icon" name="loading" size="{{size === 'mini' ? 36 : 48}}" color="inherit" />
+    <icon wx:elif="{{icon}}" class="btn-icon" name="{{icon}}" size="{{size === 'mini' ? 36 : 48}}" color="inherit" />
+    <slot></slot>
+  </view>
+</button> 

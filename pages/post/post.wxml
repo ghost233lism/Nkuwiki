@@ -1,160 +1,129 @@
+<!-- 顶部消息提示 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+
+<!-- 确认对话框 -->
+<mp-dialog 
+  title="{{dialogTitle}}" 
+  show="{{dialogShow}}" 
+  bindbuttontap="tapDialogButton" 
+  buttons="{{dialogButtons}}">
+  <view>{{dialogContent}}</view>
+</mp-dialog>
+
 <view class="post-container">
+  <!-- 顶部导航栏 -->
   <view class="post-header">
-    <view class="back-icon" bindtap="goBack">
-      <image src="/assets/icons/back.png"></image>
+    <view class="back-icon" bindtap="navigateBack">
+      <icon name="back" size="24"></icon>
     </view>
-    <view class="header-title">发布帖子</view>
-    <button class="publish-btn" bindtap="submitPost">发布</button>
+    <view class="page-title">发布帖子</view>
+    <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">发布</button>
   </view>
 
+  <!-- 表单内容 -->
   <view class="post-form">
-    <view class="input-box">
-      <input 
-        class="title-input" 
-        placeholder="请输入标题" 
-        maxlength="50"
-        bindinput="onTitleInput"
-        value="{{title}}"
-      />
+    <!-- 标题输入 -->
+    <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
+      bindinput="onFormChange" data-field="title" maxlength="50" />
+    
+    <!-- 内容输入 -->
+    <textarea class="post-content" placeholder="分享你的想法..." value="{{form.content}}" 
+      bindinput="onFormChange" data-field="content" maxlength="5000" />
+    
+    <!-- 已选图片预览 -->
+    <view class="image-preview-list" wx:if="{{form.images && form.images.length > 0}}">
+      <view class="preview-title">已选择 {{form.images.length}}/9 张图片</view>
+      <view class="preview-grid">
+        <view class="preview-item" wx:for="{{form.images}}" wx:key="index">
+          <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}"></image>
+          <view class="delete-icon" bindtap="deleteImage" data-index="{{index}}">
+            <icon name="close" size="20" color="#fff"></icon>
+          </view>
+        </view>
+      </view>
     </view>
-      
-    <view class="input-box">
-      <textarea 
-        class="content-input" 
-        placeholder="分享你的想法..." 
-        bindinput="onContentInput"
-        value="{{content}}"
-        maxlength="4000"
-      />
-    </view>
-      
-    <view class="editor-toolbar">
-      <view class="toolbar-item">B</view>
-      <view class="toolbar-item">/</view>
-      <view class="toolbar-item">@</view>
-      <view class="toolbar-item wiki-button {{isWikiEnabled ? 'active' : ''}}" bindtap="toggleWiki">
-        <image src="/assets/icons/index/logo.png" mode="aspectFit"></image>
+    
+    <!-- 工具栏 -->
+    <view class="toolbar">
+      <view class="tool-item" bindtap="onBoldTap"><text class="tool-icon">B</text></view>
+      <view class="tool-item" bindtap="onItalicTap"><text class="tool-icon">I</text></view>
+      <view class="tool-item" bindtap="chooseImage">
+        <icon name="image" size="24"></icon>
+      </view>
+      <view class="tool-item" bindtap="onAtTap"><text class="tool-icon">@</text></view>
+      <view class="wiki-tool" bindtap="toggleWikiMode">
+        <icon name="wiki" size="16"></icon>
         <text>Wiki润色</text>
       </view>
     </view>
+  </view>
 
-    <view class="image-upload-container">
-      <view class="upload-title">添加图片</view>
-      
-      <view class="upload-image-grid">
-        <block wx:for="{{images}}" wx:key="index">
-          <view class="upload-image-item">
-            <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}"></image>
-            <view class="delete-image-btn" catchtap="deleteImage" data-index="{{index}}">×</view>
-          </view>
-        </block>
-        
-        <view class="upload-image-item add-button" bindtap="showImagePicker" wx:if="{{images.length < 9}}">
-          <view class="add-icon">+</view>
-          <view class="add-text">添加</view>
-        </view>
-      </view>
-      
-      <view class="image-status-bar">
-        <view class="image-count">已选择 {{images.length}}/9 张图片</view>
-        <view class="edit-all-btn" bindtap="batchEditImages" wx:if="{{images.length > 0}}">批量编辑</view>
-      </view>
-    </view>
-
-    <view class="topic-section">
-      <text class="section-title">选择话题</text>
-      <view class="topic-list">
-        <view class="topic-tag">#校园生活</view>
-        <view class="topic-tag">#学习交流</view>
-        <view class="topic-tag">#求助</view>
-        <view class="topic-tag add-topic">#添加话题</view>
-      </view>
-    </view>
-
-    <view class="wiki-card" wx:if="{{isWikiEnabled}}">
-      <view class="wiki-header">
-        <view class="wiki-title">
-          <image src="/assets/icons/wiki-robot.png" class="wiki-icon"></image>
-          <text>Wiki 润色建议</text>
-        </view>
-        <text class="apply-btn">应用</text>
-      </view>
-      
-      <view class="wiki-content">
-        建议调整：1. 增加段落间的过渡，使文章更加连贯
-        2. 补充更多具体细节，增强文章说服力
-        3. 优化标点符号使用，提升可读性
-      </view>
-
-      <view class="wiki-divider"></view>
-
-      <view class="style-section">
-        <text class="style-title">文风选择</text>
-        <view class="style-options">
-          <view class="style-option {{currentStyle === 'formal' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="formal">正式</view>
-          <view class="style-option {{currentStyle === 'casual' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="casual">轻松</view>
-          <view class="style-option {{currentStyle === 'humorous' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="humorous">幽默</view>
-          <view class="style-option {{currentStyle === 'professional' ? 'active' : ''}}" 
-                bindtap="selectStyle" data-style="professional">专业</view>
-        </view>
-      </view>
+  <!-- 话题选择 -->
+  <view class="topic-section">
+    <view class="section-title">选择话题</view>
+    <view class="topic-list">
+      <view class="topic-tag {{form.category_id === 2 ? 'active' : ''}}" 
+        data-category="2" bindtap="onTopicSelect">#校园生活</view>
+      <view class="topic-tag {{form.category_id === 1 ? 'active' : ''}}" 
+        data-category="1" bindtap="onTopicSelect">#学习交流</view>
+      <view class="topic-tag {{form.category_id === 3 ? 'active' : ''}}" 
+        data-category="3" bindtap="onTopicSelect">#求助</view>
+      <view class="add-topic-tag" bindtap="onAddTopicTap">#添加话题</view>
     </view>
   </view>
 
-  <view class="post-footer">
-    <view class="visibility-options">
-      <view class="visibility-option-pill {{isPublic ? 'active' : ''}}" bindtap="togglePublic">
-        <image src="/assets/icons/profile/notification.png"></image>
-        <text>公开</text>
+  <!-- Wiki润色建议 -->
+  <view class="wiki-section" wx:if="{{form.wikiKnowledge}}">
+    <view class="wiki-header">
+      <view class="wiki-title">
+        <icon name="wiki" size="20"></icon>
+        <text>Wiki 润色建议</text>
       </view>
-      
-      <view class="visibility-option-pill {{allowComment ? 'active' : ''}}" bindtap="toggleComment">
-        <image src="/assets/icons/index/comment.png"></image>
-        <text>允许评论</text>
-      </view>
-      
-      <view class="wiki-switch">
-        <view class="wiki-icon"></view>
-        <text>wiki小知</text>
-        <switch checked="{{wikiKnowledge}}" color="#6252ee" bindchange="toggleWikiKnowledge"></switch>
-      </view>
+      <view class="wiki-apply" bindtap="applyWikiSuggestion">应用</view>
+    </view>
+    <view class="wiki-suggestions">
+      <text>建议调整：1. 增加段落间的过渡，使文章更加连贯</text>
+      <text>2. 补充更多具体细节，增强文章说服力</text>
+      <text>3. 优化标点符号使用，提升可读性</text>
     </view>
   </view>
-</view>
 
-<view class="image-preview-modal" wx:if="{{showImagePreview}}">
-  <view class="preview-header">
-    <view class="preview-title">图片预览</view>
-    <view class="preview-close" bindtap="closePreview">×</view>
+  <!-- 文风选择 -->
+  <view class="style-section">
+    <view class="section-title">文风选择</view>
+    <view class="style-options">
+      <view class="style-option {{form.style === 'formal' ? 'active' : ''}}" 
+        data-style="formal" bindtap="onStyleSelect">正式</view>
+      <view class="style-option {{form.style === 'casual' ? 'active' : ''}}" 
+        data-style="casual" bindtap="onStyleSelect">轻松</view>
+      <view class="style-option {{form.style === 'humorous' ? 'active' : ''}}" 
+        data-style="humorous" bindtap="onStyleSelect">幽默</view>
+      <view class="style-option {{form.style === 'professional' ? 'active' : ''}}" 
+        data-style="professional" bindtap="onStyleSelect">专业</view>
+    </view>
   </view>
-  
-  <swiper class="preview-swiper" current="{{currentPreviewIndex}}" bindchange="swiperChange">
-    <swiper-item wx:for="{{previewImages}}" wx:key="index">
-      <image src="{{item}}" mode="aspectFit" class="preview-image"></image>
-    </swiper-item>
-  </swiper>
-  
-  <view class="preview-indicator">{{currentPreviewIndex + 1}}/{{previewImages.length}}</view>
-  
-  <view class="preview-thumbnails" wx:if="{{previewImages.length > 1}}">
-    <scroll-view scroll-x="true" class="thumbnail-scroll">
-      <block wx:for="{{previewImages}}" wx:key="index">
-        <image 
-          class="preview-thumbnail {{currentPreviewIndex === index ? 'active' : ''}}" 
-          src="{{item}}" 
-          mode="aspectFill"
-          data-index="{{index}}"
-          bindtap="switchPreviewImage">
-        </image>
-      </block>
-    </scroll-view>
+
+  <!-- 底部设置 -->
+  <view class="post-settings">
+    <view class="setting-item">
+      <text>公开</text>
+      <switch checked="{{form.isPublic}}" bindchange="onSwitchChange" data-field="isPublic" color="#5853e2" />
+    </view>
+    <view class="setting-item">
+      <text>允许评论</text>
+      <switch checked="{{form.allowComment}}" bindchange="onSwitchChange" data-field="allowComment" color="#5853e2" />
+    </view>
+    <view class="setting-item">
+      <text>wiki小知识</text>
+      <switch checked="{{form.wikiKnowledge}}" bindchange="onSwitchChange" data-field="wikiKnowledge" color="#5853e2" />
+    </view>
   </view>
-  
-  <view class="preview-actions">
-    <view class="preview-button crop-btn" bindtap="cropCurrentImage">裁剪</view>
-    <view class="preview-button confirm-btn" bindtap="confirmPreview">确认</view>
+
+  <!-- 加载中状态 -->
+  <view class="loading-mask" wx:if="{{submitting}}">
+    <view class="loading-content">
+      <loading type="circle" color="#5853e2" />
+      <text>发布中...</text>
+    </view>
   </view>
 </view> 

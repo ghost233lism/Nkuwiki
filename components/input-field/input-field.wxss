@@ -1,0 +1,47 @@
+.input-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 80rpx;
+  background-color: #f7f7f7;
+  border-radius: 8rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
+.input-field.is-focus {
+  background-color: #f0f0f0;
+}
+
+.input-field.disabled {
+  opacity: 0.6;
+  background-color: #f5f5f5;
+}
+
+.input {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  color: #333;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.placeholder {
+  color: #999;
+}
+
+.clear-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+}
+
+.counter {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 16rpx;
+} 

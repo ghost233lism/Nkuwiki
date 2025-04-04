@@ -1,0 +1,17 @@
+<view class="card {{customClass}}">
+  <view class="card-header" wx:if="{{title || icon}}">
+    <image wx:if="{{icon}}" class="card-icon" src="{{icon}}"></image>
+    <view class="card-title-area">
+      <text class="card-title">{{title}}</text>
+      <text wx:if="{{subtitle}}" class="card-subtitle">{{subtitle}}</text>
+    </view>
+    <slot name="header-right"></slot>
+  </view>
+  <view class="card-content">
+    <slot></slot>
+  </view>
+  <view class="card-footer" wx:if="{{showFooter || footerText}}">
+    <text wx:if="{{footerText}}" class="footer-text">{{footerText}}</text>
+    <slot name="footer"></slot>
+  </view>
+</view>

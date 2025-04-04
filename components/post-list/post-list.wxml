@@ -1,0 +1,40 @@
+<page-status
+  loading="{{loading}}"
+  error="{{error}}"
+  errorText="{{errorText}}"
+  empty="{{post.length === 0 && !loading && !error}}"
+  emptyText="{{emptyText}}"
+  hasMore="{{hasMore}}"
+  noMoreText="{{noMoreText}}"
+  bind:retry="handleRetry"
+  bind:loadmore="loadMore"
+>
+  <!-- DEBUG信息 -->
+  <view wx:if="{{post.length === 0 && !loading && !error}}" class="debug-info">
+    <text>post长度: {{post.length}}</text>
+    <text>loading: {{loading}}</text>
+    <text>error: {{error}}</text>
+  </view>
+
+  <view class="post-list">
+    <!-- 帖子列表 -->
+    <block wx:for="{{post}}" wx:key="id">
+      <post-item 
+        post="{{item}}" 
+        showAction="{{true}}"
+        showComment="{{true}}"
+        showFollow="{{true}}"
+        index="{{index}}"
+        bind:like="handlePostLike"
+        bind:favorite="handlePostFavorite"
+        bind:follow="handlePostFollow"
+      />
+    </block>
+  </view>
+  
+  <!-- 加载更多状态 -->
+  <view wx:if="{{(loading || loadingMore) && post.length > 0}}" class="loading-more">
+    <view class="loading-icon"></view>
+    <text>{{loadingText || '加载中...'}}</text>
+  </view>
+</page-status>

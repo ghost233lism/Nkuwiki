@@ -12,7 +12,7 @@ exports.main = async (event, context) => {
     if (!wxContext.OPENID) {
       console.error('未能获取到OPENID:', wxContext);
       return {
-        code: -1,
+        code: 500,
         message: '获取用户标识失败',
         data: null
       }
@@ -20,7 +20,7 @@ exports.main = async (event, context) => {
     
     // 正确格式返回
     return {
-      code: 0,
+      code: 200,
       message: '获取成功',
       data: {
         openid: wxContext.OPENID,
@@ -31,7 +31,7 @@ exports.main = async (event, context) => {
   } catch (err) {
     console.error('获取用户标识时出错:', err);
     return {
-      code: -1,
+      code: 500,
       message: '获取用户标识时发生错误: ' + err.message,
       data: null
     }

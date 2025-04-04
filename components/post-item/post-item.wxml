@@ -1,0 +1,83 @@
+<!-- 帖子列表项组件 -->
+<view class="post-item" style="{{customStyle}}">
+  <view class="post-header">
+    <view class="post-header-left">
+      <image class="author-avatar" src="{{post.avatar || '/images/default-avatar.png'}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
+      <view class="post-info">
+        <view class="author-name" bindtap="_onAuthorTap">{{post.nickname || '未知用户'}}</view>
+        <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>
+      </view>
+    </view>
+    <view wx:if="{{showFollow && post.openid && post.openid !== userInfo.openid}}" class="follow-container">
+      <button class="follow-btn {{isFollowed ? 'followed' : ''}}" 
+              catchtap="_onFollowTap">
+        {{isFollowed ? '已关注' : '关注'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="post-content-wrapper" bindtap="_onPostTap">
+    <view wx:if="{{post.title}}" class="post-title">{{post.title}}</view>
+    <view class="post-content">
+      <view class="post-text">
+        <rich-text class="post-body {{contentExpanded ? '' : 'collapsed'}}" nodes="{{post.content}}"></rich-text>
+      </view>
+      <view wx:if="{{contentOverflow}}" bindtap="_onExpandTap" class="read-more">
+        {{contentExpanded ? '收起' : '展开全文'}}
+      </view>
+    </view>
+    
+    <view wx:if="{{post.images && post.images.length > 0}}" 
+          class="post-images {{post.images.length === 1 ? 'single-image' : (post.images.length === 2 ? 'double-image' : 'multi-image')}}">
+      <block wx:for="{{post.images}}" wx:key="index">
+        <image class="post-image" src="{{item}}" mode="{{post.images.length === 1 ? 'widthFix' : 'aspectFill'}}" 
+               data-index="{{index}}" data-images="{{post.images}}" 
+               catchtap="_onImageTap"></image>
+      </block>
+      <view wx:if="{{post.images.length > 3}}" class="image-count">+{{post.images.length - 3}}</view>
+    </view>
+  </view>
+
+  <view class="post-footer">
+    <view class="post-footer-row">
+      <text class="post-time-container">{{formattedTime}}</text>
+      <view class="post-actions" wx:if="{{showAction}}">
+        <view class="action-item {{isLiked ? 'active' : ''}}" catchtap="_onLikeTap">
+          <icon name="{{isLiked ? 'like-active' : 'like'}}" color="{{isLiked ? '#1aad19' : '#666'}}" size="24"></icon>
+          <text class="action-text">{{post.like_count || 0}}</text>
+        </view>
+        
+        <view class="action-item {{isFavorited ? 'active' : ''}}" catchtap="_onFavoriteTap">
+          <icon name="{{isFavorited ? 'favorite-active' : 'favorite'}}" color="{{isFavorited ? '#1aad19' : '#666'}}" size="24"></icon>
+          <text class="action-text">{{post.favorite_count || 0}}</text>
+        </view>
+        
+        <view class="action-item" catchtap="_onCommentTap">
+          <icon name="comment" color="#666" size="24"></icon>
+          <text class="action-text">{{post.comment_count || 0}}</text>
+        </view>
+        
+        <button class="share-button action-item" open-type="share">
+          <icon name="share" color="#666" size="24"></icon>
+          <text class="action-text">分享</text>
+        </button>
+      </view>
+    </view>
+    
+    <view wx:if="{{post.tags && post.tags.length > 0}}" class="post-tags">
+      <view wx:for="{{post.tags}}" wx:key="index" class="post-tag" data-tag="{{item}}" catchtap="_onTagTap">
+        #{{item}}
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showComment && post.comments && post.comments.length > 0}}" class="comment-preview">
+    <view wx:for="{{post.comments}}" wx:key="index" class="comment-item">
+      <text class="comment-author">{{item.nickname}}：</text>
+      <text class="comment-content">{{item.content}}</text>
+    </view>
+    <view wx:if="{{post.comment_count > post.comments.length}}" class="view-more" catchtap="_onViewMoreComments">
+      查看全部{{post.comment_count}}条评论
+    </view>
+  </view>
+</view> 

@@ -1,6 +1,6 @@
-# 南开Wiki API文档
+# nkuwiki API文档
 
-本文档包含南开Wiki平台的所有API接口，主要分为两类：
+本文档包含nkuwiki平台的所有API接口，主要分为两类：
 1. 微信小程序API：提供给微信小程序客户端使用的API
 2. Agent智能体API：提供AI聊天和知识检索功能
 
@@ -457,235 +457,281 @@ API接口的参数类型规范如下：
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+### 1.5 获取用户收藏列表
 
-### 1.5 获取用户关注统计
-
-**接口**：`GET /api/wxapp/user/follow-stats`  
-**描述**：获取用户的关注数量和粉丝数量  
+**接口**：`GET /api/wxapp/user/favorite`  
+**描述**：获取用户收藏的帖子列表  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
+- `offset` - 查询参数，分页偏移量，默认0
+- `limit` - 查询参数，每页数量，默认10
 
 **响应**：
-
 ```json
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "follow_count": 10,
-    "follower_count": 20
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
+  "data": [
+    {
+      "id": 1,
+      "title": "帖子标题",
+      "content": "帖子内容",
+      "openid": "发帖人openid",
+      "nickname": "发帖人昵称",
+      "avatar": "发帖人头像",
+      "create_time": "2024-01-01 12:00:00"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 10
+  }
 }
 ```
 
-### 1.6 关注用户
+### 1.6 获取用户点赞列表
 
-**接口**：`POST /api/wxapp/user/follow`  
-**描述**：将当前用户设为目标用户的粉丝  
-**请求体**：
-- `follower_id` - 关注者的openid（必填）
-- `followed_id` - 被关注者的openid（必填）
-
-**响应**：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "status": "success",
-    "follow_count": 11,
-    "follower_count": 21,
-    "is_following": true
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 1.7 取消关注用户
-
-**接口**：`POST /api/wxapp/user/unfollow`  
-**描述**：将当前用户从目标用户的粉丝列表中移除  
-**请求体**：
-- `follower_id` - 关注者的openid（必填）
-- `followed_id` - 被关注者的openid（必填）
-
-**响应**：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "status": "success",
-    "follow_count": 10,
-    "follower_count": 20,
-    "is_following": false
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 1.8 检查关注状态
-
-**接口**：`GET /api/wxapp/user/check-follow`  
-**描述**：检查用户是否已关注某用户  
+**接口**：`GET /api/wxapp/user/like`  
+**描述**：获取用户点赞的帖子列表  
 **参数**：
-- `follower_id` - 查询参数，关注者的openid（必填）
-- `followed_id` - 查询参数，被关注者的openid（必填）
+- `openid` - 查询参数，用户openid（必填）
+- `offset` - 查询参数，分页偏移量，默认0
+- `limit` - 查询参数，每页数量，默认10
 
 **响应**：
-
 ```json
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "is_following": true
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
+  "data": [
+    {
+      "id": 1,
+      "title": "帖子标题",
+      "content": "帖子内容",
+      "openid": "发帖人openid",
+      "nickname": "发帖人昵称",
+      "avatar": "发帖人头像",
+      "create_time": "2024-01-01 12:00:00"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 10
+  }
+}
+```
+
+### 1.7 获取用户评论列表
+
+**接口**：`GET /api/wxapp/user/comment`  
+**描述**：获取用户的评论列表  
+**参数**：
+- `openid` - 查询参数，用户openid（必填）
+- `offset` - 查询参数，分页偏移量，默认0
+- `limit` - 查询参数，每页数量，默认10
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "content": "评论内容",
+      "openid": "评论人openid",
+      "nickname": "评论人昵称",
+      "avatar": "评论人头像",
+      "create_time": "2024-01-01 12:00:00",
+      "post": {
+        "id": 1,
+        "title": "帖子标题",
+        "content": "帖子内容"
+      }
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 10
+  }
+}
+```
+
+### 1.8 获取用户粉丝列表
+
+**接口**：`GET /api/wxapp/user/follower`  
+**描述**：获取用户的粉丝列表  
+**参数**：
+- `openid` - 查询参数，用户openid（必填）
+- `offset` - 查询参数，分页偏移量，默认0
+- `limit` - 查询参数，每页数量，默认10
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "openid": "粉丝openid",
+      "nickname": "粉丝昵称",
+      "avatar": "粉丝头像",
+      "bio": "个人简介"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 10
+  }
 }
 ```
 
 ### 1.9 获取用户关注列表
 
-**接口**：`GET /api/wxapp/user/followings`  
-**描述**：获取用户关注的所有用户  
+**接口**：`GET /api/wxapp/user/following`  
+**描述**：获取用户关注的用户列表  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
-- `limit` - 查询参数，返回记录数量限制，默认20，最大100
 - `offset` - 查询参数，分页偏移量，默认0
+- `limit` - 查询参数，每页数量，默认10
+
+**响应**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "openid": "被关注者openid",
+      "nickname": "被关注者昵称", 
+      "avatar": "被关注者头像",
+      "bio": "个人简介"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 10
+  }
+}
+```
+
+### 1.10 关注用户
+
+**接口**：`POST /api/wxapp/user/follow`  
+**描述**：关注/取消关注用户，根据当前状态自动判断是关注还是取消关注  
+**请求体**：
+
+```json
+{
+  "followed_id": "被关注用户的openid", // 必填
+  "openid": "关注用户的openid" // 必填
+}
+```
 
 **响应**：
 
+1. 关注成功：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "data": [
-      {
-        "id": 2,
-        "openid": "被关注用户的openid",
-        "unionid": "微信开放平台唯一标识",
-        "nickname": "用户昵称",
-        "avatar": "头像URL",
-        "gender": 1,
-        "bio": "个人简介",
-        "country": "国家",
-        "province": "省份",
-        "city": "城市",
-        "language": "语言",
-        "birthday": "2004-06-28",
-        "wechatId": "微信号",
-        "qqId": "QQ号",
-        "token_count": 0,
-        "like_count": 0,
-        "favorite_count": 0,
-        "post_count": 0,
-        "follower_count": 0,
-        "follow_count": 0,
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00",
-        "last_login": "2023-01-01 12:00:00",
-        "platform": "wxapp",
-        "status": 1,
-        "is_deleted": 0,
-        "extra": {}
-      }
-    ],
-    "pagination": {
-      "total": 50,
-      "limit": 20,
-      "offset": 0
-    }
+    "success": true,
+    "status": "followed",
+    "is_following": true
   },
-  "details": null,
+  "details": {
+    "message": "关注成功"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 1.10 获取用户粉丝列表
-
-**接口**：`GET /api/wxapp/user/followers`  
-**描述**：获取关注该用户的所有用户  
-**参数**：
-- `openid` - 查询参数，用户openid（必填）
-- `limit` - 查询参数，返回记录数量限制，默认20，最大100
-- `offset` - 查询参数，分页偏移量，默认0
-
-**响应**：
-
+2. 取消关注成功：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "data": [
-      {
-        "id": 3,
-        "openid": "粉丝用户的openid",
-        "unionid": "微信开放平台唯一标识",
-        "nickname": "粉丝昵称",
-        "avatar": "头像URL",
-        "gender": 2,
-        "bio": "个人简介",
-        "country": "国家",
-        "province": "省份",
-        "city": "城市",
-        "language": "语言",
-        "birthday": "2004-06-28",
-        "wechatId": "微信号",
-        "qqId": "QQ号",
-        "token_count": 0,
-        "like_count": 0,
-        "favorite_count": 0,
-        "post_count": 0,
-        "follower_count": 2,
-        "follow_count": 15,
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00",
-        "last_login": "2023-01-01 12:00:00",
-        "platform": "wxapp",
-        "status": 1,
-        "is_deleted": 0,
-        "extra": {}
-      }
-    ],
-    "pagination": {
-      "total": 20,
-      "limit": 20,
-      "offset": 0
-    }
+    "success": true,
+    "status": "unfollowed",
+    "is_following": false
   },
-  "details": null,
+  "details": {
+    "message": "取消关注成功"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 1.11 获取用户令牌
+**错误响应**：
 
-**接口**：`GET /api/wxapp/user/token`  
-**描述**：获取用户的访问令牌  
-**参数**：
-- `openid` - 查询参数，用户openid（必填）
+```json
+{
+  "code": 400,
+  "message": "error",
+  "data": null,
+  "details": {
+    "message": "不能关注自己"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+### 1.11 获取用户状态
+
+**接口**：`GET /api/wxapp/user/status`  
+**描述**：获取用户的交互状态，包括关注状态和统计数据  
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| openid | string | 是 | 当前用户openid |
+| target_id | string | 是 | 目标用户openid |
 
 **响应**：
 
+1. 成功响应：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "expires_at": "2023-01-02 12:00:00"
+    "is_following": true,
+    "is_self": false,
+    "post_count": 10,
+    "follower_count": 20,
+    "following_count": 15,
+    "like_count": 30
   },
-  "details": null,
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| is_following | boolean | 当前用户是否关注目标用户 |
+| is_self | boolean | 是否是当前用户自己 |
+| post_count | integer | 目标用户的帖子总数 |
+| follower_count | integer | 目标用户的粉丝总数 |
+| following_count | integer | 目标用户的关注总数 |
+| like_count | integer | 目标用户获得的点赞总数 |
+
+2. 错误响应：
+```json
+{
+  "code": 404,
+  "message": "error",
+  "data": null,
+  "details": {
+    "message": "用户不存在"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
@@ -781,6 +827,7 @@ API接口的参数类型规范如下：
     "location": "位置信息",
     "nickname": "用户昵称",
     "avatar": "用户头像URL",
+    "bio": "用户个人简介",
     "view_count": 1,
     "like_count": 0,
     "comment_count": 0,
@@ -823,6 +870,7 @@ API接口的参数类型规范如下：
       "openid": "发布用户openid",
       "nickname": "用户昵称",
       "avatar": "用户头像URL",
+      "bio": "用户个人简介",
       "bio": "用户个人简介",
       "category_id": 1,
       "title": "帖子标题",
@@ -929,11 +977,16 @@ API接口的参数类型规范如下：
 
 ### 2.5 删除帖子
 
-**接口**：`DELETE /api/wxapp/post/delete`  
+**接口**：`POST /api/wxapp/post/delete`  
 **描述**：删除帖子（标记删除）  
-**参数**：
-- `post_id` - 查询参数，帖子ID（必填，整数类型）
-- `openid` - 查询参数，用户openid（必填，用于验证操作权限）
+**请求体**：
+
+```json
+{
+  "post_id": 1, // 必填，整数类型
+  "openid": "用户openid" // 必填，用于验证操作权限
+}
+```
 
 **响应**：
 
@@ -941,11 +994,10 @@ API接口的参数类型规范如下：
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "success": true,
-    "message": "帖子已删除"
+  "data": null,
+  "details": {
+    "message": "删除帖子成功"
   },
-  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
@@ -953,7 +1005,7 @@ API接口的参数类型规范如下：
 ### 2.6 点赞帖子
 
 **接口**：`POST /api/wxapp/post/like`  
-**描述**：点赞帖子或取消点赞（如果已点赞）  
+**描述**：点赞/取消点赞帖子，根据当前状态自动判断是点赞还是取消点赞  
 **请求体**：
 
 ```json
@@ -965,53 +1017,32 @@ API接口的参数类型规范如下：
 
 **响应**：
 
-```json
-{
-  "code": 200,
-  "message": "success",
-  "details": {
-    "like_count": 6,
-    "message": "点赞成功"
-  },
-  "data": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-**错误响应**：当已经点赞过该帖子时
-
-```json
-{
-  "code": 400,
-  "message": "Bad request",
-  "data": null,
-  "details": {
-    "message": "已经点赞，请勿重复点赞"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 2.7 取消点赞帖子
-
-**接口**：`POST /api/wxapp/post/unlike`  
-**描述**：取消对帖子的点赞  
-**请求体**：
-```json
-{
-  "post_id": 1,
-  "openid": "用户openid"
-}
-```
-
-**响应**：
-
+1. 点赞成功：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
     "success": true,
+    "status": "liked",
+    "like_count": 6,
+    "is_liked": true
+  },
+  "details": {
+    "message": "点赞成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+2. 取消点赞成功：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "success": true,
+    "status": "unliked",
     "like_count": 5,
     "is_liked": false
   },
@@ -1022,24 +1053,10 @@ API接口的参数类型规范如下：
 }
 ```
 
-**错误响应**：当未点赞该帖子时
-
-```json
-{
-  "code": 400,
-  "message": "Bad request",
-  "data": null,
-  "details": {
-    "message": "未点赞，无法取消点赞"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 2.8 收藏帖子
+### 2.7 收藏帖子
 
 **接口**：`POST /api/wxapp/post/favorite`  
-**描述**：收藏帖子或取消收藏（如果已收藏）  
+**描述**：收藏/取消收藏帖子，根据当前状态自动判断是收藏还是取消收藏  
 **请求体**：
 
 ```json
@@ -1051,40 +1068,33 @@ API接口的参数类型规范如下：
 
 **响应**：
 
-```json
-{
-  "code": 200,
-  "message": "success",
-  "details": {
-    "favorite_count": 3,
-    "is_favorited": true
-  },
-  "data": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 2.9 取消收藏帖子
-
-**接口**：`POST /api/wxapp/post/unfavorite`  
-**描述**：取消收藏帖子  
-**请求体**：
-```json
-{
-  "post_id": 1,
-  "openid": "用户openid"
-}
-```
-
-**响应**：
-
+1. 收藏成功：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
     "success": true,
-    "favorite_count": 2,
+    "status": "favorited",
+    "favorite_count": 6,
+    "is_favorited": true
+  },
+  "details": {
+    "message": "收藏成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+2. 取消收藏成功：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "success": true,
+    "status": "unfavorited",
+    "favorite_count": 5,
     "is_favorited": false
   },
   "details": {
@@ -1094,28 +1104,73 @@ API接口的参数类型规范如下：
 }
 ```
 
-### 4.5 获取帖子互动状态
+### 2.8 获取帖子状态
 
 **接口**：`GET /api/wxapp/post/status`  
-**描述**：获取用户与帖子的交互状态（是否点赞、收藏等）  
-**参数**：
-- `post_id` - 查询参数，帖子ID（必填）
-- `openid` - 查询参数，用户openid（必填）
+**描述**：获取帖子的交互状态，包括点赞、收藏、评论数等信息，支持批量查询  
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| post_id | string | 是 | 帖子ID，多个ID用逗号分隔，如"1,2,3" |
+| openid | string | 是 | 用户openid |
 
 **响应**：
 
+1. 成功响应：
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "is_liked": true,
-    "is_favorited": false,
-    "like_count": 5,
-    "favorite_count": 2,
-    "comment_count": 10
+    "1": {
+      "exist": true,
+      "is_liked": true,
+      "is_favorited": false,
+      "is_author": false,
+      "like_count": 10,
+      "favorite_count": 5,
+      "comment_count": 3,
+      "view_count": 100
+    },
+    "2": {
+      "exist": false,
+      "is_liked": false,
+      "is_favorited": false,
+      "is_author": false,
+      "like_count": 0,
+      "favorite_count": 0,
+      "comment_count": 0,
+      "view_count": 0
+    }
   },
-  "details": null,
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| [post_id] | object | 以帖子ID为key的状态对象 |
+| exist | boolean | 帖子是否存在 |
+| is_liked | boolean | 当前用户是否点赞 |
+| is_favorited | boolean | 当前用户是否收藏 |
+| is_author | boolean | 当前用户是否是作者 |
+| like_count | integer | 帖子点赞总数 |
+| favorite_count | integer | 帖子收藏总数 |
+| comment_count | integer | 帖子评论总数 |
+| view_count | integer | 帖子浏览总数 |
+
+2. 错误响应：
+```json
+{
+  "code": 404,
+  "message": "error",
+  "data": null,
+  "details": {
+    "message": "帖子不存在"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
@@ -1269,26 +1324,111 @@ API接口的参数类型规范如下：
 ### 3.5 点赞评论
 
 **接口**：`POST /api/wxapp/comment/like`  
-**描述**：点赞评论或取消点赞（如果已点赞）  
+**描述**：点赞/取消点赞评论，根据当前状态自动判断是点赞还是取消点赞  
 **请求体**：
 
 ```json
 {
-  "comment_id": 1, // 必填，评论ID，整数类型
+  "comment_id": 1, // 必填，整数类型
   "openid": "点赞用户的openid" // 必填
 }
 ```
 
 **响应**：
 
+1. 点赞成功：
 ```json
 {
   "code": 200,
   "message": "success",
+  "data": {
+    "success": true,
+    "status": "liked",
+    "like_count": 6,
+    "is_liked": true
+  },
+  "details": {
+    "message": "点赞成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+2. 取消点赞成功：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "success": true,
+    "status": "unliked",
+    "like_count": 5,
+    "is_liked": false
+  },
+  "details": {
+    "message": "取消点赞成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 3.6 获取评论状态
+
+**接口**：`GET /api/wxapp/comment/status`  
+**描述**：获取评论的交互状态，包括点赞数等信息，支持批量查询  
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| comment_id | string | 是 | 评论ID，多个ID用逗号分隔，如"1,2,3" |
+| openid | string | 是 | 用户openid |
+
+**响应**：
+
+1. 成功响应：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "1": {
+      "exist": true,
+      "is_liked": true,
+      "is_author": false,
+      "like_count": 10,
+      "reply_count": 3
+    },
+    "2": {
+      "exist": false,
+      "is_liked": false,
+      "is_author": false,
+      "like_count": 0,
+      "reply_count": 0
+    }
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| [comment_id] | object | 以评论ID为key的状态对象 |
+| exist | boolean | 评论是否存在 |
+| is_liked | boolean | 当前用户是否点赞 |
+| is_author | boolean | 当前用户是否是作者 |
+| like_count | integer | 评论点赞总数 |
+| reply_count | integer | 评论回复总数 |
+
+2. 错误响应：
+```json
+{
+  "code": 404,
+  "message": "error",
   "data": null,
   "details": {
-    "like_count": 4,
-    "message": "点赞成功"
+    "message": "评论不存在"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
@@ -1296,17 +1436,17 @@ API接口的参数类型规范如下：
 
 ## 四、通知接口
 
-南开Wiki平台中的通知系统负责处理用户交互（点赞、评论、关注等）触发的通知。
+nkuwiki平台中的通知系统负责处理用户交互（点赞、评论、收藏、关注等）触发的通知。
 
 ### 4.1 获取通知列表
 
-**接口**：`GET /api/wxapp/notification/list`  
-**描述**：获取用户的通知列表  
+**接口**：`GET /api/wxapp/notification`  
+**描述**：获取用户的通知列表，同时返回用户未读通知数量  
 **参数**：
 - `openid` - 查询参数，用户openid（必填，可以使用receiver代替）
 - `type` - 查询参数，通知类型：如comment-评论, like-点赞, follow-关注等（可选）
-- `is_read` - 查询参数，是否已读：true/false（可选）
-- `limit` - 查询参数，返回记录数量限制，默认20
+- `is_read` - 查询参数，是否已读：1-已读，0-未读（可选）
+- `limit` - 查询参数，返回记录数量限制，默认10
 - `offset` - 查询参数，分页偏移量，默认0
 
 **响应**：
@@ -1316,7 +1456,7 @@ API接口的参数类型规范如下：
   "code": 200,
   "message": "success",
   "data": {
-    "data": [
+    "list": [
       {
         "id": 1,
         "sender": {"openid": "发送者openid"},
@@ -1327,23 +1467,25 @@ API接口的参数类型规范如下：
         "is_read": false,
         "target_id": "123",
         "target_type": "comment",
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00",
-        "status": 1
+        "create_time": "2023-01-01 12:00:00"
       }
     ],
-    "pagination": {
-      "total": 20,
-      "limit": 20,
-      "offset": 0
-    }
+    "unread_count": 5
+  },
+  "pagination": {
+    "total": 20,
+    "limit": 10,
+    "offset": 0,
+    "has_more": true
   },
   "details": {
-    "message": "获取用户通知列表成功"
+    "message": "获取通知列表成功"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：响应中同时包含通知列表和未读通知数量，无需额外调用获取未读数量接口
 
 ### 4.2 获取通知详情
 
@@ -1370,22 +1512,19 @@ API接口的参数类型规范如下：
     "target_type": "comment",
     "create_time": "2023-01-01 12:00:00",
     "update_time": "2023-01-01 12:00:00",
-    "status": 1
+    "is_deleted": 0
   },
-  "details": {
-    "message": "获取通知详情成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 4.3 获取未读通知数量
+### 4.3 获取通知汇总信息
 
-**接口**：`GET /api/wxapp/notification/count`  
-**描述**：获取用户未读通知数量  
+**接口**：`GET /api/wxapp/notification/summary`  
+**描述**：获取用户各类型通知汇总信息  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
-- `type` - 查询参数，通知类型：如comment-评论, like-点赞, follow-关注等（可选）
 
 **响应**：
 
@@ -1394,25 +1533,29 @@ API接口的参数类型规范如下：
   "code": 200,
   "message": "success",
   "data": {
-    "count": 5
+    "unread_count": 5,
+    "type_counts": {
+      "system": 2,
+      "comment": 10,
+      "like": 8,
+      "follow": 3,
+      "favorite": 2
+    }
   },
-  "details": {
-    "message": "获取未读通知数量成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
 ### 4.4 标记通知已读
 
-**接口**：`POST /api/wxapp/notification/mark-read`  
+**接口**：`POST /api/wxapp/notification/read`  
 **描述**：标记单个通知为已读  
 **请求体**：
 
 ```json
 {
-  "notification_id": "123",
-  "openid": "用户openid"
+  "notification_id": 1  // 必填，通知ID
 }
 ```
 
@@ -1424,23 +1567,22 @@ API接口的参数类型规范如下：
   "message": "success",
   "data": null,
   "details": {
-    "message": "标记已读成功"
+    "message": "已标记通知为已读"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 4.5 批量标记通知已读
+### 4.5 批量标记全部通知已读
 
-**接口**：`POST /api/wxapp/notification/mark-read-batch`  
-**描述**：批量标记通知为已读  
-**说明**：只能标记属于自己（openid）的通知为已读，否则会返回403权限错误  
+**接口**：`POST /api/wxapp/notification/read-all`  
+**描述**：批量标记用户所有通知为已读  
 **请求体**：
 
 ```json
 {
-  "openid": "用户openid",
-  "notification_ids": [1, 2, 3]
+  "openid": "用户openid", // 必填
+  "type": "comment"       // 可选，通知类型，不传则标记所有类型
 }
 ```
 
@@ -1456,21 +1598,7 @@ API接口的参数类型规范如下：
   "message": "success",
   "data": null,
   "details": {
-    "message": "成功标记 3 条通知为已读"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-**错误响应**：
-
-```json
-{
-  "code": 403,
-  "message": "Permission denied",
-  "data": null,
-  "details": {
-    "message": "无权限操作此通知"
+    "message": "已标记所有通知为已读"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
@@ -1479,7 +1607,33 @@ API接口的参数类型规范如下：
 ### 4.6 删除通知
 
 **接口**：`POST /api/wxapp/notification/delete`  
-**描述**：删除通知  
+**描述**：删除通知（标记删除）  
+**请求体**：
+
+```json
+{
+  "notification_id": 1  // 必填，通知ID
+}
+```
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "message": "删除通知成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 4.7 创建通知
+
+**接口**：`POST /api/wxapp/notification`  
+**描述**：创建新通知  
 **请求体**：
 
 ```json
@@ -1501,13 +1655,14 @@ API接口的参数类型规范如下：
   "message": "success",
   "data": null,
   "details": {
-    "message": "删除通知成功"
+    "notification_id": 123,
+    "message": "创建通知成功"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 4.7 通知触发机制
+### 4.8 通知触发机制
 
 系统会在以下情况自动触发通知：
 
@@ -1525,24 +1680,23 @@ API接口的参数类型规范如下：
 4. **收藏通知**：
    - 当用户A收藏用户B的帖子时，用户B会收到收藏通知
 
-### 4.8 通知数据结构
+### 4.9 通知数据结构
 
 通知记录包含以下字段：
 
 | 字段 | 类型 | 描述 |
 | --- | --- | --- |
 | id | int | 通知ID |
-| openid | string | 接收通知的用户ID |
-| title | string | 通知标题 |
+| receiver | string | 接收通知的用户ID |
+| sender | object/string | 发送者信息，包含openid或为"system" |
 | content | string | 通知内容 |
 | type | string | 通知类型(comment/like/follow/favorite) |
-| is_read | boolean | 是否已读 |
-| sender | object | 发送者信息，包含openid |
+| is_read | int | 是否已读：0-未读，1-已读 |
 | target_id | string | 目标ID (帖子ID、评论ID等) |
 | target_type | string | 目标类型 (post/comment/user等) |
 | create_time | datetime | 创建时间 |
 | update_time | datetime | 更新时间 |
-| status | int | 状态：1-正常, 0-禁用 |
+| is_deleted | int | 是否删除：0-未删除，1-已删除 |
 
 ## 五、反馈接口
 
@@ -1560,6 +1714,7 @@ API接口的参数类型规范如下：
   "content": "反馈内容",
   "type": "suggestion",
   "contact": "联系方式",
+  "image": ["图片URL1", "图片URL2"],
   "device_info": {
     "system": "iOS 14.7.1",
     "model": "iPhone 12",
@@ -1574,7 +1729,68 @@ API接口的参数类型规范如下：
 - `content` - 字符串，必填，反馈内容
 - `type` - 字符串，可选，反馈类型：suggestion-建议，bug-问题报告，question-咨询，other-其他
 - `contact` - 字符串，可选，联系方式
+- `image` - 数组，可选，图片URL列表
 - `device_info` - 对象，可选，设备信息
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "feedback_id": 1,
+    "message": "反馈创建成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.2 获取反馈列表
+
+**接口**：`GET /api/wxapp/feedback/list`  
+**描述**：获取用户的反馈列表  
+**参数**：
+- `openid` - 查询参数，用户openid（必填）
+- `type` - 查询参数，反馈类型（可选）
+- `status` - 查询参数，反馈状态（可选）
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "feedbacks": [
+      {
+        "id": 1,
+        "openid": "用户openid",
+        "content": "反馈内容",
+        "type": "suggestion",
+        "contact": "联系方式",
+        "image": ["图片URL1", "图片URL2"],
+        "status": 1,
+        "reply": null,
+        "create_time": "2023-01-01 12:00:00",
+        "update_time": "2023-01-01 12:00:00"
+      }
+    ]
+  },
+  "details": {
+    "message": "获取反馈列表成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.3 获取反馈详情
+
+**接口**：`GET /api/wxapp/feedback/detail`  
+**描述**：获取反馈详情  
+**参数**：
+- `feedback_id` - 查询参数，反馈ID（必填）
 
 **响应**：
 
@@ -1588,31 +1804,39 @@ API接口的参数类型规范如下：
     "content": "反馈内容",
     "type": "suggestion",
     "contact": "联系方式",
-    "device_info": {
-      "system": "iOS 14.7.1",
-      "model": "iPhone 12",
-      "platform": "ios",
-      "brand": "Apple"
-    },
+    "image": ["图片URL1", "图片URL2"],
     "status": 1,
+    "reply": null,
     "create_time": "2023-01-01 12:00:00",
     "update_time": "2023-01-01 12:00:00"
   },
-  "details": {
-    "message": "提交反馈成功"
-  },
+  "details": null,
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-### 5.2 获取反馈列表
+### 5.4 更新反馈
 
-**接口**：`GET /api/wxapp/feedback/list`  
-**描述**：获取用户的反馈列表  
-**参数**：
-- `openid` - 查询参数，用户openid（必填）
-- `limit` - 查询参数，每页数量，默认10
-- `offset` - 查询参数，偏移量，默认0
+**接口**：`POST /api/wxapp/feedback/update`  
+**描述**：更新反馈内容  
+**请求体**：
+
+```json
+{
+  "feedback_id": 1,
+  "content": "更新后的反馈内容",
+  "type": "bug",
+  "contact": "更新的联系方式",
+  "image": ["新的图片URL1", "新的图片URL2"]
+}
+```
+
+**请求参数说明**：
+- `feedback_id` - 整数，必填，反馈ID
+- `content` - 字符串，可选，反馈内容
+- `type` - 字符串，可选，反馈类型
+- `contact` - 字符串，可选，联系方式
+- `image` - 数组，可选，图片URL列表
 
 **响应**：
 
@@ -1620,34 +1844,38 @@ API接口的参数类型规范如下：
 {
   "code": 200,
   "message": "success",
-  "data": {
-    "data": [
-      {
-        "id": 1,
-        "openid": "用户openid",
-        "content": "反馈内容",
-        "type": "suggestion",
-        "contact": "联系方式",
-        "device_info": {
-          "system": "iOS 14.7.1",
-          "model": "iPhone 12",
-          "platform": "ios",
-          "brand": "Apple"
-        },
-        "status": 1,
-        "admin_reply": null,
-        "create_time": "2023-01-01 12:00:00",
-        "update_time": "2023-01-01 12:00:00"
-      }
-    ],
-    "pagination": {
-      "total": 5,
-      "limit": 10,
-      "offset": 0
-    }
-  },
+  "data": null,
   "details": {
-    "message": "获取反馈列表成功"
+    "message": "反馈更新成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+### 5.5 删除反馈
+
+**接口**：`POST /api/wxapp/feedback/delete`  
+**描述**：删除反馈  
+**请求体**：
+
+```json
+{
+  "feedback_id": 1
+}
+```
+
+**请求参数说明**：
+- `feedback_id` - 整数，必填，反馈ID
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "message": "反馈删除成功"
   },
   "timestamp": "2023-01-01 12:00:00"
 }
@@ -1691,19 +1919,21 @@ API接口的参数类型规范如下：
       "type": "user"
     }
   ],
-  "details": {
-    "keyword": "测试",
-    "search_type": "all"
-  },
   "pagination": {
     "total": 50,
     "page": 1,
     "page_size": 10,
     "total_pages": 5
   },
+  "details": {
+    "keyword": "测试",
+    "search_type": "all"
+  },
   "timestamp": "2023-01-01 12:00:00"
 }
 ```
+
+> 注意：搜索操作会自动记录用户的搜索历史，无需额外调用接口。
 
 ### 6.2 获取搜索建议
 
@@ -1747,13 +1977,11 @@ API接口的参数类型规范如下：
   "data": [
     {
       "keyword": "测试帖子",
-      "search_time": "2023-01-01 12:00:00",
-      "openid": "用户openid"
+      "search_time": "2023-01-01 12:00:00"
     },
     {
       "keyword": "测试用户",
-      "search_time": "2023-01-01 11:00:00",
-      "openid": "用户openid"
+      "search_time": "2023-01-01 11:00:00"
     }
   ],
   "details": null,
@@ -1761,28 +1989,12 @@ API接口的参数类型规范如下：
 }
 ```
 
-## 六、错误代码
+> 注意：搜索历史结果已经去重，并按最近搜索时间排序。
 
-| 状态码 | 说明 |
-|--------|------|
-| 200    | 成功 |
-| 400    | 请求参数错误 |
-| 401    | 未授权，需要登录 |
-| 403    | 禁止访问，无权限 |
-| 404    | 资源不存在 |
-| 422    | 请求验证失败 |
-| 429    | 请求过于频繁 |
-| 500    | 服务器内部错误 |
-| 502    | 网关错误 |
-| 503    | 服务不可用 |
-| 504    | 网关超时 |
+### 6.4 清空搜索历史
 
-## 七、Agent智能体API
-
-### 7.1 与Agent对话
-
-**接口**：`POST /api/agent/chat`  
-**描述**：与AI智能体进行对话，支持普通对话和流式返回  
+**接口**：`POST /api/wxapp/history/clear`  
+**描述**：清空指定用户的所有搜索历史记录  
 **请求体**：
 
 ```json
@@ -1795,99 +2007,77 @@ API接口的参数类型规范如下：
 
 ```json
 {
-  "query": "南开大学的校训是什么？",
-  "messages": [
-    {"role": "user", "content": "你好"},
-    {"role": "assistant", "content": "你好！我是南开Wiki智能助手，有什么可以帮助你的吗？"}
-  ],
-  "stream": false,
-  "format": "markdown",
-  "openid": "user_openid"
+  "code": 200,
+  "message": "success",
+  "data": null,
+  "details": {
+    "message": "清空搜索历史成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-**参数说明**：
-- `query` - 必填，用户当前的问题
-- `messages` - 可选，对话历史消息列表，按时间顺序排列
-- `stream` - 可选，是否使用流式返回，默认为 false
-- `format` - 可选，返回格式，支持 "text"、"markdown" 或 "html"，默认为 "markdown"
-- `openid` - 可选，用户标识符
+### 6.5 获取热门搜索
 
-**普通响应**（`stream=false`）：
+**接口**：`GET /api/wxapp/hot`  
+**描述**：获取平台热门搜索关键词  
+**参数**：
+- `limit` - 查询参数，返回结果数量，默认值：10
+
+**响应**：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "keyword": "测试帖子",
+      "count": 100
+    },
+    {
+      "keyword": "测试用户",
+      "count": 80
+    },
+    {
+      "keyword": "测试内容",
+      "count": 50
+    }
+  ],
+  "details": null,
+  "timestamp": "2023-01-01 12:00:00"
+}
+```
+
+> 注意：热门搜索统计的是最近7天内的搜索次数。
+
+## 七、智能体接口
+
+本章描述了nkuwiki平台的智能体相关接口，包括状态查询、聊天和RAG（检索增强生成）功能。
+
+### 7.1 获取智能体状态
+
+**接口**：`GET /api/agent/status`  
+**描述**：获取智能体服务运行状态，用于检查智能体服务是否正常运行  
+**参数**：无
+
+**响应**：
 
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
-    "response": "南开大学的校训是"允公允能，日新月异"。这八个字出自《论语》，体现了南开大学追求公能日新的办学理念。",
-    "sources": [
-      {
-        "type": "小程序帖子",
-        "title": "南开大学简介",
-        "content": "南开大学校训为"允公允能，日新月异"，出自《论语》...",
-        "author": "南开百科"
-      }
-    ],
-    "suggested_questions": [
-      "南开大学的校徽有什么含义？",
-      "南开大学是什么时候创立的？",
-      "南开大学的创始人是谁？"
-    ],
-    "format": "markdown"
+    "status": "ok"
   },
-  "details": null,
-  "timestamp": "2025-03-27 16:47:42"
+  "details": {
+    "message": "获取agent状态成功"
+  },
+  "timestamp": "2023-01-01 12:00:00"
 }
 ```
 
-**流式响应**（`stream=true`）：
-
-当 `stream` 参数设置为 `true` 时，服务器将返回 `text/event-stream` 格式的数据流，客户端需要按照 Server-Sent Events (SSE) 的标准解析响应。每个事件以 `data: ` 开头，最后以 `data: [DONE]` 标记结束。
-
-```
-data: 南开
-data: 大学
-data: 的
-data: 校训
-data: 是
-data: "
-data: 允公
-data: 允能
-data: ，
-data: 日新月异
-data: "
-data: 。
-data: 这
-data: 八个
-data: 字
-data: 出自
-data: 《
-data: 论语
-data: 》
-data: ，
-data: 体现
-data: 了
-data: 南开大学
-data: 追求
-data: 公能
-data: 日新
-data: 的
-data: 办学
-data: 理念
-data: 。
-data: [DONE]
-```
-
-客户端可以累积这些片段以重建完整响应，或实时显示打字效果。
-
-**注意**：
-1. 流式响应会考虑历史消息的上下文，但为了性能考虑，会以更高效的方式处理历史记录
-2. 流式响应不会返回知识源和推荐问题，这些信息只在非流式响应中提供
-3. 流式响应有 90 秒的超时设置，超时后会自动结束流
-4. 在出现错误时，流式响应会返回相应错误信息并结束流
-
-### 7.2 知识库搜索
+### 7.2 智能体聊天
 
 **接口**：`POST /api/agent/chat`  
 **描述**：与智能体进行自由对话，获取回答  
@@ -1933,8 +2123,8 @@ data: [DONE]
 
 ### 7.3 检索增强生成
 
-**接口**：`POST /api/agent`  
-**描述**：基于南开Wiki平台的数据进行信息检索并生成回答  
+**接口**：`POST /api/agent/rag`  
+**描述**：基于nkuwiki平台的数据进行信息检索并生成回答  
 **请求体**：
 
 ```json

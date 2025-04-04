@@ -1,0 +1,74 @@
+/* 选择器字段 */
+.picker-field {
+  width: 100%;
+  margin-bottom: 16rpx;
+}
+
+/* 字段标签 */
+.picker-label {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 12rpx;
+  display: flex;
+  align-items: center;
+}
+
+/* 必填标记 */
+.required {
+  color: #ff4d4f;
+  margin-left: 4rpx;
+}
+
+/* 选择器容器 */
+.picker-container {
+  width: 100%;
+}
+
+/* 选择器内部 */
+.picker-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 80rpx;
+  padding: 0 24rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+
+/* 选择器值 */
+.picker-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 占位符样式 */
+.placeholder {
+  color: #999;
+}
+
+/* 箭头容器 */
+.picker-arrow {
+  width: 36rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 箭头图标 */
+.arrow-icon {
+  width: 0;
+  height: 0;
+  border-left: 12rpx solid transparent;
+  border-right: 12rpx solid transparent;
+  border-top: 12rpx solid #999;
+}
+
+/* 禁用状态 */
+.disabled {
+  opacity: 0.6;
+} 

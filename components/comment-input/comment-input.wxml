@@ -1,0 +1,35 @@
+<view class="comment-input {{show ? 'show' : ''}}">
+  <view class="mask" bindtap="onClose"></view>
+  <view class="comment-input-container">
+    <view class="input-header">
+      <view class="placeholder-text">{{placeholder}}</view>
+      <view class="close-btn" bindtap="onClose">
+        <icon name="close" size="40rpx" color="#999999" />
+      </view>
+    </view>
+    
+    <view class="input-body">
+      <text-area
+        value="{{inputValue}}"
+        placeholder="{{placeholder}}"
+        maxlength="{{maxlength}}"
+        height="{{inputHeight}}"
+        focus="{{focus}}"
+        disabled="{{disabled || loading}}"
+        showCount="{{true}}"
+        autoHeight="{{true}}"
+        bind:input="onInput"
+        bind:blur="onBlur"
+      ></text-area>
+    </view>
+    
+    <view class="input-footer">
+      <button 
+        class="submit-btn {{inputValue.trim() === '' || loading || disabled ? 'disabled' : ''}}"
+        disabled="{{inputValue.trim() === '' || loading || disabled}}"
+        loading="{{loading}}"
+        bindtap="onSubmit"
+      >发送</button>
+    </view>
+  </view>
+</view> 

@@ -1,206 +1,51 @@
+<!-- 帖子详情页 -->
 <view class="container">
-  <!-- 顶部标题栏 - 居中标题，使用图标返回 -->
-  <view class="header">
-    <view class="back-icon" bindtap="goBack">
-      <image src="/assets/icons/back.png"></image>
-    </view>
-    <view class="title-container">
-      <text class="title">帖子详情</text>
-    </view>
-    <view class="header-right"></view>
-  </view>
+  <!-- 编辑模式 -->
+  <post-edit 
+    wx:if="{{isEditMode}}"
+    post="{{postDetail}}"
+    bind:submit="onPostEdit"
+  />
 
-  <!-- 帖子内容部分 -->
-  <scroll-view scroll-y="{{true}}" class="content-scroll" enhanced="{{true}}">
-    <!-- 加载中 -->
-    <view class="loading-container" wx:if="{{loading}}">
-      <view class="loading-icon"></view>
-      <text class="loading-text">加载中...</text>
-    </view>
+  <!-- 展示模式 -->
+  <block wx:else>
+    <!-- 加载状态 -->
+    <loading wx:if="{{loading}}" />
 
-    <!-- 帖子详情 -->
-    <view class="post-container" wx:else>
-      <!-- 作者信息 -->
-      <view class="post-header">
-        <view class="author-info">
-          <image class="avatar" src="{{post.authorAvatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
-          <view class="author-container">
-            <view class="author-name">{{post.authorName}}</view>
-            <view class="post-time">{{post.relativeTime}}</view>
-          </view>
-        </view>
-      </view>
+    <!-- 错误状态 -->
+    <empty 
+      wx:elif="{{error}}"
+      type="error"
+      text="{{errorText}}"
+      btnText="重试"
+      bind:btnTap="loadInitialData"
+    />
 
-      <!-- 帖子内容 -->
-      <view class="post-content">
-        <view class="post-title">{{post.title}}</view>
-        <view class="post-text">{{post.content}}</view>
-        <!-- 图片显示部分 -->
-        <view class="post-images" wx:if="{{post.images && post.images.length > 0}}">
-          <view class="image-grid">
-            <view 
-              class="image-item" 
-              wx:for="{{post.images}}" 
-              wx:key="*this" 
-              bindtap="previewImage"
-              data-url="{{item}}"
-              data-urls="{{post.images}}"
-            >
-              <image src="{{item}}" mode="aspectFill" />
-              <!-- 如果超过9张，在第9张上显示剩余数量 -->
-              <view class="image-count" wx:if="{{index === 8 && post.images.length > 9}}">+{{post.images.length - 9}}</view>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 交互区域 -->
-      <view class="interaction-bar">
-        <view class="action-item {{post.isLiked ? 'liked' : ''}}" bindtap="handleLike">
-          <image 
-            class="action-icon" 
-            src="{{post.isLiked ? '/assets/icons/index/liked.png' : '/assets/icons/index/like.png'}}"
-            mode="aspectFit"
-          ></image>
-          <text class="{{post.isLiked ? 'liked-text' : ''}}">{{post.likes || 0}}</text>
-        </view>
-        <view class="action-item">
-          <image class="action-icon" src="/assets/icons/index/comment.png" mode="aspectFit"></image>
-          <text>{{post.comments.length || 0}}</text>
-        </view>
-        <!-- 添加收藏按钮，放在评论按钮的右侧 -->
-        <view class="action-item {{post.isFavorited ? 'favorited' : ''}}" bindtap="handleFavorite">
-          <image 
-            class="action-icon" 
-            src="{{post.isFavorited ? '/assets/icons/index/favorite-active.png' : '/assets/icons/index/favorite.png'}}"
-            mode="aspectFit"
-          ></image>
-          <text class="{{post.isFavorited ? 'favorited-text' : ''}}">{{post.favoriteCounts || 0}}</text>
-        </view>
-      </view>
-
-      <!-- 评论区域 -->
-      <view class="comment-section">
-        <view class="section-header">
-          <text class="section-title">评论 ({{commentTotal || 0}})</text>
-        </view>
-        
-        <view wx:if="{{!comment || comment.length === 0}}" class="empty-comment">
-          <text>暂无评论，快来抢沙发~</text>
-        </view>
-        
-        <view class="comment-list" wx:if="{{comment.length > 0}}">
-          <view class="comment-item" wx:for="{{comment}}" wx:key="id">
-            <image class="avatar" src="{{item.avatar || '/assets/icons/default-avatar.png'}}" mode="aspectFill"></image>
-            <view class="comment-content">
-              <view class="comment-header">
-                <text class="comment-author">{{item.nickname || '用户'}}</text>
-                <text class="comment-time">{{item.relativeTime}}</text>
-              </view>
-              <text class="comment-text" user-select="{{true}}">{{item.content}}</text>
-              
-              <!-- 评论图片显示 -->
-              <view class="comment-images" wx:if="{{item.image && item.image.length > 0}}">
-                <image 
-                  wx:for="{{item.image}}" 
-                  wx:for-item="img" 
-                  wx:key="index"
-                  class="comment-image" 
-                  src="{{img}}" 
-                  mode="aspectFill"
-                  data-urls="{{item.image}}"
-                  data-current="{{img}}"
-                  binderror="handleImageError"
-                  bindtap="previewCommentImage"
-                ></image>
-              </view>
-              
-              <!-- 回复预览区域 -->
-              <view class="reply-preview" wx:if="{{item.reply_preview && item.reply_preview.length > 0}}">
-                <view class="reply-item" wx:for="{{item.reply_preview}}" wx:for-item="reply" wx:key="id">
-                  <text class="reply-author">{{reply.nickname || '用户'}}：</text>
-                  <text class="reply-text">{{reply.content}}</text>
-                </view>
-                <view class="view-more-replies" wx:if="{{item.reply_count > item.reply_preview.length}}" 
-                      data-comment-id="{{item.id}}" bindtap="viewMoreReplies">
-                  <text>查看全部{{item.reply_count}}条回复</text>
-                </view>
-              </view>
-              
-              <!-- 回复按钮 -->
-              <view class="reply-action" data-comment-id="{{item.id}}" bindtap="replyToComment">
-                <text>回复</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-      
-      <!-- 底部占位区 -->
-      <view style="height: 80px;"></view>
-    </view>
-  </scroll-view>
-
-  <!-- 底部评论栏 - 保持原有简洁风格 -->
-  <view class="comment-footer">
-    <view class="comment-input-box">
-      <input 
-        class="comment-input" 
-        placeholder="{{commentPlaceholder}}" 
-        value="{{commentText}}" 
-        bindinput="onCommentInput"
-        bindfocus="expandCommentBox"
-        adjust-position="{{false}}"
+    <!-- 帖子内容 -->
+    <block wx:else>
+      <!-- 帖子详情 -->
+      <post-item
+        post="{{postDetail}}"
+        currentOpenid="{{userInfo.openid || ''}}"
+        bind:usertap="onUserTap"
+        bind:like="handleLike"
+        bind:favorite="handleFavorite"
       />
-      
-      <!-- 点击后展开评论框 -->
-      <view wx:if="{{!isCommentExpanded}}" class="send-btn-small" bindtap="expandCommentBox">
-        <image src="/assets/icons/image.png" mode="aspectFit"></image>
-      </view>
-    </view>
-  </view>
 
-  <!-- 展开后的评论框 -->
-  <view class="expanded-comment-box" wx:if="{{isCommentExpanded}}">
-    <view class="expanded-header">
-      <text>编辑评论</text>
-      <view class="close-btn" bindtap="collapseCommentBox">×</view>
-    </view>
-    
-    <textarea 
-      class="expanded-textarea" 
-      value="{{commentText}}" 
-      bindinput="onCommentInput"
-      maxlength="200"
-      auto-height
-      focus="{{isCommentExpanded}}"
-      placeholder="{{commentPlaceholder}}"
-    ></textarea>
-    
-    <view class="comment-footer-tools">
-      <view class="word-count">{{commentText.length || 0}}/200</view>
-      
-      <view class="action-row">
-        <view class="image-btn" bindtap="chooseCommentImage">
-          <image src="/assets/icons/image.png" mode="aspectFit"></image>
-          添加图片
-        </view>
-        
-        <button 
-          class="send-btn" 
-          bindtap="submitComment" 
-          disabled="{{!commentText && (!commentImages || commentImages.length === 0)}}">
-          发送
-        </button>
-      </view>
-    </view>
-    
-    <!-- 图片预览区域 -->
-    <view class="comment-images-preview" wx:if="{{commentImages && commentImages.length > 0}}">
-      <view class="image-preview" wx:for="{{commentImages}}" wx:key="index">
-        <image src="{{item.tempUrl}}" mode="aspectFill"></image>
-        <view class="delete-image" data-index="{{index}}" bindtap="removeCommentImage">×</view>
-      </view>
-    </view>
-  </view>
-</view> 
+      <!-- 评论列表 -->
+      <comment-list
+        comments="{{comments}}"
+        total="{{postDetail.comment_count}}"
+        loading="{{loadingComment}}"
+        error="{{commentError}}"
+        hasMore="{{hasMore}}"
+        currentOpenid="{{userInfo.openid || ''}}"
+      />
+    </block>
+  </block>
+</view>
+
+<!-- WEUI组件 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<mp-dialog title="{{dialogTitle}}" show="{{dialogShow}}" buttons="{{dialogButtons}}"></mp-dialog>
+<mp-actionsheet bindactiontap="actionSheetClick" show="{{actionSheetShow}}" actions="{{actionSheetGroups}}"></mp-actionsheet> 

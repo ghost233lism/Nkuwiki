@@ -1,0 +1,51 @@
+<view 
+  class="setting-item {{isLink ? 'is-link' : ''}} {{disabled ? 'disabled' : ''}}"
+  style="{{customStyle}}"
+  bindtap="onClick"
+>
+  <!-- 左侧部分 -->
+  <view class="setting-item-left">
+    <!-- 图标（如果有） -->
+    <view wx:if="{{icon}}" class="setting-item-icon">
+      <icon name="{{icon}}" size="{{iconSize}}" color="{{iconColor}}"></icon>
+    </view>
+    
+    <!-- 标题区域 -->
+    <view class="setting-item-title-area">
+      <view class="setting-item-title">{{title}}</view>
+      <view wx:if="{{subtitle}}" class="setting-item-subtitle">{{subtitle}}</view>
+    </view>
+  </view>
+  
+  <!-- 右侧部分 -->
+  <view class="setting-item-right" style="{{rightStyle}}" catchtap="onRightClick">
+    <!-- 右侧类型为文本 -->
+    <block wx:if="{{rightType === 'text'}}">
+      <text class="setting-item-value">{{value}}</text>
+    </block>
+    
+    <!-- 右侧类型为开关 -->
+    <block wx:elif="{{rightType === 'switch'}}">
+      <switch 
+        checked="{{checked}}" 
+        disabled="{{disabled}}" 
+        color="#07C160" 
+        catchtap="onSwitchClick"
+        bindchange="onSwitchChange"
+      ></switch>
+    </block>
+    
+    <!-- 右侧类型为箭头（默认） -->
+    <block wx:elif="{{rightType === 'arrow' && isLink}}">
+      <view class="setting-item-arrow">
+        <icon name="arrow-right" size="32" color="#CCCCCC"></icon>
+      </view>
+    </block>
+    
+    <!-- 右侧插槽，用于自定义内容 -->
+    <slot name="right"></slot>
+  </view>
+  
+  <!-- 分割线 -->
+  <view wx:if="{{showDivider}}" class="setting-item-divider"></view>
+</view> 

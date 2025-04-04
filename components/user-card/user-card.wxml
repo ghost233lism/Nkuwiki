@@ -1,0 +1,67 @@
+<view class="user-card" wx:if="{{formattedUser}}">
+  <view class="user-info">
+    <view class="user-avatar" bindtap="onTapUser">
+      <image 
+        class="avatar" 
+        src="{{formattedUser.avatar}}" 
+        mode="aspectFill" 
+        binderror="onAvatarError"
+      ></image>
+    </view>
+    <view class="user-details" bindtap="onTapUser">
+      <view class="user-name">{{formattedUser.nickname}}</view>
+      <view class="user-bio" wx:if="{{formattedUser.bio}}">{{formattedUser.bio}}</view>
+    </view>
+    
+    <!-- 当前用户显示编辑按钮，否则显示关注按钮 -->
+    <view class="user-action">
+      <button 
+        wx:if="{{isCurrentUser}}" 
+        class="edit-btn" 
+        size="mini" 
+        bindtap="onEdit"
+      >编辑资料</button>
+      
+      <button 
+        wx:else 
+        class="follow-btn {{formattedUser.isFollowed ? 'followed' : ''}}" 
+        size="mini" 
+        bindtap="onFollow"
+      >{{formattedUser.isFollowed ? '已关注' : '关注'}}</button>
+    </view>
+  </view>
+  
+  <!-- 用户数据统计 -->
+  <view class="user-stats">
+    <view class="stat-item">
+      <view class="stat-value">{{formattedUser.post_count || 0}}</view>
+      <view class="stat-label">帖子</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value">{{formattedUser.like_count || 0}}</view>
+      <view class="stat-label">获赞</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value">{{formattedUser.favorite_count || 0}}</view>
+      <view class="stat-label">收藏</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value">{{formattedUser.token || 0}}</view>
+      <view class="stat-label">积分</view>
+    </view>
+  </view>
+  
+  <!-- 可选的额外信息 -->
+  <slot></slot>
+</view>
+
+<!-- 未加载或错误时显示占位元素 -->
+<view wx:else class="user-card user-card-placeholder">
+  <view class="user-info-placeholder">
+    <view class="avatar-placeholder"></view>
+    <view class="info-placeholder">
+      <view class="name-placeholder"></view>
+      <view class="bio-placeholder"></view>
+    </view>
+  </view>
+</view> 

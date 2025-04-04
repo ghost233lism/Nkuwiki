@@ -1,0 +1,23 @@
+<view class="nav-tab-container">
+  <!-- 顶部导航栏 -->
+  <nav-bar
+    title="{{title}}"
+    show-back="{{showBack}}"
+    show-home="{{showHome}}"
+    bg-color="{{bgColor}}"
+    text-color="{{textColor}}"
+  />
+  
+  <!-- 标签栏 -->
+  <view class="tab-bar" wx:if="{{tabTitles.length > 0}}">
+    <view 
+      wx:for="{{tabTitles}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      bind:tap="onTabChange"
+      data-index="{{index}}"
+    >
+      <text>{{item}}</text>
+    </view>
+  </view>
+</view> 

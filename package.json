@@ -1,0 +1,11 @@
+{
+  "name": "nkuwiki-miniapp",
+  "version": "0.0.1",
+  "description": "nkuwiki 微信小程序",
+  "main": "app.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "weui-miniprogram": "^1.5.6"
+  }
+}

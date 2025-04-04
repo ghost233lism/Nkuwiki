@@ -1,60 +1,79 @@
-<view class="notification-container">
-  <!-- 顶部标签栏 -->
-  <view class="tab-bar">
-    <view class="tab-item {{activeTab === 'like' ? 'active' : ''}}" bindtap="switchTab" data-tab="like">
-      点赞
-    </view>
-    <view class="tab-item {{activeTab === 'favourite' ? 'active' : ''}}" bindtap="switchTab" data-tab="favourite">
-      收藏
-    </view>
-    <view class="tab-item {{activeTab === 'comment' ? 'active' : ''}}" bindtap="switchTab" data-tab="comment">
-      评论
-    </view>
-  </view>
+<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
+  <!-- 页面状态 -->
+  <loading wx:if="{{loading}}" />
+  <error 
+    wx:elif="{{error}}" 
+    text="{{error}}"
+    bind:retry="loadList"
+  />
 
-  <!-- 消息列表 -->
-  <scroll-view class="notification-list" scroll-y="true" bindscrolltolower="onReachBottom" enable-back-to-top refresher-enabled="{{true}}" refresher-triggered="{{loading}}" bindrefresherrefresh="onPullDownRefresh">
-    <block wx:if="{{notifications[activeTab].length > 0}}">
-      <view class="notification-item {{item.isRead ? 'read' : ''}}" 
-            wx:for="{{notifications[activeTab]}}" 
-            wx:key="id" 
-            bindtap="goToPost" 
-            data-post-id="{{item.postId}}">
-        <view class="notification-avatar">
-          <image class="avatar" src="{{item.avatar}}"></image>
-        </view>
-        <view class="notification-content">
-          <view class="notification-header">
-            <text class="username">{{item.name}}</text>
-            <text class="time">{{item.time}}</text>
+  <block wx:else>
+    <!-- 顶部标签栏 -->
+    <nav-tab-bar 
+      tabTitles="{{[tabs[0].title, tabs[1].title]}}" 
+      activeTab="{{activeTab}}" 
+      bind:change="onTabsChange"
+    />
+
+    <!-- 通知列表 -->
+    <scroll-view 
+      scroll-y 
+      enable-back-to-top
+      bindscrolltolower="onReachBottom"
+      class="notification-list"
+    >
+      <block wx:if="{{notifications.length}}">
+        <view 
+          wx:for="{{notifications}}" 
+          wx:key="id"
+          class="notification-item {{item.is_read ? 'read' : ''}}"
+          data-id="{{item.id}}"
+          data-type="{{item.type}}"
+          data-target-id="{{item.target_id}}"
+          data-target-type="{{item.target_type}}"
+          data-is-read="{{item.is_read}}"
+          bindtap="onNotificationTap"
+          bindlongpress="onNotificationDelete"
+        >
+          <!-- 通知图标 -->
+          <view class="notification-icon">
+            <icon name="{{item.config.icon}}" />
           </view>
-          <view class="notification-text">
-            <block wx:if="{{activeTab === 'comment'}}">
-              {{action}}了你的「{{item.postTitle}}」这条帖子并说了"{{item.content}}"
-            </block>
-            <block wx:else>
-              {{action}}了你的「{{item.postTitle}}」这条帖子
-            </block>
+
+          <!-- 通知内容 -->
+          <view class="notification-content">
+            <view class="notification-title">
+              <text class="nickname">{{item.sender.nickname}}</text>
+              <text class="action">{{item.config.action}}</text>
+              <text class="target">{{item.target_type === 'post' ? '帖子' : item.target_type === 'comment' ? '评论' : ''}}</text>
+            </view>
+            <view class="notification-detail" wx:if="{{item.content}}">{{item.content}}</view>
+            <view class="notification-time">{{item.relative_time}}</view>
           </view>
+
+          <!-- 未读标记 -->
+          <view class="unread-dot" wx:if="{{!item.is_read}}" />
         </view>
-      </view>
-      <view wx:if="{{!pagination.hasMore}}" class="no-more">
-        没有更多消息了
-      </view>
-    </block>
-    <view wx:else class="empty-state">
-      <image class="empty-icon" src="/assets/icons/empty.png"></image>
-      <text class="empty-text">暂无{{action}}消息</text>
+
+        <!-- 加载更多 -->
+        <view class="load-more" wx:if="{{hasMore}}">
+          <loading size="small" />
+        </view>
+      </block>
+
+      <!-- 空状态 -->
+      <empty 
+        wx:else
+        icon="notification"
+        text="暂无{{tabs[activeTab].title}}消息"
+      />
+    </scroll-view>
+
+    <!-- 全部标记已读按钮 -->
+    <view class="footer" wx:if="{{activeTab === 0 && notifications.length}}">
+      <button class="mark-all-btn" bindtap="markAllRead">
+        全部标记为已读
+      </button>
     </view>
-  </scroll-view>
-
-  <!-- 全部标记已读按钮 -->
-  <view class="mark-all-read" bindtap="markAllRead">
-    <text>全部标记为已读</text>
-  </view>
-
-  <!-- 加载中提示 -->
-  <view class="loading" wx:if="{{loading}}">
-    <text>加载中...</text>
-  </view>
-</view>
+  </block>
+</page-status> 

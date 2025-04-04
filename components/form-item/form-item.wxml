@@ -1,0 +1,28 @@
+<view 
+  class="form-item {{disabled ? 'disabled' : ''}} {{error ? 'error' : ''}}"
+  style="{{customStyle}}"
+>
+  <!-- 左侧标签 -->
+  <view class="form-item-label">
+    <text wx:if="{{required}}" class="required">*</text>
+    <text>{{label}}</text>
+  </view>
+  
+  <!-- 右侧内容 -->
+  <view class="form-item-content" style="{{rightStyle}}">
+    <slot></slot>
+  </view>
+  
+  <!-- 底部错误提示 -->
+  <view wx:if="{{error && errorMsg}}" class="form-item-error">
+    {{errorMsg}}
+  </view>
+  
+  <!-- 底部描述/提示 -->
+  <view wx:elif="{{desc}}" class="form-item-desc">
+    {{desc}}
+  </view>
+  
+  <!-- 分割线 -->
+  <view wx:if="{{showDivider}}" class="form-item-divider"></view>
+</view> 

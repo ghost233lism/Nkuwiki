@@ -1,95 +1,101 @@
 <!-- 发现页面 -->
-<view class="discover-page">
-  <!-- 标题栏 -->
-  <view class="header">
-    <text class="title">发现</text>
-    <view class="header-icons">
-      <image src="/assets/icons/discover/notification.png" class="icon"></image>
-      <image src="/assets/icons/discover/message.png" class="icon"></image>
+
+<view class="container">
+  <!-- 加载状态 -->
+  <mp-loading show="{{loading}}" type="dot-gray" tips="加载中..."></mp-loading>
+
+  <!-- 错误状态 -->
+  <view class="error-container" wx:if="{{error}}">
+    <view class="icon-wrapper error">
+      <icon name="clear" size="48" color="#ff4d4f" outline="{{false}}"></icon>
+    </view>
+    <view class="error-text">{{error}}</view>
+    <view class="error-actions">
+      <button class="retry-btn" bindtap="onRetry">重试</button>
+      <button class="close-btn" bindtap="onErrorClose">关闭</button>
     </view>
   </view>
 
-  <!-- 校园热点 -->
-  <view class="section">
-    <view class="section-header">
-      <text class="section-title">校园热点</text>
-      <text class="update-text">实时更新</text>
+  <!-- 主内容区域 -->
+  <view class="main-content" wx:if="{{!loading && !error}}">
+    <!-- 使用header组件替代原生标题栏 -->
+    <header title="发现" icons="{{['notification', 'message']}}" bind:iconTap="onHeaderIconTap" />
+
+    <!-- 校园热点 -->
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/hot.png" />
+        <view class="card-title">校园热点</view>
+        <view class="card-subtitle">实时更新</view>
+      </view>
+      <view class="card-content">
+        <post-list posts="{{hotPosts}}" type="grid" bind:itemClick="viewPostDetail" />
+      </view>
     </view>
-    <view class="hot-grid">
-      <view class="hot-item">
-        <image src="/assets/icons/discover/library.png" mode="aspectFill"></image>
-        <view class="hot-info">
-          <text class="hot-title">期末复习攻略分享</text>
-          <text class="hot-count">2.3k 讨论</text>
+
+    <!-- AI助手 -->
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/ai.png" />
+        <view class="card-title">AI 助手</view>
+      </view>
+      <view class="card-content">
+        <view class="ai-grid">
+          <custom-button 
+            wx:for="{{aiFeatures}}" 
+            type="primary" 
+            size="sm" 
+            data-type="{{item.id}}"
+            bind:tap="navigateToAI">
+            {{item.name}}
+          </custom-button>
         </view>
       </view>
-      <view class="hot-item">
-        <image src="/assets/icons/discover/canteen.png" mode="aspectFill"></image>
-        <view class="hot-info">
-          <text class="hot-title">校园美食探店</text>
-          <text class="hot-count">1.8k 讨论</text>
-        </view>
+      <view class="card-footer">
+        <text class="footer-text">点击查看全部功能</text>
       </view>
     </view>
-  </view>
 
-  <!-- AI助手 -->
-  <view class="section">
-    <view class="section-header">
-      <text class="section-title">AI 助手</text>
-      <text class="more">查看更多</text>
-    </view>
-    <view class="ai-grid">
-      <view class="ai-item">
-        <image src="/assets/icons/discover/robot.png" class="ai-icon"></image>
-        <text>作业助手</text>
+    <!-- 校园活动 -->
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/activity.png" />
+        <view class="card-title">校园活动</view>
       </view>
-      <view class="ai-item">
-        <image src="/assets/icons/discover/translate.png" class="ai-icon"></image>
-        <text>英语口语</text>
-      </view>
-      <view class="ai-item">
-        <image src="/assets/icons/discover/plan.png" class="ai-icon"></image>
-        <text>保研规划</text>
+      <view class="card-content">
+        <post-item 
+          post="{{currentActivity}}" 
+          type="activity"
+          bind:click="viewActivityDetail" />
       </view>
     </view>
-  </view>
 
-  <!-- 校园活动 -->
-  <view class="section">
-    <view class="section-header">
-      <text class="section-title">校园活动</text>
-      <text class="more">全部活动</text>
-    </view>
-    <view class="activity-card">
-      <view class="activity-info">
-        <image src="/assets/icons/discover/music-festival.png" class="activity-image"></image>
-        <view class="activity-content">
-          <text class="activity-title">校园音乐节</text>
-          <text class="activity-time">时间：2024-01-20 19:00</text>
-          <text class="activity-location">地点：大学生活动中心</text>
-        </view>
+    <!-- 学习资源 -->
+    <view class="card">
+      <view class="card-header">
+        <image class="card-icon" src="/assets/icons/discover/book.png" />
+        <view class="card-title">学习资源</view>
+      </view>
+      <view class="card-content">
+        <post-list posts="{{studyResources}}" type="vertical" />
       </view>
     </view>
-  </view>
 
-  <!-- 学习资源 -->
-  <view class="section">
-    <view class="section-header">
-      <text class="section-title">学习资源</text>
-      <text class="more">更多资源</text>
-    </view>
-    <view class="resource-grid">
-      <view class="resource-item">
-        <image src="/assets/icons/discover/book.png" class="resource-icon"></image>
-        <text>考研资料</text>
-        <text class="resource-count">12个精品资源</text>
+    <!-- 内容列表 -->
+    <post-list 
+      posts="{{posts}}"
+      loading="{{loading}}"
+      has-more="{{hasMore}}"
+      bind:loadmore="loadMorePosts"
+      bind:refresh="refreshPosts"
+    />
+    
+    <!-- 空状态 -->
+    <view class="empty-container" wx:if="{{!loading && (!posts || posts.length === 0)}}">
+      <view class="icon-wrapper">
+        <icon name="discover" size="48" color="#999999" outline="{{false}}"></icon>
       </view>
-      <view class="resource-item">
-        <image src="/assets/icons/discover/code.png" class="resource-icon"></image>
-        <text>编程课程</text>
-        <text class="resource-count">8个在线课程</text>
-      </view>
+      <view class="empty-text">暂无发现内容</view>
     </view>
   </view>
 </view>

@@ -1,0 +1,25 @@
+<view class="text-area-container">
+  <textarea
+    class="text-area {{disabled ? 'disabled' : ''}}"
+    style="height: {{height}}rpx;"
+    value="{{value}}"
+    placeholder="{{placeholder}}"
+    placeholder-class="placeholder"
+    maxlength="{{maxlength}}"
+    auto-focus="{{focus}}"
+    auto-height="{{autoHeight}}"
+    disabled="{{disabled}}"
+    bindinput="onInput"
+    bindfocus="onFocus"
+    bindblur="onBlur"
+    bindconfirm="onConfirm"
+    adjust-position="{{adjustPosition}}"
+    hold-keyboard="{{false}}"
+    cursor-spacing="10"
+    space="{{space ? 'ensp' : 'false'}}"
+  />
+  
+  <view class="count-container" wx:if="{{showCount && maxlength > 0}}">
+    <text class="count-text {{currentLength >= maxlength ? 'count-limit' : ''}}">{{currentLength}}/{{maxlength}}</text>
+  </view>
+</view> 

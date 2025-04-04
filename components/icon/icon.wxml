@@ -1,0 +1,32 @@
+<view 
+  class="icon-container {{extClass}}"
+  bindtap="handleTap"
+  style="font-size: {{sizeNumber}}px;"
+>
+  <!-- 使用图片模式 -->
+  <block wx:if="{{useImage}}">
+    <image 
+      class="icon icon-image"
+      src="{{imageSrc}}" 
+      mode="aspectFit"
+      style="width: {{size}}rpx; height: {{size}}rpx; {{color ? 'filter: drop-shadow(0 0 0 ' + color + ');' : ''}}"
+    ></image>
+  </block>
+  <!-- 使用微信原生icon -->
+  <block wx:elif="{{type}}">
+    <icon 
+      type="{{type}}" 
+      size="{{sizeNumber}}"
+      color="{{color}}"
+    ></icon>
+  </block>
+  <!-- 使用自定义图标 -->
+  <block wx:elif="{{icon}}">
+    <view 
+      class="icon custom-icon icon-{{icon}} size-{{sizeNumber}} {{outline ? 'outline' : ''}}" 
+      style="{{color ? 'color:' + color + ';' : ''}}"
+    ></view>
+  </block>
+  <!-- 涟漪效果 -->
+  <view wx:if="{{showRipple}}" class="ripple"></view>
+</view> 

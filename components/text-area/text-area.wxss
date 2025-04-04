@@ -1,0 +1,50 @@
+/* 文本域容器 */
+.text-area-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 文本域 */
+.text-area {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+}
+
+/* 禁用状态 */
+.text-area.disabled {
+  opacity: 0.7;
+  color: #999;
+}
+
+/* 占位符样式 */
+.placeholder {
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* 计数容器 */
+.count-container {
+  position: absolute;
+  bottom: 10rpx;
+  right: 20rpx;
+  z-index: 10;
+}
+
+/* 计数文本 */
+.count-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 达到限制时的计数文本 */
+.count-limit {
+  color: #ff4d4f;
+} 

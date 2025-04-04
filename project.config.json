@@ -1,6 +1,7 @@
 {
   "compileType": "miniprogram",
   "libVersion": "trial",
+  "miniprogramRoot": "",
   "setting": {
     "coverView": true,
     "es6": true,
@@ -8,7 +9,13 @@
     "minified": true,
     "enhance": true,
     "showShadowRootInWxmlPanel": true,
-    "packNpmRelationList": [],
+    "packNpmManually": true,
+    "packNpmRelationList": [
+      {
+        "packageJsonPath": "./package.json",
+        "miniprogramNpmDistDir": "./"
+      }
+    ],
     "babelSetting": {
       "ignore": [],
       "disablePlugins": [],
@@ -17,7 +24,6 @@
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
-    "packNpmManually": false,
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
@@ -34,7 +40,8 @@
     "useApiHook": true,
     "useApiHostProcess": true,
     "useMultiFrameRuntime": true,
-    "useStaticServer": true
+    "useStaticServer": true,
+    "nodeModules": true
   },
   "condition": {},
   "editorSetting": {

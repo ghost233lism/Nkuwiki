@@ -1,0 +1,20 @@
+<view class="menu-list {{customClass}}">
+  <view 
+    class="menu-item"
+    wx:for="{{items}}"
+    wx:key="index"
+    data-index="{{index}}"
+    bindtap="onItemTap"
+  >
+    <view class="item-content">
+      <view class="left">
+        <icon wx:if="{{item.icon}}" name="{{item.icon}}" size="40" color="#666666" />
+        <text class="title">{{item.title}}</text>
+      </view>
+      <view class="right">
+        <text wx:if="{{item.value}}" class="value">{{item.value}}</text>
+        <icon name="arrow-right" size="32" color="#999999" />
+      </view>
+    </view>
+  </view>
+</view> 
