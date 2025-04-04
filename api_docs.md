@@ -823,6 +823,7 @@ API接口的参数类型规范如下：
       "openid": "发布用户openid",
       "nickname": "用户昵称",
       "avatar": "用户头像URL",
+      "bio": "用户个人简介",
       "category_id": 1,
       "title": "帖子标题",
       "content": "帖子内容",
@@ -834,6 +835,8 @@ API接口的参数类型规范如下：
       "collect_count": 0,
       "status": 1,          // 帖子状态：1-正常，0-禁用
       "is_deleted": 0,      // 是否删除：0-未删除，1-已删除
+      "location": {"latitude": 39.12345, "longitude": 116.12345, "name": "位置名称"},
+      "platform": "wxapp",   // 发布平台
       "create_time": "2023-01-01T12:00:00",
       "update_time": "2023-01-01T12:00:00"
     }
@@ -850,6 +853,21 @@ API接口的参数类型规范如下：
   }
 }
 ```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| [post_id] | object | 以帖子ID为key的状态对象 |
+| exist | boolean | 帖子是否存在 |
+| is_liked | boolean | 当前用户是否点赞 |
+| is_favorited | boolean | 当前用户是否收藏 |
+| is_author | boolean | 当前用户是否是作者 |
+| is_following | boolean | 当前用户是否关注了帖子作者 |
+| like_count | integer | 帖子点赞总数 |
+| favorite_count | integer | 帖子收藏总数 |
+| comment_count | integer | 帖子评论总数 |
+| view_count | integer | 帖子浏览总数 |
 
 ### 2.4 更新帖子
 
@@ -1285,7 +1303,7 @@ API接口的参数类型规范如下：
 **接口**：`GET /api/wxapp/notification/list`  
 **描述**：获取用户的通知列表  
 **参数**：
-- `openid` - 查询参数，用户openid（必填）
+- `openid` - 查询参数，用户openid（必填，可以使用receiver代替）
 - `type` - 查询参数，通知类型：如comment-评论, like-点赞, follow-关注等（可选）
 - `is_read` - 查询参数，是否已读：true/false（可选）
 - `limit` - 查询参数，返回记录数量限制，默认20
@@ -1301,12 +1319,12 @@ API接口的参数类型规范如下：
     "data": [
       {
         "id": 1,
-        "openid": "接收者用户openid",
+        "sender": {"openid": "发送者openid"},
+        "receiver": "接收者用户openid",
         "title": "收到新评论",
         "content": "用户评论了你的帖子「帖子标题」",
         "type": "comment",
         "is_read": false,
-        "sender": {"openid": "发送者openid"},
         "target_id": "123",
         "target_type": "comment",
         "create_time": "2023-01-01 12:00:00",
@@ -1342,12 +1360,12 @@ API接口的参数类型规范如下：
   "message": "success",
   "data": {
     "id": 1,
-    "openid": "接收者用户openid",
+    "sender": {"openid": "发送者openid"},
+    "receiver": "接收者用户openid",
     "title": "收到新评论",
     "content": "用户评论了你的帖子「帖子标题」",
     "type": "comment",
     "is_read": false,
-    "sender": {"openid": "发送者openid"},
     "target_id": "123",
     "target_type": "comment",
     "create_time": "2023-01-01 12:00:00",
@@ -1427,7 +1445,7 @@ API接口的参数类型规范如下：
 ```
 
 **请求参数说明**：
-- `openid` - 字符串，必填，用户的openid
+- `openid` - 字符串，必填，用户的openid（可以使用receiver代替）
 - `notification_ids` - 整数数组，必填，要标记为已读的通知ID列表
 
 **响应**：
@@ -1470,6 +1488,10 @@ API接口的参数类型规范如下：
   "openid": "用户openid"
 }
 ```
+
+**请求参数说明**：
+- `notification_id` - 字符串，必填，通知ID
+- `openid` - 字符串，必填，用户的openid（可以使用receiver代替）
 
 **响应**：
 
