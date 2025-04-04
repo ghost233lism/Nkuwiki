@@ -1,5 +1,5 @@
 const { ui, error, ToastType, createApiClient, storage, nav } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/base-behavior');
+const baseBehavior = require('../../behaviors/baseBehavior');
 const userBehavior = require('../../behaviors/user-behavior');
 const authBehavior = require('../../behaviors/auth-behavior');
 

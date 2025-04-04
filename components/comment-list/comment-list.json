@@ -1,6 +1,6 @@
 {
   "component": true,
   "usingComponents": {
-    "page-status": "/components/page-status/page-status"
+    "icon": "/components/icon/icon"
   }
 } 

@@ -4,8 +4,8 @@
   bindtap="onClick"
 >
   <view class="btn-content">
-    <icon wx:if="{{loading}}" name="loading" size="{{size === 'mini' ? 36 : 48}}" color="inherit" class="loading" />
-    <icon wx:elif="{{icon}}" name="{{icon}}" size="{{size === 'mini' ? 36 : 48}}" color="inherit" />
+    <icon wx:if="{{loading}}" class="loading btn-icon" name="loading" size="{{size === 'mini' ? 36 : 48}}" color="inherit" />
+    <icon wx:elif="{{icon}}" class="btn-icon" name="{{icon}}" size="{{size === 'mini' ? 36 : 48}}" color="inherit" />
     <slot></slot>
   </view>
 </button> 

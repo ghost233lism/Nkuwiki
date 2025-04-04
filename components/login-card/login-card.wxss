@@ -16,9 +16,9 @@
   border-radius: 40rpx;
   padding: 48rpx 40rpx;
   box-shadow: 
-    0 20rpx 40rpx -8rpx rgba(0, 0, 0, 0.1),
-    0 8rpx 16rpx -8rpx rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(20rpx);
+    0 16rpx 32rpx -8rpx rgba(0, 0, 0, 0.08),
+    0 8rpx 16rpx -8rpx rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10rpx);
   border: 1rpx solid rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: hidden;
@@ -31,7 +31,7 @@
   left: 0;
   right: 0;
   height: 160rpx;
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08), rgba(54, 207, 201, 0.08));
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.06), rgba(54, 207, 201, 0.06));
   z-index: 0;
 }
 
@@ -112,23 +112,40 @@
   font-weight: 500;
 }
 
-/* 按钮样式 */
-button {
-  margin: 0 0 32rpx !important;
+/* 按钮容器 - 新增 */
+.button-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 30rpx 0;
+}
+
+/* 登录按钮样式 - 简化为原生样式 */
+.login-button {
+  margin: 0 !important;
+  height: 88rpx !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #07c160 !important;
-  height: 88rpx !important;
-  padding: 0 32rpx !important;
   font-size: 32rpx !important;
-  width: auto !important;
-  min-width: 300rpx !important;
+  font-weight: 500 !important;
+  border-radius: 44rpx !important;
+  min-width: 85% !important;
+  padding: 0 40rpx !important;
+  white-space: nowrap !important;
+  /* 移除自定义阴影、边框和过渡效果 */
 }
 
-button icon {
-  margin-right: 12rpx;
-  font-size: 36rpx;
+.login-button-icon {
+  margin-right: 10rpx !important;
+  vertical-align: middle !important;
+  display: inline-block !important;
+}
+
+/* 优化文字间距 */
+button.login-button {
+  letter-spacing: 1rpx !important;
+  line-height: 1 !important;
 }
 
 /* 协议提示 */

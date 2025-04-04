@@ -1,24 +1,24 @@
 .post-item {
   background: #fff;
-  margin-bottom: 15rpx;
-  padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid #f0f0f0;
-  border-radius: 0;
-  box-shadow: none;
+  margin-bottom: 20rpx;
+  padding: 30rpx 24rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
   width: 100%;
   box-sizing: border-box;
 }
 
 .post-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 15rpx;
+  margin-bottom: 20rpx;
 }
 
 .post-header-left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex: 1;
 }
 
 .author-avatar {
@@ -26,6 +26,7 @@
   height: 80rpx;
   border-radius: 50%;
   margin-right: 16rpx;
+  background-color: #f5f5f5;
 }
 
 .post-info {
@@ -38,41 +39,76 @@
   font-size: 28rpx;
   font-weight: 500;
   color: #333;
+  margin-bottom: 6rpx;
+}
+
+.author-bio {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+  max-width: 400rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post-time {
   font-size: 24rpx;
   color: #999;
-  margin-top: 4rpx;
+}
+
+.follow-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.follow-btn {
+  padding: 4rpx 24rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  background-color: #1aad19;
+  color: #fff;
+  min-width: 120rpx;
+  text-align: center;
+}
+
+.follow-btn.followed {
+  background-color: #f5f5f5;
+  color: #999;
 }
 
 .post-content-wrapper {
-  margin-bottom: 15rpx;
+  margin-bottom: 20rpx;
 }
 
 .post-title {
   display: block;
   font-size: 32rpx;
   font-weight: bold;
-  margin-bottom: 8rpx;
+  margin-bottom: 12rpx;
   color: #333;
+  line-height: 1.4;
 }
 
 .post-content {
-  padding: 10rpx 0;
+  padding: 0;
 }
 
 .post-text {
-  margin-bottom: 10rpx;
+  margin-bottom: 16rpx;
 }
 
 .post-body {
   font-size: 28rpx;
   color: #333;
-  line-height: 1.5;
+  line-height: 1.6;
+  display: block;
 }
 
-.post-body.ellipsis {
+.post-body.collapsed {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -80,24 +116,34 @@
 }
 
 .read-more {
-  color: #576b95;
+  color: #1aad19;
   font-size: 26rpx;
   margin-top: 8rpx;
+  display: inline-block;
 }
 
 .post-images {
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 10rpx;
+  gap: 10rpx;
+  margin-top: 16rpx;
   position: relative;
 }
 
-.post-image {
+.single-image .post-image {
+  max-width: 500rpx;
+  max-height: 400rpx;
+  width: auto;
+  height: auto;
+  border-radius: 8rpx;
+}
+
+.double-image .post-image,
+.multi-image .post-image {
   width: 220rpx;
   height: 220rpx;
   border-radius: 8rpx;
-  background-color: #f5f5f5;
+  object-fit: cover;
 }
 
 .image-count {
@@ -111,119 +157,90 @@
   border-radius: 20rpx;
 }
 
+.post-footer {
+  margin-top: 16rpx;
+}
+
 .post-tags {
-  margin-top: 15rpx;
+  margin-bottom: 16rpx;
   display: flex;
   flex-wrap: wrap;
-  gap: 10rpx;
+  gap: 16rpx;
 }
 
 .post-tag {
-  color: #07c160;
+  color: #1aad19;
   font-size: 24rpx;
-}
-
-.divider {
-  margin: 15rpx 0;
-  height: 1rpx;
-  background: #f0f0f0;
-}
-
-.comment-preview {
-  margin-bottom: 15rpx;
-}
-
-.comment-item {
-  margin-bottom: 10rpx;
-}
-
-.comment-info {
-  display: flex;
-  font-size: 26rpx;
-  line-height: 1.5;
-}
-
-.comment-name {
-  color: #07c160;
-  font-weight: 500;
-}
-
-.comment-text {
-  color: #333;
-  flex: 1;
-  word-break: break-all;
-}
-
-.comment-images {
-  display: flex;
-  margin-top: 8rpx;
-  gap: 8rpx;
-}
-
-.comment-images image {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 8rpx;
-  object-fit: cover;
-}
-
-.view-more-comments {
-  color: #07c160;
-  font-size: 24rpx;
-  margin-top: 10rpx;
-  text-align: right;
+  background-color: rgba(26, 173, 25, 0.1);
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
 }
 
 .post-actions {
   display: flex;
-  justify-content: space-around;
-  padding-top: 15rpx;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+  gap: 24rpx;
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 4rpx;
+  padding: 8rpx;
 }
 
-.action-item image {
-  width: 32rpx;
-  height: 32rpx;
-}
-
-.action-item text {
-  font-size: 26rpx;
+.action-text {
+  font-size: 24rpx;
   color: #666;
 }
 
-.icon-container {
-  font-size: 32rpx;
+.action-item.active .action-text {
+  color: #1aad19;
+}
+
+/* 分享按钮重置样式 */
+.share-button {
+  background: none;
+  border: none;
+  padding: 8rpx;
   line-height: 1;
+  border-radius: 0;
+  margin: 0;
+  box-sizing: content-box;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-/* 点赞和收藏的激活状态 */
-.action-item.liked text,
-.action-item.favorited text {
-  color: #07c160;
+.share-button::after {
+  border: none;
 }
 
-.action-item.liked .icon-container,
-.action-item.favorited .icon-container {
-  color: #07c160;
+.comment-preview {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
 }
 
-.follow-btn {
-  padding: 8rpx 24rpx;
-  border-radius: 30rpx;
+.comment-item {
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+}
+
+.comment-author {
+  color: #1aad19;
+  font-weight: 500;
+}
+
+.comment-content {
+  color: #333;
+}
+
+.view-more {
+  color: #1aad19;
   font-size: 24rpx;
-  background-color: #07c160;
-  color: #fff;
-}
-
-.follow-btn.followed {
-  background-color: #f0f0f0;
-  color: #999;
+  margin-top: 10rpx;
+  text-align: right;
 } 

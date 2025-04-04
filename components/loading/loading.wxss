@@ -1,34 +1,46 @@
 /* 统一loading组件样式 */
 
+/* 包装容器 */
+.loading-wrapper {
+  box-sizing: border-box;
+}
+
 /* 文本样式 */
 .loading-text {
   font-size: 28rpx;
   color: #666;
-  margin-top: 10rpx;
+  margin-top: 16rpx;
+  text-align: center;
 }
 
 .loading-text-large {
   font-size: 32rpx;
   color: #333;
   margin-top: 20rpx;
+  text-align: center;
 }
 
 /* 内联加载样式 */
 .loading-inline {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   padding: 20rpx;
 }
 
-.loading-spinner {
+.loading-inline .loading-spinner {
   width: 36rpx;
   height: 36rpx;
-  border: 4rpx solid rgba(150, 150, 150, 0.3);
+  border: 4rpx solid rgba(150, 150, 150, 0.2);
   border-radius: 50%;
-  border-top-color: #666;
+  border-top-color: #07c160;
   animation: spin 0.8s linear infinite;
   margin-right: 16rpx;
+}
+
+.loading-inline .loading-text {
+  margin-top: 0;
 }
 
 /* 全屏加载样式 */
@@ -38,11 +50,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.loading-mask.with-mask {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.loading-mask.with-mask .loading-text-large {
+  color: #fff;
 }
 
 .loading-content {
@@ -51,36 +72,23 @@
   align-items: center;
   justify-content: center;
   padding: 40rpx;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.05);
+}
+
+.loading-mask.with-mask .loading-content {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 .loading-spinner-large {
   width: 80rpx;
   height: 80rpx;
-  margin-bottom: 30rpx;
+  border: 6rpx solid rgba(7, 193, 96, 0.2);
   border-radius: 50%;
-  position: relative;
-}
-
-.loading-spinner-large:before,
-.loading-spinner-large:after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 6rpx solid transparent;
-  border-radius: 50%;
-}
-
-.loading-spinner-large:before {
-  border-top-color: #1890ff;
+  border-top-color: #07c160;
   animation: spin 1s linear infinite;
-}
-
-.loading-spinner-large:after {
-  border-bottom-color: #1890ff;
-  animation: spin 1.5s linear infinite reverse;
+  margin-bottom: 20rpx;
 }
 
 /* 点状加载样式 */
@@ -96,16 +104,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
+  height: 40rpx;
 }
 
 .loading-dot {
   width: 20rpx;
   height: 20rpx;
   border-radius: 50%;
-  background-color: #1890ff;
-  margin: 0 10rpx;
+  background-color: #07c160;
+  margin: 0 8rpx;
   animation: bounce 1.4s infinite ease-in-out both;
+  opacity: 0.8;
 }
 
 .loading-dot:nth-child(1) {
@@ -116,19 +126,47 @@
   animation-delay: -0.16s;
 }
 
-/* 默认加载样式 */
-.loading-default {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20rpx;
+/* 自定义尺寸 */
+.loading-wrapper.small .loading-spinner {
+  width: 24rpx;
+  height: 24rpx;
+  border-width: 3rpx;
 }
 
-.loading-icon {
-  width: 40rpx;
-  height: 40rpx;
-  margin-bottom: 10rpx;
+.loading-wrapper.small .loading-spinner-large {
+  width: 60rpx;
+  height: 60rpx;
+  border-width: 4rpx;
+}
+
+.loading-wrapper.small .loading-dot {
+  width: 14rpx;
+  height: 14rpx;
+}
+
+.loading-wrapper.small .loading-text {
+  font-size: 24rpx;
+}
+
+.loading-wrapper.large .loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border-width: 5rpx;
+}
+
+.loading-wrapper.large .loading-spinner-large {
+  width: 100rpx;
+  height: 100rpx;
+  border-width: 8rpx;
+}
+
+.loading-wrapper.large .loading-dot {
+  width: 24rpx;
+  height: 24rpx;
+}
+
+.loading-wrapper.large .loading-text {
+  font-size: 32rpx;
 }
 
 /* 动画定义 */

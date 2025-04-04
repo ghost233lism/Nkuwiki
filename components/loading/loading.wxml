@@ -4,33 +4,33 @@
 </view>
 
 <!-- 统一的加载组件，支持多种样式 -->
-<view wx:if="{{show}}">
+<view class="loading-wrapper {{size ? size : ''}}" wx:if="{{show}}">
   <!-- 内联加载 -->
   <view class="loading-inline" wx:if="{{type === 'inline'}}">
-    <view class="loading-spinner"></view>
-    <text class="loading-text">{{text}}</text>
+    <view class="loading-spinner" style="{{color ? 'border-top-color:' + color + ';' : ''}}"></view>
+    <text class="loading-text" wx:if="{{text}}">{{text}}</text>
   </view>
 
   <!-- 全屏加载 -->
-  <view class="loading-mask" wx:if="{{type === 'fullscreen'}}">
+  <view class="loading-mask {{mask ? 'with-mask' : ''}}" wx:elif="{{type === 'fullscreen'}}">
     <view class="loading-content">
-      <view class="loading-spinner-large"></view>
-      <text class="loading-text-large">{{text}}</text>
+      <view class="loading-spinner-large" style="{{color ? 'border-top-color:' + color + ';' : ''}}"></view>
+      <text class="loading-text-large" wx:if="{{text}}">{{text}}</text>
     </view>
   </view>
 
   <!-- 点状加载 -->
-  <view class="loading-dots-container" wx:if="{{type === 'dots'}}">
+  <view class="loading-dots-container" wx:elif="{{type === 'dots'}}">
     <view class="loading-dots">
-      <view class="loading-dot"></view>
-      <view class="loading-dot"></view>
-      <view class="loading-dot"></view>
+      <view class="loading-dot" style="{{color ? 'background-color:' + color + ';' : ''}}"></view>
+      <view class="loading-dot" style="{{color ? 'background-color:' + color + ';' : ''}}"></view>
+      <view class="loading-dot" style="{{color ? 'background-color:' + color + ';' : ''}}"></view>
     </view>
-    <text class="loading-text">{{text}}</text>
+    <text class="loading-text" wx:if="{{text}}">{{text}}</text>
   </view>
   
   <!-- 默认加载样式 -->
-  <view class="loading-default" wx:if="{{type === 'default'}}">
+  <view class="loading-default" wx:else>
     <icon name="loading" size="48"></icon>
     <text class="loading-text">{{text}}</text>
   </view>

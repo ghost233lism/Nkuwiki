@@ -15,7 +15,7 @@
   margin-bottom: 20rpx;
 }
 
-.error-icon image {
+.error-icon-image {
   width: 100%;
   height: 100%;
 }

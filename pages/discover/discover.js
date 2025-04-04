@@ -1,5 +1,5 @@
 const { storage } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/base-behavior');
+const baseBehavior = require('../../behaviors/baseBehavior');
 const postBehavior = require('../../behaviors/post-behavior');
 const authBehavior = require('../../behaviors/auth-behavior');
 

@@ -1,6 +1,6 @@
 <view class="error-container" wx:if="{{show}}">
   <view class="error-icon">
-    <icon name="close" size="56" color="#ff4d4f"></icon>
+    <icon class="error-icon-image" name="close" size="56" color="#ff4d4f"></icon>
   </view>
   <view class="error-text">{{text}}</view>
   <view class="error-actions">

@@ -22,8 +22,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 160rpx;
-  height: 160rpx;
+  width: 240rpx;
+  height: 240rpx;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgba(24, 144, 255, 0.2) 0%, rgba(24, 144, 255, 0) 70%);
   border-radius: 50%;
@@ -37,14 +37,15 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  margin-top: 20rpx;
 }
 
 .app-name {
-  font-size: 56rpx;
+  font-size: 64rpx;
   font-weight: 600;
   color: #333;
   letter-spacing: 2rpx;
-  margin-bottom: 12rpx;
+  margin-bottom: 16rpx;
   background: linear-gradient(135deg, #333 0%, #666 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

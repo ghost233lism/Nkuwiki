@@ -21,29 +21,9 @@ Component({
 
   methods: {
     onLogin() {
+      // 直接触发登录事件，由页面统一处理
       if (this.data.loading) return;
-      
-      this.setData({ loading: true });
-      
-      wx.getUserProfile({
-        desc: '用于完善用户资料',
-        success: (res) => {
-          this.triggerEvent('login', {
-            userInfo: res.userInfo
-          });
-        },
-        fail: (err) => {
-          console.debug('用户拒绝授权', err);
-          wx.showToast({
-            title: '需要授权才能使用完整功能',
-            icon: 'none',
-            duration: 2000
-          });
-        },
-        complete: () => {
-          this.setData({ loading: false });
-        }
-      });
+      this.triggerEvent('login');
     },
 
     onAgreementTap(e) {

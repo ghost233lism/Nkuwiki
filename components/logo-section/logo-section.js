@@ -14,7 +14,7 @@ Component({
     },
     logoSize: {
       type: Number,
-      value: 160
+      value: 220
     }
   },
 

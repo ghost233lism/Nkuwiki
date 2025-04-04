@@ -6,6 +6,7 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
+    "page-status": "/components/page-status/page-status",
     "post-item": "/components/post-item/post-item",
     "comment-list": "/components/comment-list/comment-list",
     "comment-item": "/components/comment-item/comment-item",

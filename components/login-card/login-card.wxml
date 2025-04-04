@@ -17,14 +17,18 @@
       </view>
     </view>
 
-    <button 
-      type="primary"
-      bindtap="onLogin"
-      loading="{{loading}}"
-    >
-      <icon wx:if="{{!loading}}" name="wechat" size="36" color="#fff"></icon>
-      微信一键登录
-    </button>
+    <view class="button-container">
+      <button 
+        class="login-button"
+        type="primary"
+        bindtap="onLogin"
+        loading="{{loading}}"
+        hover-class="button-hover"
+      >
+        <icon wx:if="{{!loading}}" class="login-button-icon" name="wechat" size="30" color="#fff"></icon>
+        微信一键登录
+      </button>
+    </view>
 
     <view class="agreement">
       <text class="tips">登录即表示您同意</text>

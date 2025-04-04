@@ -1,5 +1,5 @@
 const { ui, error, ToastType, createApiClient, formatRelativeTime } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/base-behavior');
+const baseBehavior = require('../../behaviors/baseBehavior');
 const userBehavior = require('../../behaviors/user-behavior');
 
 // 使用createApiClient创建API客户端

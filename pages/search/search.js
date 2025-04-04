@@ -1,5 +1,5 @@
 const { storage, ui, error, ToastType, createApiClient } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/base-behavior');
+const baseBehavior = require('../../behaviors/baseBehavior');
 const { parseMarkdown } = require('../../utils/markdown');
 
 // API clients

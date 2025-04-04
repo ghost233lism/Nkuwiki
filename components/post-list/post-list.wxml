@@ -1,7 +1,7 @@
 <page-status
   loading="{{loading}}"
   error="{{error}}"
-  errorText="{{errorMsg}}"
+  errorText="{{errorText}}"
   empty="{{post.length === 0 && !loading && !error}}"
   emptyText="{{emptyText}}"
   hasMore="{{hasMore}}"
@@ -18,28 +18,25 @@
 
   <view class="post-list">
     <!-- 帖子列表 -->
-    <block wx:for="{{post}}" wx:key="_id">
+    <block wx:for="{{post}}" wx:key="id">
       <post-item 
         post="{{item}}" 
-        currentOpenid="{{currentOpenid}}"
-        showActions="{{true}}"
-        showComments="{{true}}"
+        showAction="{{true}}"
+        showComment="{{true}}"
         showFollow="{{true}}"
-        data-id="{{item.id}}"
-        data-index="{{index}}"
         index="{{index}}"
-        bind:posttap="handlePostTap"
-        bind:like="handleLike"
-        bind:favorite="handleFavorite" 
-        bind:comment="handleComment"
-        bind:follow="handleFollow"
-        bind:usertap="handleUserTap"
       />
     </block>
   </view>
   
-  <!-- 空状态按钮 -->
-  <view slot="empty-action" wx:if="{{empty && showEmptyBtn}}">
-    <button class="empty-btn primary-btn" bindtap="handleEmptyBtnTap">{{emptyBtnText}}</button>
+  <!-- 加载更多状态 -->
+  <view wx:if="{{(loading || loadingMore) && post.length > 0}}" class="loading-more">
+    <view class="loading-icon"></view>
+    <text>{{loadingText || '加载中...'}}</text>
+  </view>
+  
+  <!-- 没有更多数据 -->
+  <view wx:if="{{!hasMore && post.length > 0}}" class="no-more">
+    <text>{{noMoreText}}</text>
   </view>
 </page-status>

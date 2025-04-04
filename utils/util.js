@@ -212,7 +212,17 @@ const ui = {
     wx.hideToast()
   },
 
-  showDialog: ({ title, content, confirmText = '确定', cancelText = '取消', showCancel = true }) => {
+  /**
+   * 显示模态对话框
+   * @param {Object} options 配置对象
+   * @param {String} options.title 标题
+   * @param {String} options.content 内容
+   * @param {String} [options.confirmText='确定'] 确认按钮文字
+   * @param {String} [options.cancelText='取消'] 取消按钮文字
+   * @param {Boolean} [options.showCancel=true] 是否显示取消按钮
+   * @returns {Promise<Boolean>} 用户点击确认返回 true，取消返回 false
+   */
+  showModal: ({ title = '提示', content = '', confirmText = '确定', cancelText = '取消', showCancel = true } = {}) => {
     return new Promise((resolve, reject) => {
       wx.showModal({
         title,
@@ -220,10 +230,19 @@ const ui = {
         confirmText,
         cancelText,
         showCancel,
-        success: res => resolve(res.confirm),
-        fail: err => reject(err)
-      })
-    })
+        success: (res) => {
+          if (res.confirm) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        },
+        fail: (err) => {
+          console.error('wx.showModal 调用失败:', err);
+          reject(err);
+        }
+      });
+    });
   },
 
   showActionSheet: items => {
@@ -776,6 +795,7 @@ module.exports = {
   parseJsonField,
   getAppInfo,
   getUserProfile,
+  getSystemInfo,
   getOpenID,
   parseUrl,
   parseImageUrl

@@ -1,90 +1,51 @@
-<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
-  <!-- 页面状态 -->
-  <loading wx:if="{{loading.post}}" type="dot-gray" show="{{loading.post}}" />
-  <error wx:elif="{{error}}" text="{{errorText}}" bind:retry="fetchPostData" />
+<!-- 帖子详情页 -->
+<view class="container">
+  <!-- 编辑模式 -->
+  <post-edit 
+    wx:if="{{isEditMode}}"
+    post="{{postDetail}}"
+    bind:submit="onPostEdit"
+  />
 
-  <!-- 帖子内容 -->
-  <block wx:elif="{{postDetail}}">
-    <!-- 编辑模式 -->
-    <post-edit 
-      wx:if="{{isEditMode}}"
-      post="{{postDetail}}"
-      bind:submit="onPostEdit"
+  <!-- 展示模式 -->
+  <block wx:else>
+    <!-- 加载状态 -->
+    <loading wx:if="{{loading}}" />
+
+    <!-- 错误状态 -->
+    <empty 
+      wx:elif="{{error}}"
+      type="error"
+      text="{{errorText}}"
+      btnText="重试"
+      bind:btnTap="loadInitialData"
     />
 
-    <!-- 展示模式 -->
+    <!-- 帖子内容 -->
     <block wx:else>
-      <view class="post-container">
-        <!-- 使用post-item组件展示帖子 -->
-        <post-item
-          post="{{postDetail}}"
-          showActions="{{true}}"
-          showComments="{{false}}"
-          bind:like="onPostItemLike"
-          bind:favorite="onPostItemFavorite"
-          bind:share="onPostShare"
-          bind:comment="onPostItemComment"
-        />
-        
-        <!-- 评论区标题 -->
-        <view class="comment-header-section">
-          <text class="comment-header-title">评论 ({{postDetail.comment_count || 0}})</text>
-        </view>
-        
-        <!-- 使用comment-list组件 -->
-        <comment-list
-          id="commentList"
-          comments="{{comments}}"
-          total="{{postDetail.comment_count || 0}}"
-          loading="{{loading.comment}}"
-          error="{{commentError}}"
-          hasMore="{{hasMore}}"
-          currentOpenid="{{userInfo.openid}}"
-          bind:reply="onReplyTap"
-          bind:delete="onCommentDelete"
-          bind:loadmore="onLoadMore"
-          bind:retry="onCommentRetry"
-          bind:usertap="goToUserProfile"
-        />
-      </view>
-      
-      <!-- 底部评论按钮 -->
-      <view class="comment-bar">
-        <view class="comment-input-placeholder" bindtap="onCommentTap">
-          <text>写评论...</text>
-        </view>
-      </view>
+      <!-- 帖子详情 -->
+      <post-item
+        post="{{postDetail}}"
+        currentOpenid="{{userInfo.openid || ''}}"
+        bind:usertap="onUserTap"
+        bind:like="handleLike"
+        bind:favorite="handleFavorite"
+      />
+
+      <!-- 评论列表 -->
+      <comment-list
+        comments="{{comments}}"
+        total="{{postDetail.comment_count}}"
+        loading="{{loadingComment}}"
+        error="{{commentError}}"
+        hasMore="{{hasMore}}"
+        currentOpenid="{{userInfo.openid || ''}}"
+      />
     </block>
   </block>
+</view>
 
-  <!-- 评论输入框 -->
-  <comment-input
-    id="commentInput"
-    show="{{focusComment}}"
-    loading="{{loading.comment}}"
-    value="{{commentText}}"
-    placeholder="{{replyTo ? '回复 ' + replyTo.nickname : '写评论...'}}"
-    bind:input="onCommentInput"
-    bind:submit="onCommentSubmit"
-    bind:close="onCommentClose"
-    data-focus="{{focusComment}}"
-  />
-  
-  <!-- WEUI组件 -->
-  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
-  
-  <mp-dialog 
-    title="{{dialogTitle}}" 
-    show="{{dialogShow}}" 
-    buttons="{{dialogButtons}}" 
-    bindbuttontap="tapDialogButton"
-  >
-    <view>{{dialogContent}}</view>
-  </mp-dialog>
-  
-  <mp-actionsheet 
-    bindactiontap="actionSheetClick" 
-    show="{{actionSheetShow}}" 
-    actions="{{actionSheetGroups}}"
-  ></mp-actionsheet>
-</page-status> 
+<!-- WEUI组件 -->
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<mp-dialog title="{{dialogTitle}}" show="{{dialogShow}}" buttons="{{dialogButtons}}"></mp-dialog>
+<mp-actionsheet bindactiontap="actionSheetClick" show="{{actionSheetShow}}" actions="{{actionSheetGroups}}"></mp-actionsheet> 

@@ -1,106 +1,93 @@
 /* 登录页面样式 */
 page {
   background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+  overflow: hidden;
+  height: 100%;
+  position: fixed;
+  width: 100%;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .container {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 20rpx 40rpx 80rpx;
+  height: 100%;
+  padding: 40rpx 30rpx 120rpx;
   box-sizing: border-box;
   position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
+/* 背景装饰元素，降低层级和透明度 */
 .container::before {
   content: '';
   position: absolute;
-  top: -200rpx;
-  left: -200rpx;
+  top: -100rpx;
+  left: -100rpx;
   width: 400rpx;
   height: 400rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(24, 144, 255, 0.05) 100%);
-  z-index: 1;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.04) 100%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .container::after {
   content: '';
   position: absolute;
-  bottom: -200rpx;
-  right: -200rpx;
+  bottom: -100rpx;
+  right: -100rpx;
   width: 400rpx;
   height: 400rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(82, 196, 26, 0.1) 0%, rgba(82, 196, 26, 0.05) 100%);
-  z-index: 1;
-}
-
-/* 状态层样式 */
-.state-layer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  z-index: 100;
-}
-
-.state-text {
-  font-size: 28rpx;
-  color: #666;
-  margin-top: 20rpx;
-}
-
-.state-text.error {
-  color: #ff4d4f;
-}
-
-.retry-btn {
-  margin-top: 30rpx;
-  padding: 16rpx 40rpx;
-  font-size: 28rpx;
-  color: #fff;
-  background: #1890ff;
-  border-radius: 8rpx;
-  border: none;
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.08) 0%, rgba(82, 196, 26, 0.04) 100%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* 主内容样式 */
 .main-content {
   width: 100%;
+  max-width: 750rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
+  flex: 1;
+  z-index: 2; /* 确保内容在装饰元素之上 */
+}
+
+/* 底部版权信息 */
+.footer {
+  width: 100%;
+  text-align: center;
+  padding: 20rpx 0;
   z-index: 2;
+  position: absolute;
+  bottom: 30rpx;
+  left: 0;
+  right: 0;
 }
 
-/* 错误提示样式 */
-.weui-toptips {
-  padding: 20rpx 40rpx !important;
-  font-size: 28rpx !important;
-  border-radius: 8rpx !important;
-  transform: translateZ(0);
-  transition: all 0.3s ease-out !important;
+.copyright {
+  font-size: 24rpx;
+  color: #a0a0a0;
+  opacity: 1;
+  letter-spacing: 1rpx;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
-/* 加载提示样式 */
-.mp-loading {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(10px);
+/* 覆盖微信原生按钮样式 */
+button[type=primary] {
+  background-color: #07c160 !important;
 }
 
-.mp-loading__tips {
-  font-size: 28rpx !important;
-  color: #666 !important;
-  margin-top: 20rpx !important;
+button.button-hover {
+  background-color: #06ad56 !important;
 }

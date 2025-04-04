@@ -1,12 +1,23 @@
 <view class="container">
-  <!-- 顶部提示 -->
-  <mp-toptips msg="{{errorText}}" type="error" show="{{error}}"></mp-toptips>
-
-  <!-- 加载状态 -->
-  <wloading show="{{loading}}" type="dot-gray" tips="登录中..."></wloading>
-
+  <!-- 使用loading组件 -->
+  <loading 
+    show="{{loading}}" 
+    text="{{loadingText}}" 
+    type="dots" 
+    size="large"
+    class="loading-component"
+  />
+  
+  <!-- 使用error组件 -->
+  <error 
+    show="{{error}}" 
+    text="{{errorText}}"
+    bind:retry="refreshPage"
+    bind:close="hideError"
+  />
+  
   <!-- 主内容 -->
-  <view class="main-content" hidden="{{loading}}">
+  <view class="main-content" wx:if="{{!loading && !error}}">
     <!-- Logo区域 -->
     <logo-section 
       app-name="{{appInfo.appName}}" 
@@ -20,5 +31,10 @@
       bind:login="handleLogin"
       bind:agreement="onAgreementTap"
     ></login-card>
+  </view>
+  
+  <!-- 底部版权信息 - 移到container的直接子元素 -->
+  <view class="footer">
+    <text class="copyright">© nkuwiki 2025</text>
   </view>
 </view>

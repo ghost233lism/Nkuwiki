@@ -21,14 +21,14 @@
   <view class="category-scroll">
     <view class="category-list">
       <view 
-        class="category-item {{activeTab === index ? 'active' : ''}}" 
-        wx:for="{{tabs}}" 
-        wx:key="index" 
-        data-index="{{index}}"
+        class="category-item {{categoryId === item.category_id ? 'active' : ''}}" 
+        wx:for="{{navItems}}" 
+        wx:key="category_id" 
+        data-index="{{item.category_id}}"
         bindtap="onTabChange"
       >
-        <icon name="{{item.iconName}}" size="60" color="{{activeTab === index ? '#1aad19' : '#666666'}}"></icon>
-        <text class="category-text">{{item.title}}</text>
+        <icon name="{{item.tag}}" size="60" color="{{categoryId === item.category_id ? '#1aad19' : '#666666'}}"></icon>
+        <text class="category-text">{{item.text}}</text>
       </view>
     </view>
   </view>
@@ -36,19 +36,13 @@
   <!-- 内容列表 - 使用post-list组件 -->
   <view class="post-list-container">
     <post-list 
-      post="{{post}}"
-      loading="{{postLoading}}"
-      error="{{postError}}"
-      errorMsg="{{postErrorMsg}}"
-      hasMore="{{pagination.hasMore}}"
-      currentOpenid="{{currentOpenid}}"
-      bind:posttap="handlePostTap"
-      bind:loadmore="handleLoadMore"
+      filter="{{filter}}"
       bind:retry="onRetry"
-      bind:emptybtn="handleEmptyBtnTap"
-      bind:like="handleLike"
-      bind:favorite="handleFavorite"
-      bind:usertap="handleUserTap"
     />
+  </view>
+  
+  <!-- 悬浮发帖按钮 -->
+  <view class="floating-button" bindtap="onCreatePost">
+    <icon name="add" size="56" color="#ffffff"></icon>
   </view>
 </view>
