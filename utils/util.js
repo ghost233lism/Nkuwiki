@@ -268,16 +268,57 @@ const ui = {
 const nav = {
   setTitle: title => wx.setNavigationBarTitle({ title }),
 
-  back: (delta = 1) => wx.navigateBack({ delta }),
+  back: (delta = 1) => {
+    console.debug('导航: 返回', delta, '页');
+    return new Promise((resolve, reject) => {
+      wx.navigateBack({ 
+        delta,
+        success: resolve,
+        fail: err => {
+          console.error('返回失败:', err);
+          reject(err);
+        }
+      });
+    });
+  },
 
   to: (url, params) => {
+    if (!url) {
+      console.error('导航错误: url不能为空');
+      return Promise.reject(new Error('导航错误: url不能为空'));
+    }
+    
     if (params) {
       const query = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join('&')
-      url += (url.includes('?') ? '&' : '?') + query
+        .join('&');
+      url += (url.includes('?') ? '&' : '?') + query;
     }
-    wx.navigateTo({ url })
+    
+    console.debug('导航: 跳转到', url);
+    return new Promise((resolve, reject) => {
+      wx.navigateTo({
+        url,
+        success: resolve,
+        fail: err => {
+          console.error('跳转失败:', url, err);
+          // 尝试fallback到redirectTo
+          if (err.errMsg?.includes('limit')) {
+            console.debug('已达到页面栈最大值，尝试redirectTo');
+            wx.redirectTo({
+              url,
+              success: resolve,
+              fail: redirectErr => {
+                console.error('redirectTo也失败了:', redirectErr);
+                reject(redirectErr);
+              }
+            });
+          } else {
+            reject(err);
+          }
+        }
+      });
+    });
   },
 
   // 添加navigateTo作为to方法的别名
@@ -286,18 +327,72 @@ const nav = {
   },
 
   redirect: (url, params) => {
+    if (!url) {
+      console.error('导航错误: url不能为空');
+      return Promise.reject(new Error('导航错误: url不能为空'));
+    }
+    
     if (params) {
       const query = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join('&')
-      url += (url.includes('?') ? '&' : '?') + query
+        .join('&');
+      url += (url.includes('?') ? '&' : '?') + query;
     }
-    wx.redirectTo({ url })
+    
+    console.debug('导航: 重定向到', url);
+    return new Promise((resolve, reject) => {
+      wx.redirectTo({
+        url,
+        success: resolve,
+        fail: err => {
+          console.error('重定向失败:', url, err);
+          reject(err);
+        }
+      });
+    });
   },
 
-  switchTab: url => wx.switchTab({ url }),
+  redirectTo: function(url, params) {
+    return this.redirect(url, params);
+  },
 
-  relaunch: url => wx.reLaunch({ url })
+  switchTab: url => {
+    if (!url) {
+      console.error('导航错误: url不能为空');
+      return Promise.reject(new Error('导航错误: url不能为空'));
+    }
+    
+    console.debug('导航: 切换到标签页', url);
+    return new Promise((resolve, reject) => {
+      wx.switchTab({
+        url,
+        success: resolve,
+        fail: err => {
+          console.error('切换标签页失败:', url, err);
+          reject(err);
+        }
+      });
+    });
+  },
+
+  relaunch: url => {
+    if (!url) {
+      console.error('导航错误: url不能为空');
+      return Promise.reject(new Error('导航错误: url不能为空'));
+    }
+    
+    console.debug('导航: 重启并跳转到', url);
+    return new Promise((resolve, reject) => {
+      wx.reLaunch({
+        url,
+        success: resolve,
+        fail: err => {
+          console.error('重启跳转失败:', url, err);
+          reject(err);
+        }
+      });
+    });
+  }
 }
 
 // ==================== 错误处理 ====================

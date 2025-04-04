@@ -10,119 +10,120 @@
   <view>{{dialogContent}}</view>
 </mp-dialog>
 
-<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
-  <!-- 加载状态 -->
-  <loading 
-    wx:if="{{submitting}}" 
-    type="dot-gray"
-    show="{{submitting}}"
-  />
-
-  <!-- 错误状态 -->
-  <error 
-    wx:elif="{{error}}"
-    text="{{errorMsg}}"
-    bind:retry="initPage"
-  />
+<view class="post-container">
+  <!-- 顶部导航栏 -->
+  <view class="post-header">
+    <view class="back-icon" bindtap="navigateBack">
+      <icon name="back" size="24"></icon>
+    </view>
+    <view class="page-title">发布帖子</view>
+    <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">发布</button>
+  </view>
 
   <!-- 表单内容 -->
-  <block wx:else>
-    <mp-form-page title="发布帖子">
-      <mp-form>
-        <mp-cells>
-          <!-- 标题输入 -->
-          <mp-cell 
-            title="标题"
-            prop="title"
-            show-error="{{errors.title ? true : false}}"
-            error="{{errors.title}}"
-          >
-            <input-field
-              type="text"
-              placeholder="请输入标题(2-50字)"
-              value="{{form.title}}"
-              bind:input="onFormChange"
-              data-field="title"
-            />
-          </mp-cell>
-
-          <!-- 内容输入 -->
-          <mp-cell 
-            title="内容"
-            prop="content"
-            show-error="{{errors.content ? true : false}}"
-            error="{{errors.content}}"
-          >
-            <text-area
-              placeholder="请输入内容(至少10字)"
-              value="{{form.content}}"
-              bind:input="onFormChange"
-              data-field="content"
-              maxlength="5000"
-              height="400"
-            />
-          </mp-cell>
-
-          <!-- 图片上传 -->
-          <mp-cell title="图片">
-            <mp-uploader
-              files="{{form.images}}"
-              binddelete="onImageDelete"
-              bindselect="onImageSelect"
-              select="{{selectFile}}"
-              upload="{{uploadFile}}"
-              max-count="9"
-            />
-          </mp-cell>
-
-          <!-- 分类选择 -->
-          <mp-cell title="分类">
-            <picker-field
-              mode="selector"
-              range="{{categories}}"
-              range-key="name"
-              value="{{categoryIndex}}"
-              bind:change="onCategoryChange"
-            />
-          </mp-cell>
-
-          <!-- 设置选项 -->
-          <mp-cell title="设置">
-            <mp-checkbox-group multi="{{true}}" bindchange="onCheckboxGroupChange">
-              <mp-checkbox 
-                label="公开帖子" 
-                desc="他人可以看到这个帖子"
-                value="isPublic" 
-                checked="{{form.isPublic}}" 
-              />
-              <mp-checkbox 
-                label="允许评论" 
-                desc="他人可以评论这个帖子"
-                value="allowComment" 
-                checked="{{form.allowComment}}" 
-              />
-              <mp-checkbox 
-                label="知识分享" 
-                desc="标记为校园知识库内容"
-                value="wikiKnowledge" 
-                checked="{{form.wikiKnowledge}}" 
-              />
-            </mp-checkbox-group>
-          </mp-cell>
-        </mp-cells>
-      </mp-form>
-
-      <!-- 底部按钮 -->
-      <view slot="footer">
-        <button
-          type="primary"
-          disabled="{{!canSubmit || submitting}}"
-          loading="{{submitting}}"
-          bind:tap="submitForm"
-        >
-          发布
-        </button>
+  <view class="post-form">
+    <!-- 标题输入 -->
+    <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
+      bindinput="onFormChange" data-field="title" maxlength="50" />
+    
+    <!-- 内容输入 -->
+    <textarea class="post-content" placeholder="分享你的想法..." value="{{form.content}}" 
+      bindinput="onFormChange" data-field="content" maxlength="5000" />
+    
+    <!-- 已选图片预览 -->
+    <view class="image-preview-list" wx:if="{{form.images && form.images.length > 0}}">
+      <view class="preview-title">已选择 {{form.images.length}}/9 张图片</view>
+      <view class="preview-grid">
+        <view class="preview-item" wx:for="{{form.images}}" wx:key="index">
+          <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}"></image>
+          <view class="delete-icon" bindtap="deleteImage" data-index="{{index}}">
+            <icon name="close" size="20" color="#fff"></icon>
+          </view>
+        </view>
       </view>
-    </mp-form-page>
-  </block>
-</page-status> 
+    </view>
+    
+    <!-- 工具栏 -->
+    <view class="toolbar">
+      <view class="tool-item" bindtap="onBoldTap"><text class="tool-icon">B</text></view>
+      <view class="tool-item" bindtap="onItalicTap"><text class="tool-icon">I</text></view>
+      <view class="tool-item" bindtap="chooseImage">
+        <icon name="image" size="24"></icon>
+      </view>
+      <view class="tool-item" bindtap="onAtTap"><text class="tool-icon">@</text></view>
+      <view class="wiki-tool" bindtap="toggleWikiMode">
+        <icon name="wiki" size="16"></icon>
+        <text>Wiki润色</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 话题选择 -->
+  <view class="topic-section">
+    <view class="section-title">选择话题</view>
+    <view class="topic-list">
+      <view class="topic-tag {{form.category_id === 2 ? 'active' : ''}}" 
+        data-category="2" bindtap="onTopicSelect">#校园生活</view>
+      <view class="topic-tag {{form.category_id === 1 ? 'active' : ''}}" 
+        data-category="1" bindtap="onTopicSelect">#学习交流</view>
+      <view class="topic-tag {{form.category_id === 3 ? 'active' : ''}}" 
+        data-category="3" bindtap="onTopicSelect">#求助</view>
+      <view class="add-topic-tag" bindtap="onAddTopicTap">#添加话题</view>
+    </view>
+  </view>
+
+  <!-- Wiki润色建议 -->
+  <view class="wiki-section" wx:if="{{form.wikiKnowledge}}">
+    <view class="wiki-header">
+      <view class="wiki-title">
+        <icon name="wiki" size="20"></icon>
+        <text>Wiki 润色建议</text>
+      </view>
+      <view class="wiki-apply" bindtap="applyWikiSuggestion">应用</view>
+    </view>
+    <view class="wiki-suggestions">
+      <text>建议调整：1. 增加段落间的过渡，使文章更加连贯</text>
+      <text>2. 补充更多具体细节，增强文章说服力</text>
+      <text>3. 优化标点符号使用，提升可读性</text>
+    </view>
+  </view>
+
+  <!-- 文风选择 -->
+  <view class="style-section">
+    <view class="section-title">文风选择</view>
+    <view class="style-options">
+      <view class="style-option {{form.style === 'formal' ? 'active' : ''}}" 
+        data-style="formal" bindtap="onStyleSelect">正式</view>
+      <view class="style-option {{form.style === 'casual' ? 'active' : ''}}" 
+        data-style="casual" bindtap="onStyleSelect">轻松</view>
+      <view class="style-option {{form.style === 'humorous' ? 'active' : ''}}" 
+        data-style="humorous" bindtap="onStyleSelect">幽默</view>
+      <view class="style-option {{form.style === 'professional' ? 'active' : ''}}" 
+        data-style="professional" bindtap="onStyleSelect">专业</view>
+    </view>
+  </view>
+
+  <!-- 底部设置 -->
+  <view class="post-settings">
+    <view class="setting-item">
+      <text>公开</text>
+      <switch checked="{{form.isPublic}}" bindchange="onSwitchChange" data-field="isPublic" color="#5853e2" />
+    </view>
+    <view class="setting-item">
+      <text>允许评论</text>
+      <switch checked="{{form.allowComment}}" bindchange="onSwitchChange" data-field="allowComment" color="#5853e2" />
+    </view>
+    <view class="setting-item">
+      <text>wiki小知识</text>
+      <switch checked="{{form.wikiKnowledge}}" bindchange="onSwitchChange" data-field="wikiKnowledge" color="#5853e2" />
+    </view>
+  </view>
+
+  <!-- 加载中状态 -->
+  <view class="loading-mask" wx:if="{{submitting}}">
+    <view class="loading-content">
+      <loading type="circle" color="#5853e2" />
+      <text>发布中...</text>
+    </view>
+  </view>
+</view> 

@@ -1,62 +1,281 @@
 /* 页面容器 */
 .post-container {
-  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f8f8f8;
+}
+
+/* 顶部导航 */
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
   background-color: #fff;
-  min-height: 100vh;
-}
-
-/* 标题输入框 */
-.title-input {
-  margin-bottom: 30rpx;
   border-bottom: 1rpx solid #eee;
-  padding: 20rpx 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.title-input input {
-  font-size: 36rpx;
-  font-weight: 500;
-}
-
-/* 内容输入区域 */
-.content-input {
-  margin-bottom: 30rpx;
-}
-
-.content-input textarea {
-  width: 100%;
-  height: 300rpx;
-  font-size: 30rpx;
-  line-height: 1.6;
-}
-
-/* 发布设置 */
-.post-setting {
-  margin: 40rpx 0;
-  background-color: #f9f9f9;
-  border-radius: 12rpx;
-  overflow: hidden;
-}
-
-/* 提交按钮 */
-.submit-btn {
-  margin-top: 60rpx;
-  background-color: #07c160;
-  color: #fff;
-  height: 88rpx;
+.back-icon {
+  width: 40rpx;
+  height: 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 44rpx;
-  font-size: 32rpx;
-  position: relative;
 }
 
-.submit-btn.disabled {
-  background-color: #ccc;
+.page-title {
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  flex: 1;
 }
 
-.submit-btn text {
-  margin-left: 10rpx;
+.post-btn {
+  background-color: #5853e2;
+  color: #fff;
+  font-size: 14px;
+  padding: 0 24rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  border-radius: 34rpx;
+  font-weight: normal;
+}
+
+.post-btn.disabled {
+  background-color: #c0c0c0;
+  color: #fff;
+}
+
+/* 表单区域 */
+.post-form {
+  padding: 20rpx;
+  background-color: #fff;
+  margin-bottom: 20rpx;
+}
+
+.post-title {
+  font-size: 16px;
+  border-bottom: 1px solid #eee;
+  padding: 24rpx 0;
+  width: 100%;
+}
+
+.post-content {
+  width: 100%;
+  height: 300rpx;
+  font-size: 15px;
+  line-height: 1.5;
+  padding: 24rpx 0;
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  padding: 20rpx 0;
+  border-top: 1rpx solid #eee;
+  align-items: center;
+}
+
+.tool-item {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 30rpx;
+}
+
+.tool-icon {
+  font-weight: bold;
+  font-size: 16px;
+  color: #666;
+}
+
+.tool-icon-img {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.wiki-tool {
+  display: flex;
+  align-items: center;
+  background-color: #f0f0ff;
+  color: #5853e2;
+  font-size: 14px;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  margin-left: auto;
+}
+
+.wiki-tool text {
+  margin-left: 8rpx;
+}
+
+/* 话题选择 */
+.topic-section {
+  margin-bottom: 20rpx;
+  background-color: #fff;
+  padding: 24rpx;
+}
+
+.section-title {
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 20rpx;
+  font-weight: 500;
+}
+
+.topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.topic-tag {
+  font-size: 14px;
+  color: #666;
+  background-color: #f5f5f5;
+  padding: 12rpx 24rpx;
+  border-radius: 100rpx;
+}
+
+.topic-tag.active {
+  background-color: #e0e0ff;
+  color: #5853e2;
+}
+
+.add-topic-tag {
+  font-size: 14px;
+  color: #5853e2;
+  background-color: #f0f0ff;
+  padding: 12rpx 24rpx;
+  border-radius: 100rpx;
+}
+
+/* Wiki润色建议 */
+.wiki-section {
+  margin-bottom: 20rpx;
+  background-color: #f0f0ff;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  margin: 0 20rpx 20rpx;
+}
+
+.wiki-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.wiki-title {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: #5853e2;
+}
+
+.wiki-title text {
+  margin-left: 8rpx;
+}
+
+.wiki-apply {
+  font-size: 14px;
+  color: #5853e2;
+  font-weight: 500;
+}
+
+.wiki-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.wiki-suggestions text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 文风选择 */
+.style-section {
+  margin-bottom: 20rpx;
+  background-color: #fff;
+  padding: 24rpx;
+}
+
+.style-options {
+  display: flex;
+  gap: 16rpx;
+}
+
+.style-option {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  background-color: #f5f5f5;
+  padding: 12rpx 0;
+  border-radius: 8rpx;
+}
+
+.style-option.active {
+  background-color: #5853e2;
+  color: #fff;
+}
+
+/* 底部设置 */
+.post-settings {
+  background-color: #fff;
+  padding: 24rpx;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #eee;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item text {
+  font-size: 15px;
+  color: #333;
+}
+
+/* 加载中 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.loading-content text {
+  font-size: 14px;
+  color: #666;
 }
 
 /* 自定义上传组件样式 */
@@ -217,4 +436,50 @@ page {
 .weui-uploader__file {
   margin-right: 16rpx !important;
   margin-bottom: 16rpx !important;
+}
+
+/* 图片预览样式 */
+.image-preview-list {
+  margin: 20rpx 0;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.preview-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16rpx;
+}
+
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.preview-item {
+  width: 160rpx;
+  height: 160rpx;
+  position: relative;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.preview-item image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-icon {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

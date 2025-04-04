@@ -59,7 +59,8 @@ Page({
   },
 
   onUnload() {
-    this.setStorage('isLoggedIn', false);
+    // 注释掉这一行，登录成功后不应该清除登录状态
+    // this.setStorage('isLoggedIn', false);
   },
 
   async handleLogin() {
@@ -72,6 +73,7 @@ Page({
       if (res) {
         // 设置登录状态
         this.setStorage('isLoggedIn', true);
+        console.debug('isloggedin', this.getStorage('isLoggedIn'));
         
         // 直接跳转到首页
         wx.switchTab({

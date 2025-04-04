@@ -80,11 +80,13 @@ module.exports = Behavior({
      */
     async _checkLogin(showInteraction = true) {
       const isLoggedIn = storage.get('isLoggedIn');
+      console.debug('isLoggedIn', isLoggedIn);
       if(isLoggedIn) return true;
+      
       if (showInteraction) {
         try {
             const res = await ui.showModal({
-              content: err?.message || '您尚未登录或登录已过期，是否前往登录页面？',
+              content: '您尚未登录或登录已过期，是否前往登录页面？',
               confirmText: '去登录',
               showCancel: true
             });
@@ -94,8 +96,8 @@ module.exports = Behavior({
           } catch (modalErr) {throw modalErr;}
         }
         return false;
-      }
     },
+
     /**
      * 获取用户信息
      * @param {Boolean} forceRefresh - 是否强制从服务器获取
@@ -115,6 +117,7 @@ module.exports = Behavior({
         }
       } catch (err) {throw err;}
     },
+
     /**
      * 退出登录
      */
@@ -126,6 +129,6 @@ module.exports = Behavior({
       });
       storage.set('isLoggedIn', false);
       nav.switchTab('/pages/index/index');
-    },
+    }
   }
-); 
+}); 

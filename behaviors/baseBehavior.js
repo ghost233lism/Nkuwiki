@@ -539,11 +539,85 @@ module.exports = Behavior({
 
     // ==================== 导航封装 ====================
 
-    navigateTo(url, params) { nav.navigateTo(url, params); },
-    redirectTo(url, params) { nav.redirectTo(url, params); },
-    navigateBack(delta = 1) { nav.navigateBack(delta); },
-    reLaunch(url, params) { nav.reLaunch(url, params); },
-    switchTab(url) { nav.switchTab(url); },
+    navigateTo(url, params) { 
+      try {
+        console.debug('从页面跳转到:', url);
+        return nav.navigateTo(url, params)
+          .catch(err => {
+            console.error('页面跳转失败:', err);
+            // 显示错误提示
+            ui.showToast('页面跳转失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
+            throw err;
+          });
+      } catch (e) {
+        console.error('页面跳转异常:', e);
+        return Promise.reject(e);
+      }
+    },
+    
+    redirectTo(url, params) { 
+      try {
+        console.debug('从页面重定向到:', url);
+        return nav.redirectTo(url, params)
+          .catch(err => {
+            console.error('页面重定向失败:', err);
+            ui.showToast('页面重定向失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
+            throw err;
+          });
+      } catch (e) {
+        console.error('页面重定向异常:', e);
+        return Promise.reject(e);
+      }
+    },
+    
+    navigateBack(delta = 1) { 
+      try {
+        console.debug('页面返回', delta, '层');
+        return nav.navigateBack(delta)
+          .catch(err => {
+            console.error('页面返回失败:', err);
+            // 返回失败时，可以尝试跳转到首页
+            if (delta > 1) {
+              console.debug('尝试直接返回首页');
+              return this.switchTab('/pages/index/index');
+            }
+            throw err;
+          });
+      } catch (e) {
+        console.error('页面返回异常:', e);
+        return Promise.reject(e);
+      }
+    },
+    
+    reLaunch(url, params) { 
+      try {
+        console.debug('重启并跳转到:', url);
+        return nav.reLaunch(url, params)
+          .catch(err => {
+            console.error('重启跳转失败:', err);
+            ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
+            throw err;
+          });
+      } catch (e) {
+        console.error('重启跳转异常:', e);
+        return Promise.reject(e);
+      }
+    },
+    
+    switchTab(url) { 
+      try {
+        console.debug('切换到标签页:', url);
+        return nav.switchTab(url)
+          .catch(err => {
+            console.error('切换标签页失败:', err);
+            ui.showToast('切换标签失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
+            throw err;
+          });
+      } catch (e) {
+        console.error('切换标签页异常:', e);
+        return Promise.reject(e);
+      }
+    },
 
     // ==================== 工具方法 ====================
 

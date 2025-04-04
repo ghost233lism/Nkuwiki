@@ -235,12 +235,18 @@ Page({
     this._checkLogin(true).then(isLoggedIn => {
       if (isLoggedIn) {
         // 已登录则跳转到发帖页面
-        this.navigateTo({
-          url: '/pages/post/post'
+        console.debug('登录状态验证成功，跳转到发帖页面');
+        wx.navigateTo({
+          url: '/pages/post/post',
+          fail: (err) => {
+            console.error('跳转到发帖页面失败:', err);
+          }
         });
+      } else {
+        console.debug('登录状态验证失败，需要先登录');
       }
     }).catch(err => {
-      console.debug('登录检查失败:', err);
+      console.error('登录检查过程发生错误:', err);
     });
   },
 

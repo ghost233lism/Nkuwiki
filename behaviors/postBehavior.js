@@ -135,9 +135,14 @@ module.exports = Behavior({
         // 准备API所需参数
         const apiParams = { title: postData.title, content: postData.content };
         
-        // 处理分类ID
-        if (postData.category_id !== undefined) apiParams.category_id = postData.category_id;
-        if (postData.category !== undefined) apiParams.category_id = postData.category;
+        // 处理分类ID，确保是数字类型
+        if (postData.category_id !== undefined) {
+          // 转换为数字
+          apiParams.category_id = parseInt(postData.category_id) || 1;
+        } else {
+          // 默认分类ID
+          apiParams.category_id = 1;
+        }
         
         // 处理标签
         if (postData.tag) {
@@ -148,12 +153,12 @@ module.exports = Behavior({
           }
         }
         
-        // 处理图片
-        if (postData.image) {
-          if (typeof postData.image === 'string') {
-            apiParams.image = postData.image;
-          } else if (Array.isArray(postData.image)) {
-            apiParams.image = JSON.stringify(postData.image);
+        // 处理图片，使用正确的字段名images
+        if (postData.images) {
+          if (typeof postData.images === 'string') {
+            apiParams.images = postData.images;
+          } else if (Array.isArray(postData.images)) {
+            apiParams.images = postData.images;
           }
         }
         
@@ -163,7 +168,11 @@ module.exports = Behavior({
         if (postData.location) apiParams.location = JSON.stringify(postData.location);
         if (postData.nickname) apiParams.nickname = postData.nickname;
         if (postData.avatar) apiParams.avatar = postData.avatar;
+        if (postData.wiki_knowledge !== undefined) apiParams.wiki_knowledge = postData.wiki_knowledge;
+        if (postData.style) apiParams.style = postData.style;
 
+        console.debug('发帖API参数:', apiParams);
+        
         const res = await postApi.create(apiParams);
         if (res.code !== 200) {
           throw new Error(res.message || '创建帖子失败');
