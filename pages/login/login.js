@@ -67,7 +67,6 @@ Page({
       return;
     }
     this.updateState({ isLogging: true, error: false, errorText: '' });
-    // 不再调用showLoading，避免显示两个"登录中"
     try {
       const res = await this._syncUserInfo();
       if (res) {

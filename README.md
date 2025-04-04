@@ -496,5 +496,40 @@ if (!isValidArray(arr)) {
 
 ### 命名规范
 
-1. **统一使用单数形式**：
-   - ✅ **正确**：`post`
+### 1. 命名规范
+
+#### 1.1 单数形式
+- ✅ **正确**：`post`、`user`、`image`
+- ❌ 错误：posts、users、comments、images、tags
+
+#### 1.2 大小写规则
+- 默认小写命名
+- 驼峰命名用大写（如 getUserInfo、postDetail）
+- 下划线分割时用小写（如 post_id、user_name）
+
+#### 1.3 字段命名
+api交互字段最好用api文档严格一致。
+比如计数字段统一使用 xxx_count 格式：
+- like_count（点赞数）
+- comment_count（评论数）
+- favorite_count（收藏数）
+- view_count（浏览数）
+- follower_count（粉丝数）
+- following_count（关注数）
+
+#### 1.4 文件命名
+- JS文件：小写并用连字符分隔（如 post-behavior.js、user-card.js）
+- WXML/WXSS文件：与对应JS文件同名（如 user-card.wxml、user-card.wxss）
+
+#### 1.5 组件命名
+- 组件目录：与组件名一致（如 components/post-item/）
+- 组件文件：与目录同名（如 post-item.js、post-item.wxml）
+
+#### 1.6 API接口
+- 路径格式：
+  - 以 `/api/` 开头
+  - 微信小程序API：`/api/wxapp/` 前缀
+  - 智能体API：`/api/agent/` 前缀
+  - 路径统一小写
+  - 单词间用短横线连接
+- 参数命名：一般是小写下划线命名法（如 post_id、user_id）
