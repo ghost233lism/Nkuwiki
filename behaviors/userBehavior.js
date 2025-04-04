@@ -153,12 +153,52 @@ module.exports = Behavior({
       if (!openid) return null;
 
       try {
+        console.debug('执行关注/取消关注操作:', followedUserId);
         const res = await userApi.follow({ followed_id: followedUserId, openid });
-        if (res.code !== 200 || !res.data) throw new Error(res.message || '操作失败');
+        
+        if (res.code !== 200 || !res.data) {
+          throw new Error(res.message || '操作失败');
+        }
+        
+        console.debug('关注/取消关注操作结果:', res.data);
+        
+        // 通知当前页面上的post-list组件更新状态
+        this._triggerPostListRefresh();
+        
         return res.data;
       } catch (err) {
         console.debug('关注操作失败:', err);
         return null;
+      }
+    },
+    
+    /**
+     * 触发所有post-list组件的刷新
+     * @private
+     */
+    _triggerPostListRefresh() {
+      try {
+        const pages = getCurrentPages();
+        const currentPage = pages[pages.length - 1];
+        
+        if (currentPage && currentPage.selectAllComponents) {
+          const postListComponents = currentPage.selectAllComponents('.post-list');
+          console.debug('找到post-list组件:', postListComponents.length);
+          
+          // 调用每个post-list组件的刷新方法
+          postListComponents.forEach(component => {
+            if (component && component.refresh) {
+              console.debug('刷新post-list组件');
+              // 重新获取所有帖子状态
+              const posts = component.data.post;
+              if (posts && posts.length > 0) {
+                component.updatePostsStatus(posts);
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.debug('触发组件刷新失败:', err);
       }
     }
   }

@@ -25,6 +25,9 @@
         showComment="{{true}}"
         showFollow="{{true}}"
         index="{{index}}"
+        bind:like="handlePostLike"
+        bind:favorite="handlePostFavorite"
+        bind:follow="handlePostFollow"
       />
     </block>
   </view>

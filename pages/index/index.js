@@ -113,58 +113,62 @@ Page({
   },
   
   async onShow() {
-    // 检查是否需要刷新，避免重复请求
-    const lastShowTime = this.data.lastShowTime || 0;
-    const now = Date.now();
-    
-    // 设置最近显示时间
-    this.updateState({ lastShowTime: now });
-    
-    // 检查是否刚发布了新帖子
-    const needRefreshPosts = this.getStorage('needRefreshPosts');
-    if (needRefreshPosts) {
-      console.debug('检测到新发布的帖子，刷新列表');
-      // 清除标记
-      this.setStorage('needRefreshPosts', false);
+    try {
+      // 检查是否需要刷新，避免重复请求
+      const lastShowTime = this.data.lastShowTime || 0;
+      const now = Date.now();
       
-      // 刷新帖子列表
-      const postList = this.selectComponent('.post-list-container post-list');
-      if (postList) {
-        postList.loadInitialData();
+      // 设置最近显示时间
+      this.updateState({ lastShowTime: now });
+      
+      // 先刷新所有帖子的状态（不管是否刚加载）
+      // 延迟执行确保DOM已更新
+      setTimeout(() => {
+        this._refreshPostStatus();
+      }, 100);
+      
+      // 检查是否刚发布了新帖子
+      const needRefreshPosts = this.getStorage('needRefreshPosts');
+      if (needRefreshPosts) {
+        console.debug('检测到新发布的帖子，刷新列表');
+        // 清除标记
+        this.setStorage('needRefreshPosts', false);
+        
+        // 刷新帖子列表
+        const postList = this.selectComponent('#postList');
+        if (postList) {
+          postList.loadInitialData();
+        }
+        return;
       }
-      return;
-    }
-    
-    // 如果距离上次刷新时间少于10秒，不刷新内容
-    if (now - lastShowTime < 10000) {
-      console.debug('距离上次刷新时间小于10秒，跳过刷新');
-      return;
-    }
-    
-    // 静默检查未读通知
-    const openid = this.getStorage('openid');
-    if (openid) {
-      this.checkUnreadNotification().catch(err => {
-        console.debug('检查未读通知失败:', err);
-      });
-    }
-    
-    // 如果有错误或超过30秒没刷新，才刷新帖子列表
-    if (this.data.error || now - lastShowTime > 30000) {
-      this.hideError();
       
-      // 刷新帖子列表 - 通过设置筛选条件触发post-list组件更新
-      const postList = this.selectComponent('.post-list-container post-list');
-      if (postList) {
-        postList.setData({
-          filter: { category_id: this.data.categoryId }
+      // 静默检查未读通知
+      const openid = this.getStorage('openid');
+      if (openid) {
+        this.checkUnreadNotification().catch(err => {
+          console.debug('检查未读通知失败:', err);
         });
       }
+      
+      // 如果有错误或超过30秒没刷新，才刷新帖子列表
+      if (this.data.error || now - lastShowTime > 30000) {
+        this.hideError();
+        
+        // 刷新帖子列表 - 通过设置筛选条件触发post-list组件更新
+        const postList = this.selectComponent('#postList');
+        if (postList) {
+          postList.setData({
+            filter: { category_id: this.data.categoryId }
+          });
+        }
+      }
+    } catch (err) {
+      console.debug('onShow 执行出错:', err);
     }
   },
 
   onPullDownRefresh() {
-    const postList = this.selectComponent('.post-list-container post-list');
+    const postList = this.selectComponent('#postList');
     if (postList) {
       postList.loadInitialData();
     }
@@ -172,7 +176,7 @@ Page({
   },
 
   onReachBottom() {
-    const postList = this.selectComponent('.post-list-container post-list');
+    const postList = this.selectComponent('#postList');
     if (postList) {
       postList.loadMore();
     }
@@ -197,7 +201,7 @@ Page({
     }
     
     // 更新post-list组件筛选条件
-    const postList = this.selectComponent('.post-list-container post-list');
+    const postList = this.selectComponent('#postList');
     if (postList) {
       postList.setData({
         filter: { category_id: this.data.categoryId }
@@ -207,7 +211,7 @@ Page({
   
   // post-list组件的重试回调
   onRetry() {
-    const postList = this.selectComponent('.post-list-container post-list');
+    const postList = this.selectComponent('#postList');
     if (postList) {
       postList.loadInitialData();
     }
@@ -298,6 +302,43 @@ Page({
     } catch (err) {
       console.debug('检查未读通知失败:', err);
       return false;
+    }
+  },
+
+  // 刷新帖子状态
+  async _refreshPostStatus() {
+    try {
+      console.debug('开始刷新帖子状态');
+      const postList = this.selectComponent('#postList');
+      
+      if (!postList) {
+        console.debug('未找到post-list组件');
+        return;
+      }
+      
+      console.debug('post-list组件已找到');
+      
+      // 直接获取帖子列表
+      const posts = postList.data.post;
+      console.debug('当前帖子列表:', posts ? posts.length : 0);
+      
+      if (!posts || posts.length === 0) {
+        console.debug('帖子列表为空，不发送状态请求');
+        return;
+      }
+      
+      // 获取用户登录状态
+      const openid = this.getStorage('openid');
+      if (!openid) {
+        console.debug('用户未登录，不获取交互状态');
+        return;
+      }
+      
+      // 直接调用updatePostsStatus并等待结果
+      await postList.updatePostsStatus(posts);
+      console.debug('帖子状态刷新完成');
+    } catch (err) {
+      console.debug('刷新帖子状态发生错误:', err);
     }
   }
 });

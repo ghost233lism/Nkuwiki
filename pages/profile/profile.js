@@ -144,24 +144,30 @@ Page({
       }
       
       console.debug('【Profile】发送用户同步请求');
-      // 使用authBehavior中的方法进行同步
+      // 先验证登录状态
       const startTime = Date.now();
-      const userInfo = await this._syncUserInfo();
-      const endTime = Date.now();
-      console.debug(`【Profile】收到同步响应(${endTime - startTime}ms)`);
+      await this._syncUserInfo();
       
-      if (userInfo && userInfo.id) {
-        // 同步成功，更新用户信息
-        console.debug('【Profile】同步成功，更新用户信息');
+      // 获取最新的用户资料（包含统计数据）
+      const profileRes = await this._getUserInfo(true);
+      const endTime = Date.now();
+      console.debug(`【Profile】收到用户资料响应(${endTime - startTime}ms)`);
+      
+      if (profileRes && profileRes.id) {
+        // 更新成功，更新用户信息
+        console.debug('【Profile】获取资料成功，更新用户信息', profileRes);
+        
+        // 存储最新用户信息
+        this.setStorage('userInfo', profileRes);
         
         // 更新页面数据
         this.setData({
-          userInfo,
+          userInfo: profileRes,
           stats: {
-            posts: userInfo.post_count || 0,
-            likes: userInfo.like_count || 0,
-            favorites: userInfo.favorite_count || 0,
-            comments: userInfo.comment_count || 0
+            posts: profileRes.post_count || 0,
+            likes: profileRes.like_count || 0,
+            favorites: profileRes.favorite_count || 0,
+            comments: profileRes.comment_count || 0
           },
           loading: false
         });
@@ -172,7 +178,7 @@ Page({
         // 检查未读通知
         this.checkUnreadNotifications();
       } else {
-        console.debug('【Profile】同步请求失败或返回数据不完整');
+        console.debug('【Profile】获取用户资料失败或返回数据不完整');
         // 同步失败或返回数据不完整，清除登录状态
         this.setStorage('userInfo', null);
         this.setStorage('openid', null);

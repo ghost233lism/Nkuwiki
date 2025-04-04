@@ -39,8 +39,8 @@ Page({
       ui.showToast('加载中...', { type: ToastType.LOADING });
       this.setData({ loading: true });
 
-      // 使用userBehavior中的getCurrentUserInfo方法获取用户信息
-      const userInfo = await this.getCurrentUserInfo();
+      // 使用authBehavior中的_getUserInfo方法获取用户信息
+      const userInfo = await this._getUserInfo(true);
       
       if (userInfo) {
         userInfo.avatarUrl = userInfo.avatar;

@@ -36,6 +36,7 @@
   <!-- 内容列表 - 使用post-list组件 -->
   <view class="post-list-container">
     <post-list 
+      id="postList"
       filter="{{filter}}"
       bind:retry="onRetry"
     />

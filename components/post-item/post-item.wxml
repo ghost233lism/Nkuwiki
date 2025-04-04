@@ -10,9 +10,7 @@
     </view>
     <view wx:if="{{showFollow && post.openid && post.openid !== userInfo.openid}}" class="follow-container">
       <button class="follow-btn {{isFollowed ? 'followed' : ''}}" 
-              catchtap="_onFollowTap" 
-              data-author-id="{{post.openid}}" 
-              data-followed="{{isFollowed}}">
+              catchtap="_onFollowTap">
         {{isFollowed ? '已关注' : '关注'}}
       </button>
     </view>

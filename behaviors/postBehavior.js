@@ -100,24 +100,42 @@ module.exports = Behavior({
     },
     
     /**
-     * 获取帖子状态（点赞、收藏等）
-     * @param {string|string[]} postIds 帖子ID或ID数组
+     * 获取帖子状态（点赞、收藏、关注等）
+     * @param {string|string[]} post_ids 帖子ID或ID数组
      * @returns {Promise<Object>} API响应
      */
-    async _getPostStatus(postIds = []) {
-      if (!postIds || (Array.isArray(postIds) && !postIds.length)) {
-        return { code: 400, message: '参数错误', data: null };
-      }
-      
-      // 处理单个ID的情况
-      const postIdStr = Array.isArray(postIds) ? postIds.join(',') : postIds;
-      
+    async _getPostStatus(post_ids) {
       try {
-        const res = await postApi.status({ post_id: postIdStr });
+        console.debug('开始获取帖子状态:', post_ids);
+        
+        if (!post_ids || (Array.isArray(post_ids) && post_ids.length === 0)) {
+          console.debug('没有提供有效的帖子ID');
+          return { code: -1, message: '没有提供帖子ID' };
+        }
+        
+        // 检查登录状态
+        const openid = this.getStorage('openid');
+        if (!openid) {
+          console.debug('用户未登录，无法获取交互状态');
+          return { code: -1, message: '用户未登录' };
+        }
+        
+        // 将数组转换为逗号分隔的字符串
+        const postIdsParam = Array.isArray(post_ids) ? post_ids.join(',') : post_ids;
+        
+        console.debug('发送帖子状态请求, 参数:', { post_id: postIdsParam, openid });
+        
+        // 使用postApi发送请求，确保请求被发出
+        const res = await postApi.status({ 
+          post_id: postIdsParam, 
+          openid: openid 
+        });
+        
+        console.debug('帖子状态响应成功:', res);
         return res;
       } catch (err) {
-        console.debug('postBehavior _getPostStatus failed:', err);
-        throw err;
+        console.debug('获取帖子状态失败:', err);
+        return { code: -1, message: err.message || '获取状态失败' };
       }
     },
     

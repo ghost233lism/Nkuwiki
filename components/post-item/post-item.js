@@ -196,9 +196,9 @@ Component({
       // 从帖子数据中获取状态 - 后端会返回交互状态
       // is_liked、is_favorited和is_followed都是后端返回的字段
       this.setData({
-        isLiked: post.is_liked === 1,
-        isFavorited: post.is_favorited === 1,
-        isFollowed: post.is_followed === 1
+        isLiked: post.is_liked === 1 || post.is_liked === true,
+        isFavorited: post.is_favorited === 1 || post.is_favorited === true,
+        isFollowed: post.is_followed === 1 || post.is_followed === true
       });
     },
     
@@ -258,23 +258,55 @@ Component({
       const post = this.data.post;
       if (!post || !post.id) return;
       
+      // 检查用户登录状态
+      const openid = this.getStorage('openid');
+      if (!openid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
+
       const isLiked = this.data.isLiked;
       const newLikeCount = post.like_count + (isLiked ? -1 : 1);
       
       // 乐观更新UI
       this.setData({
         isLiked: !isLiked,
-        'post.like_count': newLikeCount >= 0 ? newLikeCount : 0
+        'post.like_count': newLikeCount >= 0 ? newLikeCount : 0,
+        'post.is_liked': !isLiked ? 1 : 0 // 同时更新is_liked字段
       });
       
       // 调用行为方法处理实际的点赞/取消点赞操作
       this._likePost(post.id)
+        .then(res => {
+          if (res && res.code === 200 && res.data) {
+            // 获取服务器返回的状态数据
+            // 服务器返回格式: {data: {"post_id": {is_liked: true, like_count: 2}}}
+            const postId = post.id.toString();
+            const statusData = res.data[postId] || {};
+            
+            // 使用服务器返回的状态更新
+            this.setData({
+              isLiked: statusData.is_liked || false,
+              'post.like_count': statusData.like_count || 0,
+              'post.is_liked': statusData.is_liked ? 1 : 0
+            });
+            
+            // 触发事件通知父组件
+            this.triggerEvent('like', {
+              id: post.id,
+              index: this.data.index,
+              isLiked: statusData.is_liked || false,
+              likeCount: statusData.like_count || 0
+            });
+          }
+        })
         .catch(err => {
           console.error('点赞操作失败', err);
           // 恢复原状态
           this.setData({
             isLiked: isLiked,
-            'post.like_count': post.like_count
+            'post.like_count': post.like_count,
+            'post.is_liked': isLiked ? 1 : 0
           });
         });
     },
@@ -284,23 +316,55 @@ Component({
       const post = this.data.post;
       if (!post || !post.id) return;
       
+      // 检查用户登录状态
+      const openid = this.getStorage('openid');
+      if (!openid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
+      
       const isFavorited = this.data.isFavorited;
       const newFavoriteCount = post.favorite_count + (isFavorited ? -1 : 1);
       
       // 乐观更新UI
       this.setData({
         isFavorited: !isFavorited,
-        'post.favorite_count': newFavoriteCount >= 0 ? newFavoriteCount : 0
+        'post.favorite_count': newFavoriteCount >= 0 ? newFavoriteCount : 0,
+        'post.is_favorited': !isFavorited ? 1 : 0
       });
       
       // 调用行为方法处理实际的收藏/取消收藏操作
       this._favoritePost(post.id)
+        .then(res => {
+          if (res && res.code === 200 && res.data) {
+            // 获取服务器返回的状态数据
+            // 服务器返回格式: {data: {"post_id": {is_favorited: true, favorite_count: 2}}}
+            const postId = post.id.toString();
+            const statusData = res.data[postId] || {};
+            
+            // 使用服务器返回的状态更新
+            this.setData({
+              isFavorited: statusData.is_favorited || false,
+              'post.favorite_count': statusData.favorite_count || 0,
+              'post.is_favorited': statusData.is_favorited ? 1 : 0
+            });
+            
+            // 触发事件通知父组件
+            this.triggerEvent('favorite', {
+              id: post.id,
+              index: this.data.index,
+              isFavorited: statusData.is_favorited || false,
+              favoriteCount: statusData.favorite_count || 0
+            });
+          }
+        })
         .catch(err => {
           console.error('收藏操作失败', err);
           // 恢复原状态
           this.setData({
             isFavorited: isFavorited,
-            'post.favorite_count': post.favorite_count
+            'post.favorite_count': post.favorite_count,
+            'post.is_favorited': isFavorited ? 1 : 0
           });
         });
     },
@@ -317,18 +381,60 @@ Component({
     
     // 关注
     _onFollowTap(e) {
-      const { authorId, followed } = e.currentTarget.dataset;
-      if (!authorId) return;
+      const post = this.data.post;
+      if (!post || !post.openid) return;
+      
+      // 检查用户登录状态
+      const openid = this.getStorage('openid');
+      if (!openid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
+      
+      // 不能关注自己
+      if (post.openid === openid) {
+        this.showToast('不能关注自己', 'error');
+        return;
+      }
+      
+      const isFollowed = this.data.isFollowed;
       
       // 乐观更新UI
-      this.setData({ isFollowed: !followed });
+      this.setData({ 
+        isFollowed: !isFollowed,
+        'post.is_followed': !isFollowed ? 1 : 0
+      });
       
       // 调用行为方法处理实际的关注/取消关注操作
-      this._toggleFollow(authorId)
+      this._toggleFollow(post.openid)
+        .then(res => {
+          if (res && res.success) {
+            // 使用服务器返回的状态更新
+            const isNowFollowing = res.is_following || res.status === 'followed';
+            this.setData({ 
+              isFollowed: isNowFollowing,
+              'post.is_followed': isNowFollowing ? 1 : 0
+            });
+            
+            // 触发事件通知父组件
+            this.triggerEvent('follow', {
+              id: post.id,
+              authorId: post.openid,
+              index: this.data.index,
+              isFollowed: isNowFollowing
+            });
+            
+            // 显示操作结果提示
+            this.showToast(isNowFollowing ? '关注成功' : '已取消关注', 'success');
+          }
+        })
         .catch(err => {
           console.error('关注操作失败', err);
           // 恢复原状态
-          this.setData({ isFollowed: followed });
+          this.setData({ 
+            isFollowed: isFollowed,
+            'post.is_followed': isFollowed ? 1 : 0
+          });
         });
     },
     
@@ -347,9 +453,9 @@ Component({
       if (!post) return;
       
       this.setData({
-        isLiked: post.is_liked === 1,
-        isFavorited: post.is_favorited === 1,
-        isFollowed: post.is_followed === 1
+        isLiked: post.is_liked === 1 || post.is_liked === true,
+        isFavorited: post.is_favorited === 1 || post.is_favorited === true,
+        isFollowed: post.is_followed === 1 || post.is_followed === true
       });
     },
 
