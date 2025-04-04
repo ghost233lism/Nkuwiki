@@ -41,14 +41,12 @@ services/app/
 │   ├── post/           # 发帖页
 │   └── agent/          # 智能体相关页面
 ├── behaviors/          # 可复用的行为模块
-│   ├── base-behavior.js      # 基础行为
-│   ├── auth-behavior.js      # 认证行为
-│   ├── user-behavior.js      # 用户行为
-│   ├── post-behavior.js      # 帖子行为
-│   ├── comment-behavior.js   # 评论行为
-│   ├── page-behavior.js      # 页面行为
-│   ├── form-behavior.js      # 表单行为
-│   └── weui-behavior.js      # WEUI行为
+│   ├── baseBehavior.js      # 基础行为
+│   ├── authBehavior.js      # 认证行为
+│   ├── userBehavior.js      # 用户行为
+│   ├── postBehavior.js      # 帖子行为
+│   ├── commentBehavior.js   # 评论行为
+│   ├── notificationBehavior.js # 通知行为
 ├── components/         # 自定义组件
 │   ├── action-bar/     # 操作栏
 │   ├── button/         # 按钮
@@ -102,22 +100,7 @@ services/app/
 
 ### 云函数使用
 
-项目使用微信云开发功能，仅包含`getOpenID`云函数。**云函数只能处理与微信云端交互的逻辑，不得用于处理其他业务逻辑**。
-
-```javascript
-// 调用云函数获取openid
-async function getOpenID() {
-  try {
-    const res = await wx.cloud.callFunction({
-      name: 'getOpenID'  // 云函数名称
-    });
-    return res.result.openid;
-  } catch (err) {
-    console.debug('获取openid失败:', err);
-    return null;
-  }
-}
-```
+项目使用了微信云函数获取openID，由authBehavior中的_initOpenid()方法封装调用。只需引入authBehavior，它会在组件或页面attached时**自动调用_initOpenid()方法获取和存储openid**，无需手动调用。
 
 #### 云函数使用原则
 
@@ -125,167 +108,89 @@ async function getOpenID() {
 2. **最小依赖**：保持云函数代码简洁，不要引入不必要的依赖
 3. **安全优先**：不在云函数中存储敏感信息
 
+
 #### 云函数部署方法
 
 1. 在微信开发者工具中，右键点击`cloudfunctions/getOpenID`目录
 2. 选择"上传并部署"选项
 3. 点击确认，等待部署完成
 
-获取到openID后，应立即存储到storage中供后续使用：
-
-```javascript
-const { storage } = require('../../utils/util');
-
-// 获取并存储openid
-async function initOpenID() {
-  const openid = await getOpenID();
-  if (openid) {
-    storage.set('openid', openid);
-    return true;
-  }
-  return false;
-}
-```
-
 所有业务逻辑必须由小程序前端或服务器后端处理，不要依赖云函数实现复杂功能。
 
 ### 行为复用 (Behaviors)
 
-项目定义了多个行为模块，封装了常用的页面逻辑和API交互。
+项目定义了多个行为模块，封装了常用的功能和API交互逻辑。
+1. `baseBehavior`封装了状态管理、全局存储管理、UI交互等功能。
+2. 其他行为专注于API调用，方法以**下划线开头**，**不存储状态**。
 
-#### 1. 基础行为 (base-behavior.js)
+#### 1. 基础行为 (baseBehavior.js)
 
-封装了所有页面通用的功能，如加载状态、错误处理等。
+封装了所有页面通用的功能，如状态管理、表单校验、错误处理、页面跳转、页面提示、全局存储等。
 
-```javascript
-// 引入基础行为
-const baseBehavior = require('../../behaviors/base-behavior');
+主要方法：
+- getStorage(key)/setStorage(key, value): 存储操作
+- updateState(stateUpdate, nextTick): 统一状态更新
+- showLoading()/hideLoading(): 加载状态
+- showError()/hideError(): 错误状态
+- showEmpty()/hideEmpty(): 空状态
+- showSuccess()/hideSuccess(): 成功状态
+- initForm()/getForm()/setFormField(): 表单操作
+- validateForm(rules): 表单验证
+- navigateTo/redirectTo/navigateBack: 导航封装
 
-Component({
-  behaviors: [baseBehavior],
-  
-  methods: {
-    loadData() {
-      this.showLoading(); // 显示加载状态
-      
-      try {
-        // 数据加载逻辑...
-        
-        // 数据为空时显示空状态
-        if (data.length === 0) {
-          this.showEmpty('暂无数据'); 
-          return;
-        }
-        
-        this.hideLoading(); // 隐藏加载状态
-      } catch (err) {
-        this.handleError(err, '加载失败'); // 统一错误处理
-      }
-    },
-    
-    // 错误重试
-    retryLastOperation() {
-      // 重新加载数据
-      this.loadData();
-    }
-  }
-});
-```
+#### 2. 认证行为 (authBehavior.js)
 
-#### 2. 用户行为 (user-behavior.js)
+专注于认证相关API交互，方法以下划线开头，不存储状态。
 
-封装了用户相关API交互和状态管理。
+只需引入authBehavior，它会在组件或页面attached时**自动调用_initOpenid()方法获取和存储openid**，无需手动调用。
+authBehavior提供了以下方法：
+- _initOpenid(): 初始化openID，会自动调用，一般不需要手动调用
+- _syncUserInfo(): 同步用户信息，验证登录状态，如果没有openID会自动获取
+- _checkLogin(showInteraction): 检查用户是否已登录，可选是否显示登录提示弹窗
+- _getUserInfo(forceRefresh): 获取用户信息，可选是否强制从服务器获取
+- _logout(): 退出登录，清除登录状态并返回首页
 
-```javascript
-// 引入用户行为
-const userBehavior = require('../../behaviors/user-behavior');
+#### 3. 用户行为 (userBehavior.js)
 
-Component({
-  behaviors: [userBehavior],
-  
-  methods: {
-    async loadUserProfile(userId) {
-      try {
-        const userInfo = await this.getUserInfo(userId);
-        this.setData({
-          userInfo: userInfo
-        });
-      } catch (err) {
-        // 错误已在behavior中处理
-      }
-    },
-    
-    async followAction(userId) {
-      try {
-        // 调用behavior中封装的方法
-        const result = await this.toggleFollow(userId);
-        // result包含status和其他关注状态信息
-        this.setData({
-          'userInfo.is_following': result.status === 'followed'
-        });
-      } catch (err) {
-        // 错误已在behavior中处理
-      }
-    },
-    
-    goToUserPage(userId) {
-      // 使用封装的导航方法
-      this.navigateToUserProfile(userId);
-    }
-  }
-});
-```
+专注于用户相关API交互，方法以下划线开头，不存储状态。
 
-#### 3. 帖子行为 (post-behavior.js)
+主要方法：
+- _getUserProfile(): 获取用户微信资料
+- _updateUserInfo(userInfo): 更新用户信息
+- _getUserStat(): 获取用户统计数据(发帖数、评论数等)
+- _followUser(userId): 关注用户
+- _unfollowUser(userId): 取消关注用户
+- _getFollowList(type): 获取关注/粉丝列表，type可选'following'或'follower'
+- _blockUser(userId): 拉黑用户
+- _unblockUser(userId): 取消拉黑用户
 
-封装了帖子相关的API交互和状态管理。
+#### 4. 帖子行为 (postBehavior.js)
 
-```javascript
-// 引入帖子行为
-const postBehavior = require('../../behaviors/post-behavior');
+专注于帖子相关API交互，方法以下划线开头，不存储状态。
 
-Component({
-  behaviors: [postBehavior],
-  
-  data: {
-    // 继承了behavior中的数据
-    // posts, postsLoading, postsError, pagination等
-  },
-  
-  methods: {
-    async loadPostList() {
-      // 调用behavior中的loadPost方法
-      await this.loadPost({
-        page: 1,
-        limit: 20,
-        category: 'tech' // 可选分类
-      }, true); // 传true表示刷新列表
-    },
-    
-    onReachBottom() {
-      // 加载更多
-      if (this.data.pagination.hasMore && !this.data.postsLoading) {
-        this.loadMorePost();
-      }
-    },
-    
-    onLikePost(e) {
-      // 处理点赞，直接调用behavior中的方法
-      this.toggleLike(e);
-    },
-    
-    onFavoritePost(e) {
-      // 处理收藏
-      this.toggleFavorite(e);
-    },
-    
-    goToDetail(e) {
-      // 去帖子详情页
-      this.navigateToPostDetail(e);
-    }
-  }
-});
-```
+主要方法：
+- _getPostList(filter, page, limit): 获取帖子列表，支持分类、排序等筛选
+- _getPostDetail(postId): 获取帖子详情
+- _getPostStatus(postIds): 获取帖子状态(点赞、收藏等)
+- _createPost(postData): 创建帖子
+- _updatePost(postId, postData): 更新帖子
+- _deletePost(postId): 删除帖子
+- _likePost(postId): 点赞/取消点赞帖子
+- _favoritePost(postId): 收藏/取消收藏帖子
+
+#### 5. 评论行为 (commentBehavior.js)
+
+专注于评论相关API交互，方法以下划线开头，不存储状态。
+
+主要方法：
+- _getComment(page, pageSize): 获取评论数据
+- getInitialComment(postId, params): 加载初始评论列表
+- getMoreComment(): 加载更多评论/回复
+- submitTopComment(): 提交顶级评论
+- _createComment(postId, content): 创建评论
+- _deleteComment(commentId): 删除评论
+- _likeComment(commentId): 点赞评论
+
 
 ### 组件复用 (Components)
 
@@ -329,74 +234,115 @@ data: {
 
 团队开发时，请优先查看已有图标库，避免重复添加相似图标。
 
-#### 2. 使用帖子列表组件
+#### 2. 使用帖子列表组件 (post-list)
+
+帖子列表组件封装了帖子列表数据获取、分页、空状态等功能，内部已与postBehavior集成，无需额外引入行为：
 
 ```html
 <!-- wxml文件中使用 -->
 <post-list 
-  list="{{posts}}" 
-  loading="{{postsLoading}}" 
-  error="{{postsError}}"
-  empty="{{posts.length === 0 && !postsLoading}}"
-  bind:like="onLikePost"
-  bind:favorite="onFavoritePost"
-  bind:tap="goToDetail">
+  filter="{{filter}}"
+  bind:retry="handleRetry"
+  bind:loadmore="handleLoadMore">
 </post-list>
 ```
 
 ```javascript
 // js文件中
 Page({
-  behaviors: [require('../../behaviors/post-behavior')],
+  data: {
+    filter: {
+      category_id: 0, // 默认全部分类
+      sort: 'newest',  // 排序方式
+      tag: null, // 可选标签筛选
+      keyword: '' // 可选关键词搜索
+    }
+  },
   
-  onLoad() {
-    this.loadPost({
-      page: 1,
-      limit: 20
+  // 更改筛选条件
+  changeFilter(e) {
+    const { type, value } = e.currentTarget.dataset;
+    
+    this.setData({
+      [`filter.${type}`]: value
     });
+    
+    // 组件会自动监听filter变化并重新加载数据
   },
   
-  onLikePost(e) {
-    this.toggleLike(e);
+  // 重试加载
+  handleRetry() {
+    console.debug('用户点击了重试');
+    // 可以添加其他UI反馈
   },
   
-  onFavoritePost(e) {
-    this.toggleFavorite(e);
-  },
-  
-  goToDetail(e) {
-    this.navigateToPostDetail(e);
+  // 加载更多
+  handleLoadMore() {
+    console.debug('加载更多数据');
+    // 列表组件内部会自动处理分页逻辑
   }
 });
 ```
 
-#### 3. 使用表单组件
+#### 3. 使用帖子项组件 (post-item)
+
+帖子项组件封装了单个帖子的展示和交互，可以单独使用或被post-list调用。此组件集成了多个behavior，包括baseBehavior、postBehavior和userBehavior，并在内部处理了所有交互逻辑：
 
 ```html
 <!-- wxml文件中使用 -->
-<form-panel title="创建帖子">
-  <input-field 
-    label="标题" 
-    value="{{title}}" 
-    placeholder="请输入标题" 
-    bind:input="onTitleInput">
-  </input-field>
-  
-  <text-area 
-    value="{{content}}" 
-    placeholder="请输入内容" 
-    bind:input="onContentInput">
-  </text-area>
-  
-  <image-uploader 
-    files="{{images}}" 
-    bind:upload="onImageUpload" 
-    bind:delete="onImageDelete">
-  </image-uploader>
-  
-  <button type="primary" bind:tap="submitPost">发布</button>
-</form-panel>
+<post-item 
+  post="{{post}}"
+  show-action="{{true}}"
+  show-comment="{{true}}"
+  show-follow="{{true}}"
+  show-user-info="{{true}}"
+  show-image="{{true}}"
+  is-card="{{false}}">
+</post-item>
 ```
+
+```javascript
+// js文件中
+Page({
+  behaviors: [require('../../behaviors/postBehavior')],
+  
+  data: {
+    post: null
+  },
+  
+  async onLoad(options) {
+    const { post_id } = options;
+    if (post_id) {
+      await this.loadPostDetail(post_id);
+    }
+  },
+  
+  // 加载帖子详情
+  async loadPostDetail(postId) {
+    try {
+      // 使用postBehavior中的方法
+      const res = await this._getPostDetail(postId);
+      
+      if (res.code === 200 && res.data) {
+        this.setData({ post: res.data });
+      }
+    } catch (err) {
+      console.debug('加载帖子详情失败:', err);
+    }
+  }
+});
+```
+
+post-item组件内部已集成多个behavior并处理了所有交互：
+- 点击帖子区域：自动跳转至帖子详情页
+- 点击用户头像/昵称：自动跳转至用户主页
+- 点击点赞按钮：自动调用postBehavior的_likePost方法
+- 点击收藏按钮：自动调用postBehavior的_favoritePost方法
+- 点击关注按钮：自动调用userBehavior的_toggleFollow方法
+- 点击图片：自动预览大图
+- 点击标签：自动跳转至相关标签页面
+
+这种"智能组件"设计是本项目的特色，通过在组件内部集成behavior提供完整功能，使页面代码更加精简。使用者只需提供数据，组件自动处理交互和业务逻辑，无需在页面层面处理事件绑定和回调。
 
 ### 工具函数复用 (Utils)
 
@@ -551,41 +497,4 @@ if (!isValidArray(arr)) {
 ### 命名规范
 
 1. **统一使用单数形式**：
-   - ✅ **正确**：`post`、`user`、`comment`、`image`、`tag`
-   - ❌ **错误**：`posts`、`users`、`comments`、`images`、`tags`
-
-2. **命名大小写规则**：
-   - 默认小写命名
-   - 缩写用大写（如 `API`、`HTTP`、`URL`）
-   - 类名首字母大写（如 `PostItem`、`UserProfile`）
-   - 驼峰命名用大写（如 `getUserInfo`、`postDetail`）
-   - 下划线分割时用小写（如 `post_id`、`user_name`）
-
-3. **字段命名规范**：
-   - 计数字段统一使用 `xxx_count` 格式：
-     - `like_count`（点赞数）
-     - `comment_count`（评论数）
-     - `favorite_count`（收藏数）
-     - `view_count`（浏览数）
-     - `follower_count`（粉丝数）
-     - `following_count`（关注数）
-
-4. **文件命名规范**：
-   - JS文件使用小写并用连字符分隔：`post-behavior.js`、`user-card.js`
-   - WXML/WXSS文件与对应JS文件同名：`user-card.wxml`、`user-card.wxss`
-
-5. **组件命名规范**：
-   - 组件目录与组件名一致：`components/post-item/`
-   - 组件文件与目录同名：`post-item.js`、`post-item.wxml`
-
-### API接口规范
-
-1. **API路径格式**：
-   - 所有API路径必须以`/api/`开头
-   - 微信小程序API使用`/api/wxapp/`前缀
-   - 智能体API使用`/api/agent/`前缀
-   - 路径统一使用小写
-   - 单词间用短横线连接，不使用下划线
-
-2. **参数命名**：
-   - 参数名使用小写下划线命名法：`post_id`、`user_id`
+   - ✅ **正确**：`post`
