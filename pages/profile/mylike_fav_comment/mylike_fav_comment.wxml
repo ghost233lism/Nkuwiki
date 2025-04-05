@@ -8,6 +8,8 @@
     bind:change="switchTab"
   />
 
+  <view class="page-position"></view>
+
   <!-- 内容区域 -->
   <view class="content-area">
     <!-- 帖子列表 -->
