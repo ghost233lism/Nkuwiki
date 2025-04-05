@@ -1,6 +1,9 @@
 {
   "component": true,
   "usingComponents": {
-    "icon": "/components/icon/icon"
+    "mp-cells": "/components/weui/cells/cells",
+    "mp-cell": "/components/weui/cell/cell",
+    "icon": "/components/icon/icon",
+    "cell-status": "/components/cell-status/cell-status"
   }
 } 

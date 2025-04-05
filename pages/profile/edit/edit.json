@@ -1,18 +1,13 @@
 {
   "component": true,
   "usingComponents": {
-    "mp-form-page": "weui-miniprogram/form-page/form-page",
-    "mp-form": "weui-miniprogram/form/form",
-    "mp-cell": "weui-miniprogram/cell/cell",
-    "mp-cells": "weui-miniprogram/cells/cells",
-    "mp-dialog": "weui-miniprogram/dialog/dialog",
-    "mp-toptips": "weui-miniprogram/toptips/toptips",
-    "input-field": "../../../components/input-field/input-field",
-    "text-area": "../../../components/text-area/text-area",
-    "loading": "../../../components/loading/loading",
-    "page-status": "../../../components/page-status/page-status"
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "cell-status": "/components/cell-status/cell-status",
+    "image-uploader": "/components/image-uploader/image-uploader",
+    "mp-toptips": "/components/weui/toptips/toptips",
+    "mp-cells": "/components/weui/cells/cells",
+    "mp-cell": "/components/weui/cell/cell"
   },
   "navigationBarTitleText": "编辑资料",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationStyle": "custom"
 }

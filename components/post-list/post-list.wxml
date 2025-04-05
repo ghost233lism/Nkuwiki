@@ -1,13 +1,13 @@
-<page-status
+<cell-status
   loading="{{loading}}"
   error="{{error}}"
-  errorText="{{errorText}}"
+  errorMsg="{{errorText}}"
   empty="{{post.length === 0 && !loading && !error}}"
   emptyText="{{emptyText}}"
   hasMore="{{hasMore}}"
   noMoreText="{{noMoreText}}"
-  bind:retry="handleRetry"
-  bind:loadmore="loadMore"
+  bindretry="handleRetry"
+  bindloadmore="loadMore"
 >
   <!-- DEBUG信息 -->
   <view wx:if="{{post.length === 0 && !loading && !error}}" class="debug-info">
@@ -37,4 +37,4 @@
     <view class="loading-icon"></view>
     <text>{{loadingText || '加载中...'}}</text>
   </view>
-</page-status>
+</cell-status>

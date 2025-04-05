@@ -2,7 +2,11 @@
   "navigationBarTitleText": "发布帖子",
   "navigationStyle": "custom",
   "usingComponents": {
-    "loading": "/components/loading/loading",
-    "icon": "/components/icon/icon"
+    "image-uploader": "/components/image-uploader/image-uploader",
+    "text-area": "/components/text-area/text-area",
+    "mp-toptips": "/components/weui/toptips/toptips",
+    "mp-badge": "/components/weui/badge/badge",
+    "mp-dialog": "/components/weui/dialog/dialog",
+    "loading": "/components/loading/loading"
   }
 }

@@ -1,4 +1,0 @@
-<view class="empty-container" wx:if="{{show}}">
-  <image class="empty-icon" src="{{getIconPath()}}" mode="aspectFit"></image>
-  <view class="empty-text">{{text}}</view>
-</view> 

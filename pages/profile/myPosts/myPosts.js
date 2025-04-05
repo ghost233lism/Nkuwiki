@@ -51,7 +51,15 @@ Page({
     page: 1,
     pageSize: 10,
     openid: '',
-    refreshing: false
+    refreshing: false,
+    // 导航按钮配置
+    navButtons: [
+      {type: "back", icon: "back", show: true, delta: 1},
+      {type: "home", show: false},
+      {type: "logo", show: false},
+      {type: "notification", show: false},
+      {type: "avatar", show: false}
+    ]
   },
 
   async onLoad() {

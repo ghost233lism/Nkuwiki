@@ -160,34 +160,26 @@ Component({
             empty: posts.length === 0
           });
           
-          // 确保获取到的帖子列表添加到页面后，立即执行状态更新
-          console.debug('帖子列表加载完成，总数:', posts.length);
-          
           // 使用setTimeout确保DOM更新后再更新状态
           setTimeout(() => {
             if (posts.length > 0) {
-              console.debug('异步强制刷新帖子状态');
               this.updatePostsStatus(posts);
-            } else {
-              console.debug('帖子列表为空，不调用状态更新');
             }
           }, 0);
         } else {
-          throw new Error(res?.message || '获取帖子列表失败');
+          throw new Error(res?.message || '获取数据失败');
         }
         
         this.hideLoading();
       } catch (err) {
         this.hideLoading();
-        this.showError('加载失败，请重试');
-        console.debug('加载列表数据失败:', err);
+        this.showError('获取内容失败');
       }
     },
     
     // 更新帖子状态
     async updatePostsStatus(posts) {
       if (!posts || !posts.length) {
-        console.debug('没有帖子需要更新状态');
         return;
       }
       
@@ -195,26 +187,21 @@ Component({
         // 检查用户登录状态
         const openid = this.getStorage('openid');
         if (!openid) {
-          console.debug('用户未登录，不获取交互状态');
           return;
         }
         
         const postIds = posts.map(p => p.id).filter(Boolean);
         if (postIds.length === 0) {
-          console.debug('没有有效的帖子ID');
           return;
         }
         
-        console.debug('获取帖子状态:', postIds);
         const statusRes = await this._getPostStatus(postIds);
         
         if (statusRes && statusRes.code === 200 && statusRes.data) {
           const statusData = statusRes.data;
-          console.debug('获取到帖子状态:', statusData);
           
           // 服务器返回的是一个以post_id为key的对象
           // 格式：{"1": {...状态}, "2": {...状态}}
-          // 不需要转换为map
           const statusMap = statusData || {};
           
           // 更新列表数据
@@ -242,15 +229,10 @@ Component({
             
             // 更新数据
             this.setData({ post: updatedPosts });
-            console.debug('帖子状态已更新');
-            console.log(posts);
           }
-        } else {
-          console.debug('获取帖子状态返回错误:', statusRes);
         }
       } catch (err) {
-        console.debug('更新帖子状态失败:', err);
-        // 不中断流程，仅记录日志
+        // 不中断流程，仅忽略错误
       }
     },
     
@@ -298,13 +280,12 @@ Component({
             this.setData({ hasMore: false });
           }
         } else {
-          throw new Error(res?.message || '加载更多帖子失败');
+          throw new Error(res?.message || '加载更多内容失败');
         }
         
         this.hideLoadingMore();
       } catch (err) {
         this.hideLoadingMore();
-        console.debug('加载更多失败:', err);
       }
     },
     

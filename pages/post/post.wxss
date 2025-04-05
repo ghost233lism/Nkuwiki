@@ -50,6 +50,38 @@
   color: #fff;
 }
 
+/* 模式切换 */
+.mode-switch {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 16rpx;
+}
+
+.mode-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 14px;
+  color: #666;
+  position: relative;
+}
+
+.mode-item.active {
+  color: #5853e2;
+  font-weight: 500;
+}
+
+.mode-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 30%;
+  width: 40%;
+  height: 4rpx;
+  background-color: #5853e2;
+  border-radius: 2rpx;
+}
+
 /* 表单区域 */
 .post-form {
   padding: 20rpx;
@@ -72,187 +104,290 @@
   padding: 24rpx 0;
 }
 
+.post-content.markdown-editor {
+  height: 400rpx;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 24rpx 0;
+}
+
+.markdown-content {
+  min-height: 200rpx;
+  padding: 24rpx 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 8rpx;
+  background-color: #fafafa;
+}
+
 /* 工具栏 */
 .toolbar {
   display: flex;
   padding: 20rpx 0;
   border-top: 1rpx solid #eee;
   align-items: center;
+  justify-content: space-around;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  margin-top: 20rpx;
 }
 
 .tool-item {
-  width: 60rpx;
-  height: 60rpx;
+  width: 80rpx;
+  height: 80rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 30rpx;
+  margin: 0 10rpx;
+  background-color: #fff;
+  border-radius: 8rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.1);
 }
 
 .tool-icon {
   font-weight: bold;
   font-size: 16px;
-  color: #666;
+  color: #333;
+  line-height: 1;
 }
 
-.tool-icon-img {
+.tool-item.active {
+  background-color: #5853e2;
+  border-radius: 8rpx;
+}
+
+.tool-item.active icon,
+.tool-item.active .tool-icon {
+  color: #fff;
+}
+
+/* 图片预览 */
+.image-preview-list {
+  margin-top: 20rpx;
+}
+
+.preview-title {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 10rpx;
+}
+
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.preview-item {
+  width: 180rpx;
+  height: 180rpx;
+  position: relative;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background-color: #f5f5f5;
+}
+
+.preview-item image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-icon {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
   width: 40rpx;
   height: 40rpx;
-}
-
-.wiki-tool {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  background-color: #f0f0ff;
-  color: #5853e2;
-  font-size: 14px;
-  padding: 8rpx 16rpx;
-  border-radius: 8rpx;
-  margin-left: auto;
+  justify-content: center;
 }
 
-.wiki-tool text {
-  margin-left: 8rpx;
-}
-
-/* 话题选择 */
-.topic-section {
+/* 分类选择 */
+.category-section {
   margin-bottom: 20rpx;
   background-color: #fff;
-  padding: 24rpx;
+  padding: 20rpx;
+  border-radius: 8rpx;
+}
+
+.category-list {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.category-item {
+  width: 110rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8rpx;
+  padding: 12rpx 0;
+  background-color: #f8f8f8;
+  transition: all 0.3s;
+}
+
+.category-text {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4rpx;
+  text-align: center;
+}
+
+.category-item.active {
+  background-color: #f0f0ff;
+  border: 1px solid #5853e2;
+}
+
+.category-item.active .category-text {
+  color: #5853e2;
+  font-weight: 500;
+}
+
+/* 标签栏样式 */
+.tag-section {
+  margin-bottom: 20rpx;
+  background-color: #fff;
+  padding: 20rpx;
+  border-radius: 8rpx;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.tag-item {
+  display: inline-block;
+  margin-right: 20rpx;
+  margin-bottom: 16rpx;
+  border-radius: 30rpx;
+  transition: all 0.3s;
+}
+
+.tag-item.active {
+  background-color: #5853e2;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.tag-item.add-custom {
+  background: #fff;
+  border: 1px dashed #ddd;
+  color: #999;
+}
+
+.tag-input-container {
+  display: flex;
+  align-items: center;
+  border: 1px solid #eee;
+  border-radius: 30rpx;
+  padding: 8rpx 12rpx;
+  margin-top: 20rpx;
+  background: #f7f7f7;
+}
+
+.tag-input {
+  flex: 1;
+  height: 70rpx;
+  font-size: 28rpx;
+  padding-left: 8rpx;
+}
+
+.tag-add-btn {
+  padding: 8rpx 24rpx;
+  background: #5853e2;
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 24rpx;
+}
+
+.tag-tips {
+  font-size: 24rpx;
+  color: #999;
 }
 
 .section-title {
-  font-size: 15px;
-  color: #333;
-  margin-bottom: 20rpx;
+  font-size: 16px;
   font-weight: 500;
-}
-
-.topic-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.topic-tag {
-  font-size: 14px;
-  color: #666;
-  background-color: #f5f5f5;
-  padding: 12rpx 24rpx;
-  border-radius: 100rpx;
-}
-
-.topic-tag.active {
-  background-color: #e0e0ff;
-  color: #5853e2;
-}
-
-.add-topic-tag {
-  font-size: 14px;
-  color: #5853e2;
-  background-color: #f0f0ff;
-  padding: 12rpx 24rpx;
-  border-radius: 100rpx;
-}
-
-/* Wiki润色建议 */
-.wiki-section {
-  margin-bottom: 20rpx;
-  background-color: #f0f0ff;
-  padding: 24rpx;
-  border-radius: 8rpx;
-  margin: 0 20rpx 20rpx;
-}
-
-.wiki-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 16rpx;
-}
-
-.wiki-title {
-  display: flex;
-  align-items: center;
-  font-size: 15px;
-  font-weight: 500;
-  color: #5853e2;
-}
-
-.wiki-title text {
-  margin-left: 8rpx;
-}
-
-.wiki-apply {
-  font-size: 14px;
-  color: #5853e2;
-  font-weight: 500;
-}
-
-.wiki-suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-}
-
-.wiki-suggestions text {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
-}
-
-/* 文风选择 */
-.style-section {
-  margin-bottom: 20rpx;
-  background-color: #fff;
-  padding: 24rpx;
-}
-
-.style-options {
-  display: flex;
-  gap: 16rpx;
-}
-
-.style-option {
-  flex: 1;
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  background-color: #f5f5f5;
-  padding: 12rpx 0;
-  border-radius: 8rpx;
-}
-
-.style-option.active {
-  background-color: #5853e2;
-  color: #fff;
+  color: #333;
 }
 
 /* 底部设置 */
 .post-settings {
   background-color: #fff;
-  padding: 24rpx;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  margin-bottom: 100rpx;
+}
+
+.settings-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 16rpx;
+  color: #333;
+}
+
+.setting-group {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: nowrap;
 }
 
 .setting-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #eee;
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+  background-color: #f8f8f8;
+  width: 30%;
+  box-sizing: border-box;
+  transition: all 0.3s;
 }
 
-.setting-item:last-child {
-  border-bottom: none;
+.setting-text {
+  margin-left: 8rpx;
+  font-size: 13px;
+  color: #666;
 }
 
-.setting-item text {
-  font-size: 15px;
-  color: #333;
+.setting-item.active {
+  background-color: #5853e2;
 }
 
-/* 加载中 */
+.setting-item.active icon {
+  color: #fff;
+}
+
+.setting-item.active .setting-text {
+  color: #fff;
+}
+
+/* Wiki小知识开关样式 */
+.wiki-item {
+  justify-content: space-between;
+  padding: 12rpx 16rpx;
+  height: 70rpx;
+  background-color: transparent;
+}
+
+.wiki-label {
+  display: flex;
+  align-items: center;
+}
+
+.wiki-label text {
+  font-size: 13px;
+  margin-left: 8rpx;
+}
+
+/* 加载中状态 */
 .loading-mask {
   position: fixed;
   top: 0;
@@ -270,7 +405,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 
 .loading-content text {
@@ -482,4 +617,67 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Markdown预览区域 */
+.markdown-preview {
+  background-color: #fff;
+  margin-bottom: 20rpx;
+  padding: 20rpx;
+  border-radius: 8rpx;
+}
+
+.markdown-content {
+  width: 100%;
+  min-height: 300rpx;
+  font-size: 15px;
+  line-height: 1.5;
+  padding: 24rpx 0;
+  border: 1rpx solid #eee;
+  border-radius: 6rpx;
+  padding: 16rpx;
+  background-color: #fafafa;
+  overflow-y: auto;
+}
+
+/* 覆盖towxml的默认样式 */
+.h2w {
+  font-size: 28rpx;
+  line-height: 1.8;
+  padding: 0 8rpx;
+}
+
+/* 删除调试信息相关样式 */
+.debug-info,
+.debug-text,
+.debug-view,
+.debug-title,
+.debug-content {
+  display: none;
+}
+
+.tag-badge {
+  background-color: #f5f5f5 !important;
+  color: #666 !important;
+  font-size: 26rpx !important;
+  font-weight: normal !important;
+  padding: 10rpx 24rpx !important;
+  border-radius: 30rpx !important;
+  margin: 0 !important;
+}
+
+.tag-badge-active {
+  background-color: #5853e2 !important;
+  color: #ffffff !important;
+  font-size: 26rpx !important;
+  font-weight: 500 !important;
+  padding: 10rpx 24rpx !important;
+  border-radius: 30rpx !important;
+  margin: 0 !important;
+}
+
+.custom-tag-list {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
 }

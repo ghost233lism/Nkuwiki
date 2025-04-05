@@ -5,26 +5,26 @@
   </view>
 
   <!-- 加载状态 -->
-  <view wx:if="{{loading && (!comments || comments.length === 0)}}" class="center-loading">
-    <view class="loading-dots">
-      <view class="loading-dot"></view>
-      <view class="loading-dot"></view>
-      <view class="loading-dot"></view>
-    </view>
-    <text class="loading-text">加载评论中...</text>
+  <view class="loading-container" wx:if="{{loading && comments.length === 0}}">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">加载中...</view>
   </view>
 
   <!-- 错误状态 -->
-  <view wx:elif="{{error}}" class="error-message">
-    <icon type="warn" size="40"></icon>
-    <text>{{errorMsg || '加载评论失败'}}</text>
-    <button class="retry-btn" bindtap="retry">重试</button>
+  <view class="error-container" wx:elif="{{error}}">
+    <view class="error-icon">
+      <icon name="error" size="48"></icon>
+    </view>
+    <view class="error-text">{{errorMsg || '加载失败'}}</view>
+    <view class="retry-btn" bindtap="retry">重试</view>
   </view>
 
-  <!-- 空评论状态 -->
-  <view wx:elif="{{!loading && (!comments || comments.length === 0)}}" class="empty-message">
-    <icon type="info" size="40"></icon>
-    <text>暂无评论，快来抢沙发~</text>
+  <!-- 空状态 -->
+  <view class="empty-container" wx:elif="{{comments.length === 0}}">
+    <view class="empty-icon">
+      <icon name="comment" size="48"></icon>
+    </view>
+    <view class="empty-text">暂无评论，快来抢沙发吧</view>
   </view>
 
   <!-- 评论列表 -->
@@ -136,13 +136,50 @@
   </view>
 
   <!-- 加载更多 -->
-  <view class="loading-more" wx:if="{{loading && comments.length > 0}}">
-    <view class="loading-icon"></view>
-    <text>加载中...</text>
+  <view class="load-more" wx:if="{{hasMore}}" bindtap="loadMore">
+    <view wx:if="{{loading}}" class="loading-more">
+      <view class="loading-spinner small"></view>
+      <text>加载中...</text>
+    </view>
+    <view wx:else class="load-more-text">
+      <text>加载更多</text>
+    </view>
   </view>
 
-  <!-- 全部加载完毕 -->
-  <view class="no-more" wx:if="{{!loading && !hasMore && comments.length > 0}}">
-    <text>已经到底了~</text>
+  <!-- 到底提示 -->
+  <view class="end-text" wx:elif="{{comments.length > 0}}">
+    <text>已经到底了</text>
+  </view>
+  
+  <!-- 评论输入区域 -->
+  <view class="comment-input-area">
+    <view class="comment-input-container">
+      <input 
+        class="comment-input" 
+        placeholder="{{replyTo ? '回复 @' + replyTo.nickname : '写评论...'}}" 
+        value="{{commentText}}"
+        focus="{{commentFocus}}"
+        bindfocus="onCommentFocus"
+        bindinput="onCommentInput"
+        confirm-type="send"
+        bindconfirm="submitComment"
+      />
+      
+      <!-- 取消回复按钮，仅在回复模式下显示 -->
+      <view 
+        class="cancel-reply-btn" 
+        wx:if="{{replyTo}}"
+        bindtap="cancelReply">
+        <icon name="close" size="16"></icon>
+      </view>
+      
+      <!-- 发送按钮 -->
+      <view 
+        class="submit-btn {{commentText.trim() ? 'active' : ''}}" 
+        bindtap="submitComment"
+        data-disabled="{{!commentText.trim() || isSubmitting}}">
+        <text>发送</text>
+      </view>
+    </view>
   </view>
 </view> 

@@ -383,12 +383,27 @@ const nav = {
     
     console.debug('导航: 重启并跳转到', url);
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.debug('重启跳转超时:', url);
+        // 仍然解析为成功，避免阻塞其他操作
+        resolve({success: true, timeout: true});
+      }, 3000); // 3秒超时
+      
       wx.reLaunch({
         url,
-        success: resolve,
+        success: res => {
+          clearTimeout(timeout);
+          resolve(res);
+        },
         fail: err => {
+          clearTimeout(timeout);
           console.error('重启跳转失败:', url, err);
-          reject(err);
+          // 如果是超时错误，也解析为成功
+          if (err.errMsg && err.errMsg.includes('timeout')) {
+            resolve({success: true, timeout: true});
+          } else {
+            reject(err);
+          }
         }
       });
     });

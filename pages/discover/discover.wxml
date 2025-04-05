@@ -18,8 +18,11 @@
 
   <!-- 主内容区域 -->
   <view class="main-content" wx:if="{{!loading && !error}}">
-    <!-- 使用header组件替代原生标题栏 -->
-    <header title="发现" icons="{{['notification', 'message']}}" bind:iconTap="onHeaderIconTap" />
+    <!-- 使用nav-bar组件替代原生标题栏 -->
+    <nav-bar 
+      title="发现" 
+      nav-buttons='[{"type": "notification", "hasUnread": hasUnreadNotification}, {"type": "avatar"}]'
+    />
 
     <!-- 校园热点 -->
     <view class="card">
@@ -41,14 +44,14 @@
       </view>
       <view class="card-content">
         <view class="ai-grid">
-          <custom-button 
+          <button 
             wx:for="{{aiFeatures}}" 
-            type="primary" 
-            size="sm" 
+            wx:key="id"
+            class="ai-btn" 
             data-type="{{item.id}}"
-            bind:tap="navigateToAI">
+            bindtap="navigateToAI">
             {{item.name}}
-          </custom-button>
+          </button>
         </view>
       </view>
       <view class="card-footer">

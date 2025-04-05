@@ -8,7 +8,7 @@ const weuiBehavior = require('../../behaviors/weuiBehavior');
 const CATEGORIES = [
   { id: 1, name: '学习交流', tag: 'study' },
   { id: 2, name: '校园生活', tag: 'life' },
-  { id: 3, name: '求助', tag: 'help' },
+  { id: 3, name: '就业创业', tag: 'job' },
   { id: 4, name: '社团活动', tag: 'club' },
   { id: 5, name: '失物招领', tag: 'lost' }
 ];
@@ -32,8 +32,14 @@ Page({
       allowComment: true,
       wikiKnowledge: false,
       category_id: 1,
-      style: 'formal'
+      tags: []
     },
+
+    tagInputValue: '',
+    tagSelected: {}, // 用于标记标签选中状态
+    customTags: [], // 自定义标签列表
+    showCustomTagInput: false,
+    forceRefresh: 0,
 
     // --- Form Rules ---
     rules: {
@@ -48,22 +54,27 @@ Page({
       ]
     },
 
-    categories: [
-      { id: 1, name: '学习交流', tag: 'study' },
-      { id: 2, name: '校园生活', tag: 'life' },
-      { id: 3, name: '求助', tag: 'help' },
-      { id: 4, name: '社团活动', tag: 'club' },
-      { id: 5, name: '失物招领', tag: 'lost' }
-    ],
-    categoryIndex: 0,
+    // 标准模式和Markdown模式的规则
+    normalRules: {
+      title: [
+        { required: true, message: '请输入标题' },
+        { min: 2, message: '标题至少2个字' },
+        { max: 50, message: '标题最多50个字' }
+      ],
+      content: [
+        { required: true, message: '请输入内容' },
+        { min: 10, message: '内容至少10个字' }
+      ]
+    },
+    markdownRules: {
+      content: [
+        { required: true, message: '请输入内容' },
+        { min: 10, message: '内容至少10个字' }
+      ]
+    },
 
-    // 文风选项
-    styles: [
-      { id: 'formal', name: '正式' },
-      { id: 'casual', name: '轻松' },
-      { id: 'humorous', name: '幽默' },
-      { id: 'professional', name: '专业' }
-    ],
+    categories: CATEGORIES,
+    categoryIndex: 0,
 
     // --- UI State ---
     canSubmit: false,
@@ -71,12 +82,26 @@ Page({
     error: false,
     errorMsg: '',
     
-    // 工具栏状态
-    showWikiSuggestion: false,
+    // 是否是Markdown模式
+    isMarkdownMode: false,
     
     // weui-uploader需要的函数
     selectFile: null,
-    uploadFile: null
+    uploadFile: null,
+    
+    // 顶部消息条
+    toptipsShow: false,
+    toptipsMsg: '',
+    toptipsType: 'error',
+
+    // 预览对话框
+    dialogShow: false,
+    dialogTitle: '',
+    dialogContent: '',
+    dialogButtons: [],
+
+    // Markdown预览状态
+    showMarkdownPreview: false
   },
 
   async onLoad() {
@@ -84,6 +109,13 @@ Page({
     
     // 初始化上传组件
     this.initUploader();
+    
+    // 确保标签数组已初始化
+    this.setData({
+      'form.tags': [],
+      tagSelected: {},
+      customTags: []
+    });
   },
 
   async initPage() {
@@ -103,8 +135,72 @@ Page({
     });
   },
 
+  // 模式切换处理
+  switchToMarkdownMode() {
+    if (this.data.isMarkdownMode) return;
+    
+    // 切换到Markdown模式
+    this.setData({
+      isMarkdownMode: true,
+      rules: this.data.markdownRules
+    });
+    
+    // 验证表单
+    this.validatePostForm();
+  },
+  
+  switchToNormalMode() {
+    if (!this.data.isMarkdownMode) return;
+    
+    // 切换到普通模式
+    this.setData({
+      isMarkdownMode: false,
+      rules: this.data.normalRules
+    });
+    
+    // 从markdown内容中提取标题
+    this._extractTitleFromMarkdown();
+    
+    // 验证表单
+    this.validatePostForm();
+  },
+  
+  // 从markdown内容中提取标题
+  _extractTitleFromMarkdown() {
+    const content = this.data.form.content || '';
+    const titleMatch = content.match(/^#\s+(.+)$/m);
+    
+    if (titleMatch && titleMatch[1]) {
+      // 提取到标题
+      const title = titleMatch[1].trim();
+      let newContent = content;
+      
+      // 从内容中移除标题行
+      newContent = newContent.replace(/^#\s+(.+)$/m, '').trim();
+      
+      this.setData({
+        'form.title': title,
+        'form.content': newContent
+      });
+    }
+  },
+
   // 使用baseBehavior的validateForm方法
   validatePostForm() {
+    // 如果是Markdown模式，检查content中是否包含标题或者form.title是否有值
+    if (this.data.isMarkdownMode) {
+      const content = this.data.form.content || '';
+      const hasMarkdownTitle = content.trim().match(/^#\s+.+$/m);
+      const hasFormTitle = !!this.data.form.title;
+      
+      // 如果内容不为空且（有Markdown标题或表单标题），则视为有效
+      if (content.length >= 10 && (hasMarkdownTitle || hasFormTitle)) {
+        this.updateState({ canSubmit: true });
+        return true;
+      }
+    }
+    
+    // 常规验证
     const isValid = this.validateForm(this.data.rules);
     this.updateState({ canSubmit: isValid });
     return isValid;
@@ -119,61 +215,29 @@ Page({
     this.validatePostForm();
   },
 
-  // 图片上传相关方法直接使用weuiBehavior中的方法
-  // 选择文件方法从weuiBehavior继承
-  selectFile(files) {
-    console.debug('选择文件:', files);
-    return super.selectFile(files);
-  },
-  
-  // 上传文件方法从weuiBehavior继承
-  uploadFile(file) {
-    console.debug('上传文件:', file);
-    return super.uploadFile(file);
-  },
-  
-  // 图片选择回调，关联到表单
-  onImageSelect(e) {
-    const images = super.onImageSelect(e);
-    this.setFormField('images', images.map(img => img.url));
-    this.validatePostForm();
-  },
-  
-  // 图片删除回调，关联到表单
-  onImageDelete(e) {
-    const images = super.onImageDelete(e);
-    this.setFormField('images', images.map(img => img.url));
-    this.validatePostForm();
-  },
-
-  // 复选框组变更回调
-  onCheckboxGroupChange(e) {
-    const values = e.detail.value;
-    
-    this.setFormField('isPublic', values.includes('isPublic'));
-    this.setFormField('allowComment', values.includes('allowComment'));
-    this.setFormField('wikiKnowledge', values.includes('wikiKnowledge'));
-    
-    this.validatePostForm();
-  },
-
   // 开关切换
   onSwitchChange(e) {
     const { field } = e.currentTarget.dataset;
-    const value = e.detail.value;
+    const value = e.currentTarget.dataset.value !== undefined ? 
+                  e.currentTarget.dataset.value : 
+                  e.detail.value;
     
     this.setFormField(field, value);
     this.validatePostForm();
   },
 
   // 分类选择
-  onCategoryChange(e) {
-    const index = parseInt(e.detail.value);
-    const category_id = CATEGORIES[index].id;
+  onTopicSelect(e) {
+    const { category } = e.currentTarget.dataset;
+    const categoryId = parseInt(category);
     
-    this.updateState({ categoryIndex: index });
-    this.setFormField('category_id', category_id);
+    // 找到对应分类的索引
+    const categoryIndex = this.data.categories.findIndex(item => item.id === categoryId);
+    if (categoryIndex !== -1) {
+      this.updateState({ categoryIndex });
+    }
     
+    this.setFormField('category_id', categoryId);
     this.validatePostForm();
   },
 
@@ -195,235 +259,223 @@ Page({
     }
   },
 
+  // 标签相关方法
+  selectTag(e) {
+    const { tag } = e.currentTarget.dataset;
+    if (!tag) return;
+    
+    // 创建标签选中状态的副本
+    const newTagSelected = {...this.data.tagSelected};
+    
+    // 切换标签的选中状态
+    if (newTagSelected[tag]) {
+      delete newTagSelected[tag];
+    } else {
+      // 检查标签数量限制
+      if (Object.keys(newTagSelected).length >= 3) {
+        this._showToptips('最多添加3个标签', ToastType.ERROR);
+        return;
+      }
+      newTagSelected[tag] = true;
+    }
+    
+    console.debug('标签选择状态:', newTagSelected);
+    
+    // 更新选中状态和表单数据
+    this.setData({
+      tagSelected: newTagSelected,
+      'form.tags': Object.keys(newTagSelected)
+    });
+  },
+  
+  onTagInput(e) {
+    this.setData({
+      tagInputValue: e.detail.value
+    });
+  },
+  
+  // 添加自定义标签
+  addTag() {
+    const value = this.data.tagInputValue.trim();
+    if (!value) return;
+    
+    // 创建标签选中状态的副本
+    const newTagSelected = {...this.data.tagSelected};
+    
+    // 检查标签是否已存在
+    if (newTagSelected[value]) {
+      this._showToptips('该标签已存在', ToastType.ERROR);
+      return;
+    }
+    
+    // 检查标签数量限制
+    if (Object.keys(newTagSelected).length >= 3) {
+      this._showToptips('最多添加3个标签', ToastType.ERROR);
+      return;
+    }
+    
+    // 添加标签
+    newTagSelected[value] = true;
+    
+    // 添加到自定义标签列表
+    const newCustomTags = [...this.data.customTags, value];
+    
+    // 更新选中状态和表单数据
+    this.setData({
+      tagSelected: newTagSelected,
+      customTags: newCustomTags,
+      'form.tags': Object.keys(newTagSelected),
+      tagInputValue: ''
+    });
+  },
+  
+  // 移除自定义标签
+  removeCustomTag(e) {
+    const tag = e.currentTarget.dataset.tag;
+    if (!tag) return;
+    
+    // 创建副本
+    const newTagSelected = {...this.data.tagSelected};
+    const newCustomTags = this.data.customTags.filter(t => t !== tag);
+    
+    // 移除标签
+    delete newTagSelected[tag];
+    
+    // 更新状态
+    this.setData({
+      tagSelected: newTagSelected,
+      customTags: newCustomTags,
+      'form.tags': Object.keys(newTagSelected)
+    });
+  },
+
+  // 显示图片上传组件
+  showImageUploader() {
+    const imageUploader = this.selectComponent('#imageUploader');
+    if (imageUploader) {
+      imageUploader.chooseImage();
+    }
+  },
+  
+  // 对话框按钮点击
+  tapDialogButton(e) {
+    this.setData({ dialogShow: false });
+  },
+  
+  // 图片选择后的回调
+  onImagesChoose(e) {
+    console.debug('选择图片', e.detail);
+    // 用户选择了图片，但还未上传
+    const images = e.detail.images || [];
+    this.validatePostForm();
+  },
+  
+  // 图片上传完成后的回调
+  onImagesUploaded(e) {
+    console.debug('图片上传完成', e.detail);
+    // 更新表单中的图片列表
+    const images = e.detail.images || [];
+    this.setFormField('images', images);
+    this.validatePostForm();
+  },
+
   // 提交表单
   async submitForm() {
     // 验证表单
     if (!this.validatePostForm()) {
-      this.showFormError();
+      const errorFields = this.getFormErrors();
+      if (errorFields && Object.keys(errorFields).length > 0) {
+        const firstError = Object.values(errorFields)[0];
+        this._showToptips(firstError, ToastType.ERROR);
+      }
       return;
     }
-
-    // 显示加载状态
-    this.showLoading('发布中...');
+    
+    // 如果已经在提交中，防止重复提交
+    if (this.data.submitting) return;
+    
     this.updateState({ submitting: true });
-
+    
     try {
-      // 获取表单数据
-      const formData = this.getForm();
-      
-      // 调用postBehavior中的方法发布帖子
-      console.debug('准备发布帖子', formData);
-      const result = await this._createPost({
-        title: formData.title,
+      // 准备提交数据
+      const formData = this.data.form;
+      let postData = {
         content: formData.content,
-        images: formData.images,
-        category_id: formData.category_id,
+        image: formData.images || [],
+        category_id: formData.category_id || 1,
         is_public: formData.isPublic,
         allow_comment: formData.allowComment,
         wiki_knowledge: formData.wikiKnowledge,
-        style: formData.style
-      });
-
-      if (!result) {
-        throw new Error('发布失败');
-      }
-
-      // 显示成功提示
-      this.showToast('发布成功', ToastType.SUCCESS);
+        tag: formData.tags || []
+      };
       
-      // 设置需要刷新首页帖子列表的标记
-      this.setStorage('needRefreshPosts', true);
-      
-      // 延迟返回
-      setTimeout(() => {
-        try {
-          // 使用wx.navigateBack直接返回，避免使用封装的方法可能引起的问题
-          wx.navigateBack({
-            delta: 1,
-            success: () => {
-              // 通知列表页刷新
-              const app = getApp();
-              if (app && app.globalData) {
-                app.globalData.postsUpdated = true;
-              }
-            },
-            fail: (err) => {
-              console.error('发布成功后返回失败:', err);
-              // 返回失败时跳转到首页
-              wx.switchTab({
-                url: '/pages/index/index',
-                success: () => {
-                  const app = getApp();
-                  if (app && app.globalData) {
-                    app.globalData.postsUpdated = true;
-                  }
-                }
-              });
-            }
-          });
-        } catch (navErr) {
-          console.error('导航过程中发生异常:', navErr);
-          wx.switchTab({ url: '/pages/index/index' });
+      // 如果是Markdown模式，需要在content前面添加标题
+      if (this.data.isMarkdownMode) {
+        // 提取一个title供API使用
+        let titleForApi = formData.title || '无标题';
+        
+        // 检查content是否已有标题行
+        const titleMatch = postData.content.trim().match(/^#\s+(.+)$/m);
+        if (titleMatch && titleMatch[1]) {
+          // 如果内容中已经有标题，提取出来作为API的title参数
+          titleForApi = titleMatch[1].trim();
+        } else {
+          // 如果内容中没有标题，添加一个
+          const title = formData.title || '无标题';
+          postData.content = `# ${title}\n\n${postData.content}`;
         }
-      }, 1500);
+        
+        // 设置API需要的title参数
+        postData.title = titleForApi;
+      } else {
+        // 普通模式下，保持标题字段
+        postData.title = formData.title;
+      }
+      
+      // 提交帖子
+      const result = await this._createPost(postData);
+      
+      if (result.code === 200) {
+        this._showToptips('发布成功', ToastType.SUCCESS);
+        
+        // 设置需要刷新首页帖子列表的标记
+        this.setStorage('needRefreshPosts', true);
+        
+        // 延迟返回，等待显示成功提示
+        setTimeout(() => {
+          this.switchTab('/pages/index/index');
+        }, 1500);
+      } else {
+        throw new Error(result.message || '发布失败');
+      }
     } catch (err) {
-      // 处理错误
-      console.error('发布过程发生错误:', err);
-      this.handleError(err, err.message || '发布失败');
+      console.error('提交帖子失败:', err);
+      this._showToptips(err.message || '发布失败，请稍后再试', ToastType.ERROR);
     } finally {
-      // 更新状态并隐藏加载提示
       this.updateState({ submitting: false });
-      this.hideLoading();
     }
   },
 
-  // 切换Wiki润色模式
-  toggleWikiMode() {
-    this.setFormField('wikiKnowledge', !this.data.form.wikiKnowledge);
-    this.validatePostForm();
-  },
-
-  // 应用Wiki润色建议
-  applyWikiSuggestion() {
-    // 简单模拟润色效果
-    const originalContent = this.data.form.content;
-    const enhancedContent = originalContent.length > 0 ? 
-      originalContent + '\n\n(已应用Wiki润色建议，优化了文章结构和表达)' : 
-      originalContent;
-    
-    this.setFormField('content', enhancedContent);
-    this.validatePostForm();
-    this.showToast('已应用润色建议', ToastType.SUCCESS);
-  },
-
-  // 文本编辑工具 - 加粗
-  onBoldTap() {
-    const content = this.data.form.content;
-    const selection = this._getSelectionText(content);
-    if (selection) {
-      const newContent = content.replace(selection, `**${selection}**`);
-      this.setFormField('content', newContent);
-    } else {
-      this.showToast('请先选择要加粗的文本', ToastType.NONE);
-    }
-  },
-
-  // 文本编辑工具 - 斜体
-  onItalicTap() {
-    const content = this.data.form.content;
-    const selection = this._getSelectionText(content);
-    if (selection) {
-      const newContent = content.replace(selection, `*${selection}*`);
-      this.setFormField('content', newContent);
-    } else {
-      this.showToast('请先选择要设为斜体的文本', ToastType.NONE);
-    }
-  },
-
-  // 文本编辑工具 - @
-  onAtTap() {
-    const content = this.data.form.content;
-    this.setFormField('content', content + '@');
-  },
-
-  // 辅助方法 - 获取选中文本（简化实现）
-  _getSelectionText(text) {
-    // 实际中应该使用小程序的selection API
-    // 这里简化处理，需要完整实现
-    return '';
-  },
-
-  // 选择话题/分类
-  onTopicSelect(e) {
-    const category_id = parseInt(e.currentTarget.dataset.category);
-    this.setFormField('category_id', category_id);
-    
-    // 找到对应的索引位置
-    const index = this.data.categories.findIndex(item => item.id === category_id);
-    if (index !== -1) {
-      this.updateState({ categoryIndex: index });
-    }
-    
-    this.validatePostForm();
-  },
-
-  // 添加自定义话题
-  onAddTopicTap() {
-    // 显示添加话题的输入框
-    this.showModal({
-      title: '添加话题',
-      content: '请输入话题名称（不含#号）',
-      editable: true,
-      placeholderText: '如: 校园活动',
-      success: (res) => {
-        if (res.confirm && res.content) {
-          const newTopic = {
-            id: res.content.toLowerCase().replace(/\s+/g, '_'),
-            name: res.content
-          };
-          
-          // 添加到分类列表
-          const categories = [...this.data.categories, newTopic];
-          const categoryIndex = categories.length - 1;
-          
-          this.updateState({ 
-            categories,
-            categoryIndex
-          });
-          
-          // 设置为当前选中的分类
-          this.setFormField('category_id', newTopic.id);
-          this.validatePostForm();
-        }
-      }
+  // 显示顶部消息提示
+  _showToptips(msg, type = 'error') {
+    this.setData({
+      toptipsShow: true,
+      toptipsMsg: msg,
+      toptipsType: type
     });
+
+    setTimeout(() => {
+      this.setData({
+        toptipsShow: false
+      });
+    }, 3000);
   },
 
-  // 文风选择
-  onStyleSelect(e) {
-    const style = e.currentTarget.dataset.style;
-    this.setFormField('style', style);
-    this.validatePostForm();
-  },
-
-  // 图片选择直接方法
-  chooseImage() {
-    wx.chooseMedia({
-      count: 9 - (this.data.form.images?.length || 0),
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        const tempFiles = res.tempFiles.map(file => file.tempFilePath);
-        const images = [...(this.data.form.images || []), ...tempFiles];
-        this.setFormField('images', images);
-        this.validatePostForm();
-      }
+  // 处理text-area组件的预览状态变化
+  onPreviewChange(e) {
+    const { showPreview } = e.detail;
+    this.setData({
+      showMarkdownPreview: showPreview
     });
-  },
-
-  // 预览图片
-  previewImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.form.images;
-    
-    wx.previewImage({
-      current: images[index], // 当前显示图片的链接
-      urls: images // 需要预览的图片链接列表
-    });
-  },
-  
-  // 删除图片
-  deleteImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = [...this.data.form.images];
-    
-    if (index >= 0 && index < images.length) {
-      images.splice(index, 1);
-      this.setFormField('images', images);
-      this.validatePostForm();
-      
-      // 显示轻提示
-      this.showToast('已删除图片', ToastType.NONE);
-    }
-  },
-}) 
+  }
+}); 

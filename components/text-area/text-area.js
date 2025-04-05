@@ -1,6 +1,8 @@
 /**
  * 文本域组件
  */
+const towxml = require('/components/towxml/index');
+
 Component({
   options: {
     styleIsolation: 'isolated'
@@ -25,7 +27,20 @@ Component({
     // 高度
     height: {
       type: Number,
-      value: 200
+      value: 200,
+      observer: function(newVal) {
+        // 确保高度值为数字
+        if (typeof newVal !== 'number' || isNaN(newVal)) {
+          console.warn('text-area组件: height属性应为数字，已使用默认值200');
+          this.setData({
+            _height: 200
+          });
+        } else {
+          this.setData({
+            _height: newVal
+          });
+        }
+      }
     },
     // 是否显示计数器
     showCount: {
@@ -56,12 +71,43 @@ Component({
     adjustPosition: {
       type: Boolean,
       value: true
+    },
+    // 是否为Markdown编辑模式
+    markdownMode: {
+      type: Boolean,
+      value: false
+    },
+    // 是否显示工具栏
+    showToolbar: {
+      type: Boolean,
+      value: true
+    },
+    // 标题（用于预览时生成markdown标题）
+    title: {
+      type: String,
+      value: ''
+    },
+    // 是否只显示预览切换按钮，隐藏其他工具栏按钮
+    simpleToolbar: {
+      type: Boolean,
+      value: false
+    },
+    // 是否为只读模式（只显示预览）
+    readOnly: {
+      type: Boolean,
+      value: false
     }
   },
   
   data: {
     // 当前字符数
-    currentLength: 0
+    currentLength: 0,
+    // 是否显示预览
+    showPreview: false,
+    // 预览内容
+    markdownNodes: null,
+    // 内部使用的高度值，确保为数字
+    _height: 200
   },
   
   observers: {
@@ -69,13 +115,40 @@ Component({
       this.setData({
         currentLength: value ? value.length : 0
       });
+      
+      // 如果在预览模式，更新预览内容
+      if (this.data.showPreview) {
+        this.updatePreview();
+      }
+    },
+    'readOnly': function(readOnly) {
+      // 如果是只读模式，自动切换到预览模式
+      if (readOnly && !this.data.showPreview) {
+        this.setData({ showPreview: true });
+        this.updatePreview();
+      }
     }
   },
   
-  attached() {
-    this.setData({
-      currentLength: this.properties.value ? this.properties.value.length : 0
-    });
+  lifetimes: {
+    attached() {
+      this.setData({
+        currentLength: this.properties.value ? this.properties.value.length : 0,
+        _height: Number(this.properties.height) || 200
+      });
+      
+      // 如果是只读模式，自动切换到预览模式
+      if (this.properties.readOnly && !this.data.showPreview) {
+        this.setData({ showPreview: true });
+      }
+    },
+    
+    ready() {
+      // 如果已经在预览模式，初始化预览内容
+      if (this.data.showPreview && this.properties.value) {
+        this.updatePreview();
+      }
+    }
   },
   
   methods: {
@@ -104,6 +177,91 @@ Component({
     // 确认事件
     onConfirm(e) {
       this.triggerEvent('confirm', e.detail);
+    },
+    
+    // 切换预览
+    togglePreview() {
+      // 如果是只读模式，不允许切换
+      if (this.properties.readOnly) return;
+      
+      const showPreview = !this.data.showPreview;
+      
+      if (showPreview) {
+        // 先更新预览内容，再切换预览状态
+        this.updatePreview();
+      }
+      
+      this.setData({ showPreview });
+      
+      // 通知父组件预览状态改变
+      this.triggerEvent('previewchange', { showPreview });
+    },
+    
+    // 更新Markdown预览
+    updatePreview() {
+      let content = this.properties.value || '';
+      
+      // 如果有标题但内容不包含标题，添加标题
+      const title = this.properties.title || '';
+      if (title && !content.trim().startsWith('#') && !content.includes(title)) {
+        content = `# ${title}\n\n${content}`;
+      }
+      
+      if (!content) {
+        this.setData({ 
+          markdownNodes: towxml('*暂无内容*', 'markdown') 
+        });
+        return;
+      }
+      
+      try {
+        // 使用towxml解析Markdown
+        const markdownNodes = towxml(content, 'markdown', {
+          theme: 'light',
+          events: {
+            tap: (e) => {
+              // 点击链接事件处理
+              this.triggerEvent('linktap', e);
+            }
+          }
+        });
+        
+        this.setData({ markdownNodes });
+      } catch (err) {
+        this.triggerEvent('error', { error: err });
+      }
+    },
+    
+    // 工具栏操作 - 粗体
+    onBoldTap() {
+      const value = this.properties.value || '';
+      this.triggerEvent('input', {
+        value: value + '**粗体文字**',
+        cursor: value.length + 10
+      });
+    },
+    
+    // 工具栏操作 - 斜体
+    onItalicTap() {
+      const value = this.properties.value || '';
+      this.triggerEvent('input', {
+        value: value + '*斜体文字*',
+        cursor: value.length + 5
+      });
+    },
+    
+    // 工具栏操作 - @ 用户
+    onAtTap() {
+      const value = this.properties.value || '';
+      this.triggerEvent('input', {
+        value: value + '@用户 ',
+        cursor: value.length + 4
+      });
+    },
+    
+    // 工具栏操作 - 添加图片
+    onImageTap() {
+      this.triggerEvent('imagetap');
     }
   }
 }); 

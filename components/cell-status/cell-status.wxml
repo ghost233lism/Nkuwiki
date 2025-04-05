@@ -1,0 +1,88 @@
+<view class="cell-status {{customClass}} {{loadingSize ? loadingSize : ''}}" style="{{containerStyle}}">
+  <!-- 加载状态 -->
+  <block wx:if="{{_state.isLoading}}">
+    <!-- 内联加载 -->
+    <view class="loading-inline" wx:if="{{loadingType === 'inline'}}">
+      <view class="loading-spinner" style="{{iconColor ? 'border-top-color:' + iconColor + ';' : ''}}"></view>
+      <text class="loading-text">{{loadingText}}</text>
+    </view>
+    
+    <!-- 全屏加载 -->
+    <view class="loading-mask {{mask ? 'with-mask' : ''}}" wx:elif="{{loadingType === 'fullscreen'}}">
+      <view class="loading-content">
+        <view class="loading-spinner-large" style="{{iconColor ? 'border-top-color:' + iconColor + ';' : ''}}"></view>
+        <text class="loading-text-large">{{loadingText}}</text>
+      </view>
+    </view>
+    
+    <!-- 点状加载 -->
+    <view class="loading-container {{fullscreen ? 'fullscreen' : ''}}" wx:elif="{{loadingType === 'dots'}}">
+      <view class="loading-dots">
+        <view class="loading-dot" style="{{iconColor ? 'background-color:' + iconColor + ';' : ''}}"></view>
+        <view class="loading-dot" style="{{iconColor ? 'background-color:' + iconColor + ';' : ''}}"></view>
+        <view class="loading-dot" style="{{iconColor ? 'background-color:' + iconColor + ';' : ''}}"></view>
+      </view>
+      <view class="loading-text">{{loadingText}}</view>
+    </view>
+    
+    <!-- 旋转加载 -->
+    <view class="loading-container {{fullscreen ? 'fullscreen' : ''}}" wx:else>
+      <view class="loading-spinner" style="{{iconColor ? 'border-top-color:' + iconColor + ';' : ''}}"></view>
+      <view class="loading-text">{{loadingText}}</view>
+    </view>
+  </block>
+
+  <!-- 成功状态 -->
+  <view class="success-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isSuccess}}">
+    <view class="icon-wrapper success">
+      <icon name="{{customIcon || 'success'}}" size="{{iconSize}}" color="{{iconColor || '#07c160'}}"></icon>
+    </view>
+    <view class="success-text">{{successText}}</view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isError}}">
+    <view class="icon-wrapper error">
+      <icon name="{{customIcon || 'error'}}" size="{{iconSize}}" color="{{iconColor || '#ff5252'}}"></icon>
+    </view>
+    <view class="error-text">{{errorMsg}}</view>
+    <view class="error-actions">
+      <button class="retry-btn button-reset" bindtap="onErrorRetry">{{retryText}}</button>
+      <button wx:if="{{showCloseBtn}}" class="close-btn button-reset" bindtap="onErrorClose">关闭</button>
+    </view>
+  </view>
+
+  <!-- 空数据状态 -->
+  <view class="empty-container {{fullscreen ? 'fullscreen' : ''}}" wx:if="{{_state.isEmpty}}">
+    <view class="icon-wrapper">
+      <block wx:if="{{customIcon}}">
+        <icon name="{{customIcon}}" size="{{iconSize}}" color="{{iconColor}}"></icon>
+      </block>
+      <block wx:else>
+        <icon wx:if="{{status === 'empty-search'}}" name="search-empty" size="{{iconSize}}" color="{{iconColor || '#999999'}}"></icon>
+        <icon wx:elif="{{status === 'empty-network'}}" name="network-empty" size="{{iconSize}}" color="{{iconColor || '#ff9800'}}"></icon>
+        <icon wx:else name="empty" size="{{iconSize}}" color="{{iconColor || '#999999'}}"></icon>
+      </block>
+    </view>
+    <view class="empty-text">{{emptyText}}</view>
+    <button wx:if="{{showEmptyBtn && emptyBtnText}}" class="empty-btn button-reset" bindtap="onEmptyBtnTap">{{emptyBtnText}}</button>
+  </view>
+  
+  <!-- 正常内容 -->
+  <view class="cell-content" wx:if="{{_state.isNormal}}">
+    <slot></slot>
+  </view>
+  
+  <!-- 加载更多状态 - 只在有内容且明确指定hasMore时显示 -->
+  <view class="load-more" wx:if="{{_state.isNormal && hasMore !== undefined}}">
+    <view wx:if="{{hasMore}}" class="load-more-loading" bindtap="onLoadMore">
+      <view class="loading-dots small">
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+      </view>
+      <text class="load-more-text">{{loadMoreText}}</text>
+    </view>
+    <view wx:else class="no-more-text">{{noMoreText}}</view>
+  </view>
+</view> 

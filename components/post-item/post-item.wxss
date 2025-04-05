@@ -122,11 +122,150 @@
   overflow: hidden;
 }
 
+/* Markdown 渲染相关样式 */
+.markdown-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.markdown-wrapper.collapsed {
+  max-height: 200rpx;
+}
+
+/* 增加展开状态的Markdown容器高度 */
+.markdown-wrapper:not(.collapsed) {
+  max-height: none;
+}
+
+.markdown-wrapper .text-area-container {
+  margin-bottom: 0;
+}
+
+/* 确保text-area组件中的预览区域在post-item中显示正常 */
+.markdown-wrapper .markdown-preview {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* 移除text-area中工具栏的边距，确保与post-item样式一致 */
+.markdown-wrapper .toolbar {
+  margin-top: 0;
+  background-color: transparent;
+  padding: 0;
+}
+
+/* 覆盖 towxml 默认样式 */
+.h2w {
+  font-size: 28rpx !important;
+  line-height: 1.8 !important;
+  word-wrap: break-word !important;
+  padding: 0 !important;
+}
+
+.h2w__h1, .h2w__h2, .h2w__h3, .h2w__h4, .h2w__h5, .h2w__h6 {
+  font-weight: bold !important;
+  margin-bottom: 0.8em !important;
+  margin-top: 0.6em !important;
+}
+
+.h2w__h1 {
+  font-size: 32rpx !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding-bottom: 0.3em !important;
+}
+
+.h2w__h2 {
+  font-size: 30rpx !important;
+}
+
+.h2w__h3 {
+  font-size: 28rpx !important;
+}
+
+.h2w__p {
+  margin-bottom: 0.8em !important;
+}
+
+.h2w__code {
+  font-size: 26rpx !important;
+  background-color: #f8f8f8 !important;
+  border-radius: 4rpx !important;
+  padding: 10rpx !important;
+}
+
+.h2w__pre {
+  margin-bottom: 16rpx !important;
+  background-color: #f8f8f8 !important;
+  border-radius: 8rpx !important;
+  padding: 16rpx !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+.h2w__ul, .h2w__ol {
+  margin-bottom: 16rpx !important;
+  padding-left: 40rpx !important;
+}
+
+.h2w__li {
+  margin-bottom: 0.5em !important;
+}
+
+.h2w__blockquote {
+  border-left: 6rpx solid #ddd !important;
+  padding: 12rpx 24rpx !important;
+  background-color: #f8f8f8 !important;
+  margin-bottom: 16rpx !important;
+}
+
+.h2w__a {
+  color: #1aad19 !important;
+  text-decoration: none !important;
+}
+
+.h2w__hr {
+  margin: 20rpx 0 !important;
+  border: none !important;
+  border-top: 1px solid #eee !important;
+}
+
+.h2w__table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-bottom: 16rpx !important;
+  font-size: 26rpx !important;
+}
+
+.h2w__th, .h2w__td {
+  border: 1px solid #e0e0e0 !important;
+  padding: 8rpx 12rpx !important;
+}
+
+.h2w__th {
+  background-color: #f8f8f8 !important;
+  font-weight: bold !important;
+}
+
 .read-more {
   color: #1aad19;
   font-size: 26rpx;
   margin-top: 8rpx;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+}
+
+.read-more-wrapper {
+  width: 100%;
+  margin-top: 8rpx;
+  text-align: center;
+  padding: 8rpx 0;
+}
+
+.expand-icon {
+  margin-left: 4rpx;
 }
 
 .post-images {
@@ -176,6 +315,31 @@
   width: 100%;
 }
 
+/* 标签相关样式 */
+.tag-list {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.tag-badge {
+  position: relative;
+  display: inline-block;
+}
+
+/* 覆盖mp-badge默认样式 */
+.tag-badge .weui-badge {
+  background-color: rgba(26, 173, 25, 0.1) !important;
+  color: #1aad19 !important;
+  font-size: 24rpx !important;
+  padding: 4rpx 16rpx !important;
+  border-radius: 20rpx !important;
+  min-width: unset !important;
+  display: inline-block !important;
+}
+
+/* 保留原有的标签样式兼容 */
 .post-tags {
   margin-top: 16rpx;
   display: flex;

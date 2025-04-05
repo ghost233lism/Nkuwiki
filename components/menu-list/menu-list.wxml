@@ -1,20 +1,30 @@
-<view class="menu-list {{customClass}}">
-  <view 
-    class="menu-item"
-    wx:for="{{items}}"
-    wx:key="index"
-    data-index="{{index}}"
-    bindtap="onItemTap"
-  >
-    <view class="item-content">
-      <view class="left">
-        <icon wx:if="{{item.icon}}" name="{{item.icon}}" size="40" color="#666666" />
-        <text class="title">{{item.title}}</text>
-      </view>
-      <view class="right">
-        <text wx:if="{{item.value}}" class="value">{{item.value}}</text>
-        <icon name="arrow-right" size="32" color="#999999" />
-      </view>
-    </view>
+<cell-status
+  loading="{{loading}}" 
+  error="{{error}}"
+  error-text="{{errorMsg}}"
+  bindretry="onRetry"
+  class="menu-list-wrapper">
+  <view class="menu-section">
+    <view class="menu-title">{{title}}</view>
+    <mp-cells ext-class="menu-cells">
+      <mp-cell 
+        wx:for="{{items}}" 
+        wx:key="index"
+        link
+        hover
+        data-index="{{index}}"
+        bindtap="onItemTap"
+      >
+        <view class="menu-item">
+          <view class="menu-item-left">
+            <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
+            <text class="menu-text">{{item.title}}</text>
+          </view>
+          <view class="menu-item-right">
+            <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
+          </view>
+        </view>
+      </mp-cell>
+    </mp-cells>
   </view>
-</view> 
+</cell-status> 

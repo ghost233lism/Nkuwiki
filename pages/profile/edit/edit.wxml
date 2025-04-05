@@ -11,64 +11,94 @@
   <view>{{dialogContent}}</view>
 </mp-dialog>
 
-<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
-  <!-- 加载状态 -->
-  <loading 
-    wx:if="{{loading}}" 
-    type="dot-gray"
-    show="{{loading}}"
-  />
+<view class="container">
+  <!-- 导航栏 -->
+  <nav-bar title="编辑资料" back></nav-bar>
 
   <!-- 内容区域 -->
-  <mp-form-page wx:else title="编辑资料">
-    <mp-form>
-      <mp-cells>
-        <!-- 头像编辑 -->
-        <mp-cell title="头像">
-          <view class="avatar-container">
-            <!-- 使用微信原生的头像选择器 -->
-            <button 
-              class="avatar-btn"
-              open-type="chooseAvatar" 
-              bind:chooseavatar="onChooseAvatar"
-            >
-              <image 
-                class="avatar" 
-                src="{{userInfo.avatarUrl}}" 
-                mode="aspectFill"
-                binderror="onAvatarError"
+  <view class="content-area">
+    <cell-status
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bindretry="onRetry">
+
+      <!-- 表单内容 -->
+      <form bindsubmit="formSubmit">
+        <!-- 头像 -->
+        <view class="avatar-section">
+          <image-uploader
+            image="{{userInfo.avatar}}"
+            bindchange="onAvatarChange"
+          ></image-uploader>
+          <view class="avatar-hint">点击更换头像</view>
+        </view>
+
+        <!-- 基本资料 -->
+        <view class="form-section">
+          <mp-cells title="基本资料">
+            <mp-cell title="昵称">
+              <input 
+                name="nickname"
+                class="input" 
+                placeholder="请输入昵称" 
+                value="{{userInfo.nickname}}"
+                maxlength="20"
               />
-              <view class="avatar-hint">点击更换头像</view>
-            </button>
-          </view>
-        </mp-cell>
+            </mp-cell>
+            <mp-cell title="个性签名">
+              <textarea
+                name="bio"
+                class="textarea"
+                placeholder="介绍一下自己吧"
+                value="{{userInfo.bio}}"
+                maxlength="100"
+                auto-height
+              ></textarea>
+            </mp-cell>
+          </mp-cells>
+        </view>
 
-        <!-- 昵称编辑 -->
-        <mp-cell title="昵称">
-          <input-field
-            type="text"
-            value="{{newNickName}}"
-            placeholder="请输入昵称"
-            bind:input="onInputNickName"
-          />
-        </mp-cell>
+        <!-- 校园信息 -->
+        <view class="form-section">
+          <mp-cells title="校园信息">
+            <mp-cell title="学院">
+              <picker 
+                name="college"
+                mode="selector"
+                range="{{colleges}}"
+                value="{{collegeIndex}}"
+                bindchange="onCollegeChange"
+              >
+                <view class="picker">
+                  {{collegeIndex >= 0 ? colleges[collegeIndex] : '请选择学院'}}
+                </view>
+              </picker>
+            </mp-cell>
+            <mp-cell title="年级">
+              <picker 
+                name="grade"
+                mode="selector"
+                range="{{grades}}"
+                value="{{gradeIndex}}"
+                bindchange="onGradeChange"
+              >
+                <view class="picker">
+                  {{gradeIndex >= 0 ? grades[gradeIndex] : '请选择年级'}}
+                </view>
+              </picker>
+            </mp-cell>
+          </mp-cells>
+        </view>
 
-        <!-- 个性签名编辑 -->
-        <mp-cell title="个性签名">
-          <text-area
-            value="{{newStatus}}"
-            placeholder="介绍一下自己吧"
-            bind:input="onInputStatus"
-            maxlength="50"
-            space
-          />
-        </mp-cell>
-      </mp-cells>
-    </mp-form>
+        <!-- 提交按钮 -->
+        <view class="button-area">
+          <button class="save-button" form-type="submit" type="primary">保存修改</button>
+        </view>
+      </form>
+    </cell-status>
+  </view>
 
-    <!-- 保存按钮 -->
-    <view slot="button">
-      <button class="weui-btn weui-btn_primary" bindtap="saveChanges">保存</button>
-    </view>
-  </mp-form-page>
-</page-status>
+  <!-- 顶部通知 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+</view>

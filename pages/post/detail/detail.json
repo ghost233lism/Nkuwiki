@@ -6,11 +6,11 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "mp-toptips": "/miniprogram_npm/weui-miniprogram/toptips/toptips",
-    "mp-dialog": "/miniprogram_npm/weui-miniprogram/dialog/dialog",
-    "mp-actionsheet": "/miniprogram_npm/weui-miniprogram/actionsheet/actionsheet",
-    "loading": "/components/loading/loading",
-    "icon": "/components/icon/icon",
-    "post-item": "/components/post-item/post-item"
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "post-item": "/components/post-item/post-item",
+    "comment-list": "/components/comment-list/comment-list",
+    "cell-status": "/components/cell-status/cell-status",
+    "mp-toptips": "/components/weui/toptips/toptips",
+    "mp-dialog": "/components/weui/dialog/dialog"
   }
 } 

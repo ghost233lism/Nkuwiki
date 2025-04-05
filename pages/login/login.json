@@ -3,8 +3,6 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "logo-section": "/components/logo-section/logo-section",
-    "login-card": "/components/login-card/login-card",
-    "loading": "/components/loading/loading",
-    "error": "/components/error/error"
+    "login-card": "/components/login-card/login-card"
   }
 } 

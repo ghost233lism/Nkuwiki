@@ -2,11 +2,11 @@
 <view class="post-item" style="{{customStyle}}">
   <view class="post-header">
     <view class="post-header-left">
-      <image class="author-avatar" src="{{post.avatar || '/images/default-avatar.png'}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
+      <image class="author-avatar" src="{{post.avatar || '/icons/avatar1.png'}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
       <view class="post-info">
         <view class="author-name" bindtap="_onAuthorTap">{{post.nickname || '未知用户'}}</view>
         <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>
-      </view>
+      </view> 
     </view>
     <view wx:if="{{showFollow && post.openid && post.openid !== userInfo.openid}}" class="follow-container">
       <button class="follow-btn {{isFollowed ? 'followed' : ''}}" 
@@ -17,13 +17,35 @@
   </view>
 
   <view class="post-content-wrapper" bindtap="_onPostTap">
-    <view wx:if="{{post.title}}" class="post-title">{{post.title}}</view>
+    <!-- 只在非Markdown模式下显示标题 -->
+    <view wx:if="{{post.title && !isMarkdown}}" class="post-title">{{post.title}}</view>
     <view class="post-content">
-      <view class="post-text">
-        <rich-text class="post-body {{contentExpanded ? '' : 'collapsed'}}" nodes="{{post.content}}"></rich-text>
-      </view>
-      <view wx:if="{{contentOverflow}}" bindtap="_onExpandTap" class="read-more">
-        {{contentExpanded ? '收起' : '展开全文'}}
+      <!-- 根据是否为Markdown内容，使用不同的渲染方式 -->
+      <block wx:if="{{isMarkdown}}">
+        <!-- 使用text-area组件渲染Markdown内容 -->
+        <view class="markdown-wrapper {{contentExpanded ? '' : 'collapsed'}}">
+          <text-area
+            value="{{post.content}}"
+            readOnly="{{true}}"
+            markdownMode="{{true}}"
+            title="{{post.title}}"
+            height="{{contentExpanded ? 600 : 200}}"
+            showToolbar="{{false}}"
+          ></text-area>
+        </view>
+      </block>
+      <block wx:else>
+        <!-- 普通文本内容渲染 -->
+        <view class="post-text">
+          <rich-text class="post-body {{contentExpanded ? '' : 'collapsed'}}" nodes="{{post.content}}"></rich-text>
+        </view>
+      </block>
+      
+      <view wx:if="{{contentOverflow}}" catchtap="_onExpandTap" class="read-more-wrapper">
+        <view class="read-more">
+          {{contentExpanded ? '收起' : '展开全文'}}
+          <icon class="expand-icon" name="{{contentExpanded ? 'up' : 'down'}}" size="12"></icon>
+        </view>
       </view>
     </view>
     
@@ -64,10 +86,14 @@
       </view>
     </view>
     
-    <view wx:if="{{post.tags && post.tags.length > 0}}" class="post-tags">
-      <view wx:for="{{post.tags}}" wx:key="index" class="post-tag" data-tag="{{item}}" catchtap="_onTagTap">
-        #{{item}}
-      </view>
+    <!-- 修改标签显示为mp-badge组件 -->
+    <view wx:if="{{post.tags && post.tags.length > 0}}" class="tag-list">
+      <mp-badge wx:for="{{post.tags}}" wx:key="index"
+               content="{{item}}"
+               data-tag="{{item}}" 
+               catchtap="_onTagTap"
+               class="tag-badge">
+      </mp-badge>
     </view>
   </view>
 

@@ -87,6 +87,13 @@ Page({
     settingItems: [],
     MENU_CONFIG: MENU_CONFIG,
     hasUnreadNotification: false,
+    // 导航按钮配置
+    navButtons: [
+      {type: "notification", hasUnread: false},
+      {type: "avatar"}
+    ],
+    // 状态栏高度
+    statusBarHeight: 0,
     // 用户详情页相关数据
     userId: '',
     otherUserInfo: null
@@ -94,6 +101,17 @@ Page({
 
   async onLoad() {
     console.debug('【Profile】页面onLoad触发');
+    
+    // 获取系统信息设置状态栏高度
+    try {
+      const systemInfo = wx.getSystemInfoSync();
+      this.setData({
+        statusBarHeight: systemInfo.statusBarHeight || 0
+      });
+    } catch (err) {
+      console.debug('获取系统信息失败', err);
+    }
+    
     // 准备菜单数据
     this.processMenuItems();
     
@@ -214,28 +232,26 @@ Page({
 
   // 检查是否有未读通知
   async checkUnreadNotifications() {
-    const openid = storage.get('openid');
-    if (!openid) return false;
-
     try {
-      console.debug('【Profile】检查未读通知');
-      const result = await this._checkUnreadNotification();
+      const hasUnread = await this._checkUnreadNotification();
       
-      if (result && result.hasUnread) {
-        this.setData({
-          hasUnreadNotification: true,
-          unreadCount: result.count
-        });
-        return true;
-      } else {
-        this.setData({
-          hasUnreadNotification: false,
-          unreadCount: 0
-        });
-        return false;
+      // 更新通知红点状态，并同时更新navButtons中的hasUnread属性
+      const navButtons = this.data.navButtons;
+      for (let i = 0; i < navButtons.length; i++) {
+        if (navButtons[i].type === "notification") {
+          navButtons[i].hasUnread = hasUnread;
+          break;
+        }
       }
+      
+      this.setData({
+        hasUnreadNotification: hasUnread,
+        navButtons: navButtons
+      });
+      
+      return hasUnread;
     } catch (err) {
-      console.debug('检查未读通知失败:', err);
+      console.debug('检查未读通知出错:', err);
       return false;
     }
   },
@@ -266,55 +282,50 @@ Page({
     });
   },
 
+  // 功能菜单点击
   onMenuItemTap(e) {
-    const userInfo = this.data.userInfo;
-    if (!userInfo) {
-      this.showToast('请先登录', 'error');
-      return;
-    }
-
-    const index = e.currentTarget.dataset.index;
-    const item = this.data.menuItems[index];
-    
-    if (item && item.path) {
-      nav.navigateTo(item.path);
-    }
+    const { index, item } = e.detail;
+    console.debug('profile#onMenuItemTap', index, item);
+    this._routeMenuItem(item);
   },
 
+  // 设置菜单点击
   onSettingItemTap(e) {
-    const userInfo = this.data.userInfo;
-    if (!userInfo) {
-      this.showToast('请先登录', 'error');
-      return;
-    }
+    const { index, item } = e.detail;
+    console.debug('profile#onSettingItemTap', index, item);
+    this._routeMenuItem(item);
+  },
+  
+  // 功能菜单重试
+  onMenuRetry() {
+    console.debug('profile#onMenuRetry');
+    this.loadMenus();
+  },
+  
+  // 设置菜单重试
+  onSettingRetry() {
+    console.debug('profile#onSettingRetry');
+    this.loadMenus();
+  },
 
-    const index = e.currentTarget.dataset.index;
-    const item = this.data.settingItems[index];
+  // 自定义事件处理 - 可以捕获nav-bar组件发出的事件
+  onCustomNavEvent(e) {
+    const { type, button } = e.detail;
     
-    if (item && item.path) {
-      nav.navigateTo(item.path);
+    switch (type) {
+      case 'notification':
+        console.debug('进入通知页面');
+        // 默认行为已由nav-bar处理，无需额外代码
+        break;
+      case 'avatar':
+        console.debug('进入个人中心');
+        // 默认行为已由nav-bar处理，无需额外代码
+        break;
+      default:
+        break;
     }
   },
 
-  onAvatarTap() {
-    if (!this.data.userInfo) {
-      this.login();
-      return;
-    }
-    this.navigateToEditProfile();
-  },
-
-  // 新增：导航栏通知按钮点击事件
-  onNotificationTap() {
-    if (!this.data.userInfo) {
-      this.showToast('请先登录', 'error');
-      return;
-    }
-    
-    this.navigateTo('/pages/notification/notification');
-  },
-
-  // 编辑资料
   navigateToEditProfile() {
     if (!this.data.userInfo) {
       return;
@@ -391,6 +402,23 @@ Page({
       this.handleError(err, '关注操作失败');
     } finally {
       this.hideLoading();
+    }
+  },
+
+  // 处理菜单项点击路由
+  _routeMenuItem(item) {
+    if (!item) return;
+    
+    const userInfo = this.data.userInfo;
+    // 对于需要登录的菜单项，先检查登录状态
+    if (item.requireLogin && !userInfo) {
+      this.showToast('请先登录', 'error');
+      return;
+    }
+    
+    // 导航到指定路径
+    if (item.path) {
+      nav.navigateTo(item.path);
     }
   }
 });

@@ -58,8 +58,7 @@ Page({
   },
   
   onLoad() {
-    // 初始化上传组件
-    this.initUploader();
+    // 不再需要初始化uploader
   },
 
   // --- Event Handlers ---
@@ -90,6 +89,20 @@ Page({
   // 重写图片删除回调，适配表单结构
   onImageDelete(e) {
     const images = this.methods.onImageDelete.call(this, e);
+    this.setData({ 'form.images': images });
+  },
+
+  // --- 新的图片上传组件事件处理 ---
+  // 图片选择事件
+  onImagesChoose(e) {
+    console.debug('选择图片', e.detail);
+  },
+
+  // 图片上传完成事件
+  onImagesUploaded(e) {
+    console.debug('图片上传完成', e.detail);
+    // 更新表单中的图片列表
+    const images = e.detail.images || [];
     this.setData({ 'form.images': images });
   },
 

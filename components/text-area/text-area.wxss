@@ -2,7 +2,7 @@
 .text-area-container {
   position: relative;
   width: 100%;
-  overflow: hidden;
+  margin-bottom: 20rpx;
 }
 
 /* 文本域 */
@@ -12,10 +12,10 @@
   padding: 20rpx;
   box-sizing: border-box;
   font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f8f8f8;
+  line-height: 1.5;
+  background-color: #fff;
   border-radius: 8rpx;
+  border: 1px solid #eee;
 }
 
 /* 禁用状态 */
@@ -47,4 +47,86 @@
 /* 达到限制时的计数文本 */
 .count-limit {
   color: #ff4d4f;
+}
+
+.markdown-editor {
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.markdown-preview {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  background-color: #f8f9fa;
+  border-radius: 8rpx;
+  border: 1px solid #eee;
+  overflow-y: auto;
+}
+
+/* 只读模式的预览区样式 */
+.markdown-preview.read-only {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+.empty-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.counter {
+  position: absolute;
+  right: 20rpx;
+  bottom: 10rpx;
+  font-size: 24rpx;
+  color: #999;
+  z-index: 1;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  height: 80rpx;
+  margin-top: 10rpx;
+  padding: 0 20rpx;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60rpx;
+  height: 60rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+/* 只有预览按钮时的样式 */
+.tool-item.preview-only {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.tool-icon {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.tool-item.active {
+  background-color: #0078ff;
+}
+
+.tool-item.active .tool-icon {
+  color: #fff;
 } 

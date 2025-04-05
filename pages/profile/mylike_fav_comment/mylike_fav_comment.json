@@ -1,12 +1,14 @@
 {
-  "navigationBarTitleText": "我的互动",
+  "navigationBarTitleText": "我的记录",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "page-status": "/components/page-status/page-status",
-    "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar",
-    "post-list": "/components/post-list/post-list"
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "post-list": "/components/post-list/post-list",
+    "comment-list": "/components/comment-list/comment-list",
+    "cell-status": "/components/cell-status/cell-status",
+    "mp-toptips": "/components/weui/toptips/toptips"
   },
   "enablePullDownRefresh": true,
   "backgroundColor": "#f5f5f5",
-  "backgroundTextStyle": "dark",
-  "navigationStyle": "custom"
+  "backgroundTextStyle": "dark"
 } 

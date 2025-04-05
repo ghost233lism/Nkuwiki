@@ -1,44 +1,58 @@
 <!-- 美化的搜索页面 -->
-<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
-	<!-- 搜索栏 -->
-	<mp-searchbar 
-		value="{{searchValue}}"
-		placeholder="搜索校园知识"
-		search="{{search}}"
-		cancel="{{cancel}}"
-	/>
+<!-- 搜索栏 -->
+<mp-searchbar 
+	value="{{searchValue}}"
+	placeholder="搜索校园知识"
+	search="{{search}}"
+	cancel="{{cancel}}"
+/>
 
-	<!-- 分类标签 -->
-	<category-tabs
-		categories="{{categories}}"
-		current="{{currentCategory}}"
-		bind:change="onCategoryChange"
-	/>
+<!-- 分类标签 -->
+<category-tabs
+	categories="{{categories}}"
+	current="{{currentCategory}}"
+	bind:change="onCategoryChange"
+/>
 
+<cell-status 
+	loading="{{loading}}" 
+	error="{{error}}" 
+	errorMsg="{{errorMsg}}"
+	bindretry="onRetry">
+	
 	<!-- 搜索历史 -->
-	<block wx:if="{{!searchValue && searchHistory.length > 0}}">
-		<search-history
-			items="{{searchHistory}}"
-			bind:clear="clearSearchHistory"
-			bind:tap="onHistoryItemTap"
-		/>
-	</block>
+	<view wx:if="{{!searchValue && searchHistory.length > 0}}" class="history-container">
+		<view class="history-title">搜索历史</view>
+		<view class="history-list">
+			<view 
+				class="history-item" 
+				wx:for="{{searchHistory}}" 
+				wx:key="index"
+				bindtap="onHistoryItemTap"
+				data-query="{{item}}"
+			>
+				{{item}}
+			</view>
+			<view class="clear-history" bindtap="onClearHistory" wx:if="{{searchHistory.length > 0}}">
+				清除历史记录
+			</view>
+		</view>
+	</view>
 
 	<!-- 搜索结果 -->
-	<post-list 
-		wx:else
-		posts="{{searchResults}}"
-		loading="{{loading}}"
-		has-more="{{pagination.hasMore}}"
-		bind:tap="viewDetail"
-		bind:loadMore="loadMore"
-	>
-		<empty
-			wx:if="{{!loading && searchResults.length === 0}}"
-			type="search"
-			text="未找到相关结果"
+	<view wx:elif="{{searchValue && !loading && !error && searchResults.length > 0}}" class="search-results">
+		<post-list 
+			posts="{{searchResults}}"
+			loading="{{resultsLoading}}"
+			error="{{resultsError}}"
+			errorMsg="{{resultsErrorMsg}}"
+			empty="{{!resultsLoading && !resultsError && searchResults.length === 0}}"
+			emptyText="没有找到匹配的内容"
+			hasMore="{{pagination.hasMore}}"
+			bind:loadMore="loadMore"
+			bind:retry="onResultsRetry"
 		/>
-	</post-list>
+	</view>
 	
 	<!-- WEUI组件 -->
 	<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
@@ -51,4 +65,4 @@
 	>
 		<view>{{dialogContent}}</view>
 	</mp-dialog>
-</page-status>
+</cell-status>

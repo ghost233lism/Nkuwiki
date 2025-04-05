@@ -37,13 +37,11 @@
 
       <!-- 图片上传 -->
       <mp-cell title="相关截图">
-        <mp-uploader
-          files="{{form.images}}"
-          max-count="{{imageConfig.maxCount}}"
-          bindselect="onImageSelect"
-          binddelete="onImageDelete"
-          select="{{selectFile}}"
-          upload="{{uploadFile}}"
+        <image-uploader
+          images="{{form.images}}"
+          maxCount="{{imageConfig.maxCount}}"
+          bind:choose="onImagesChoose"
+          bind:uploadcomplete="onImagesUploaded"
         />
       </mp-cell>
 

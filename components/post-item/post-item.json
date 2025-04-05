@@ -1,4 +1,9 @@
 {
   "component": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "towxml": "/components/towxml/towxml",
+    "icon": "/components/icon/icon",
+    "mp-badge": "/components/weui/badge/badge",
+    "text-area": "/components/text-area/text-area"
+  }
 } 

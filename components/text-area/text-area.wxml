@@ -1,25 +1,62 @@
 <view class="text-area-container">
-  <textarea
-    class="text-area {{disabled ? 'disabled' : ''}}"
-    style="height: {{height}}rpx;"
-    value="{{value}}"
-    placeholder="{{placeholder}}"
-    placeholder-class="placeholder"
-    maxlength="{{maxlength}}"
-    auto-focus="{{focus}}"
-    auto-height="{{autoHeight}}"
-    disabled="{{disabled}}"
-    bindinput="onInput"
-    bindfocus="onFocus"
-    bindblur="onBlur"
-    bindconfirm="onConfirm"
-    adjust-position="{{adjustPosition}}"
-    hold-keyboard="{{false}}"
-    cursor-spacing="10"
-    space="{{space ? 'ensp' : 'false'}}"
-  />
-  
-  <view class="count-container" wx:if="{{showCount && maxlength > 0}}">
-    <text class="count-text {{currentLength >= maxlength ? 'count-limit' : ''}}">{{currentLength}}/{{maxlength}}</text>
+  <!-- 显示预览内容或文本区域 -->
+  <block wx:if="{{!showPreview && !readOnly}}">
+    <textarea
+      class="text-area {{markdownMode ? 'markdown-editor' : ''}}"
+      style="height: {{_height}}rpx;"
+      placeholder="{{markdownMode ? '使用 # 作为标题 ## 作为二级标题 正文内容...' : placeholder}}"
+      value="{{value}}"
+      maxlength="{{maxlength}}"
+      auto-height="{{autoHeight}}"
+      disabled="{{disabled}}"
+      focus="{{focus}}"
+      show-confirm-bar="{{false}}"
+      adjust-position="{{adjustPosition}}"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+      bindconfirm="onConfirm"
+      space="{{space}}"
+    ></textarea>
+  </block>
+  <block wx:else>
+    <!-- Markdown预览区域 -->
+    <scroll-view scroll-y class="markdown-preview {{readOnly ? 'read-only' : ''}}" style="height: {{_height}}rpx;">
+      <view wx:if="{{markdownNodes}}">
+        <towxml nodes="{{markdownNodes}}"/>
+      </view>
+      <view wx:else class="empty-preview">
+        <text>暂无内容预览</text>
+      </view>
+    </scroll-view>
+  </block>
+
+  <!-- 计数器 -->
+  <view class="counter" wx:if="{{showCount && !showPreview && !readOnly}}">
+    <text>{{currentLength}}/{{maxlength}}</text>
+  </view>
+
+  <!-- 工具栏 -->
+  <view class="toolbar" wx:if="{{showToolbar && !readOnly}}">
+    <!-- 完整工具栏 -->
+    <block wx:if="{{!simpleToolbar}}">
+      <view class="tool-item" bindtap="onBoldTap">
+        <text class="tool-icon">B</text>
+      </view>
+      <view class="tool-item" bindtap="onItalicTap">
+        <text class="tool-icon">I</text>
+      </view>
+      <view class="tool-item" bindtap="onImageTap">
+        <text class="tool-icon">📷</text>
+      </view>
+      <view class="tool-item" bindtap="onAtTap">
+        <text class="tool-icon">@</text>
+      </view>
+    </block>
+    
+    <!-- 预览按钮始终显示 -->
+    <view class="tool-item {{showPreview ? 'active' : ''}} {{simpleToolbar ? 'preview-only' : ''}}" bindtap="togglePreview">
+      <text class="tool-icon">👁️</text>
+    </view>
   </view>
 </view> 

@@ -48,6 +48,13 @@ Page({
       category_id: 0  // 默认不筛选分类
     },
     
+    // 导航按钮配置
+    navButtons: [
+      {type: "logo", show: true},
+      {type: "notification", hasUnread: false},
+      {type: "avatar"}
+    ],
+    
     // 通知状态
     hasUnreadNotification: false,
     
@@ -232,18 +239,22 @@ Page({
     }
   },
 
-  // 处理通知点击
-  onNotificationTap() {
-    console.debug('进入通知页面');
-    this.navigateTo('/pages/notification/notification');
-  },
-
-  // 处理头像点击
-  onAvatarTap() {
-    console.debug('进入个人中心');
-    this.switchTab({
-      url: '/pages/profile/profile'
-    });
+  // 自定义事件处理 - 可以捕获nav-bar组件发出的事件
+  onCustomNavEvent(e) {
+    const { type, button } = e.detail;
+    
+    switch (type) {
+      case 'notification':
+        console.debug('进入通知页面');
+        // 默认行为已由nav-bar处理，无需额外代码
+        break;
+      case 'avatar':
+        console.debug('进入个人中心');
+        // 默认行为已由nav-bar处理，无需额外代码
+        break;
+      default:
+        break;
+    }
   },
 
   // 处理发帖按钮点击
@@ -268,37 +279,27 @@ Page({
   },
 
   async checkUnreadNotification() {
-    // 使用节流控制，避免频繁请求
-    const now = Date.now();
-    const lastCheckTime = this.data.lastNotificationCheckTime || 0;
-    
-    // 如果距离上次检查少于30秒，则跳过
-    if (now - lastCheckTime < 30000) {
-      console.debug('距离上次检查通知时间小于30秒，跳过检查');
-      return this.data.hasUnreadNotification;
-    }
-    
-    // 记录本次检查时间
-    this.setData({ lastNotificationCheckTime: now });
-    
     try {
-      const openid = this.getStorage('openid');
-      if (!openid) return false;
+      const result = await this._checkUnreadNotification();
+      const hasUnread = result && result.hasUnread;
       
-      const res = await notificationApi.status({
-        openid
-      });
-      
-      if (res.code === 200 && res.data) {
-        this.setData({
-          hasUnreadNotification: res.data.has_unread
-        });
-        return res.data.has_unread;
+      // 更新通知红点状态，并同时更新navButtons中的hasUnread属性
+      const navButtons = this.data.navButtons;
+      for (let i = 0; i < navButtons.length; i++) {
+        if (navButtons[i].type === "notification") {
+          navButtons[i].hasUnread = hasUnread;
+          break;
+        }
       }
       
-      return false;
+      this.updateState({
+        hasUnreadNotification: hasUnread,
+        navButtons: navButtons
+      });
+      
+      return hasUnread;
     } catch (err) {
-      console.debug('检查未读通知失败:', err);
+      console.debug('检查未读通知出错:', err);
       return false;
     }
   },

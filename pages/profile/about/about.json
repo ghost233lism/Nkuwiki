@@ -1,12 +1,13 @@
 {
-  "navigationBarTitleText": "关于",
+  "navigationBarTitleText": "关于我们",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "page-status": "/components/page-status/page-status",
-    "loading": "/components/loading/loading",
-    "error": "/components/error/error",
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "cell-status": "/components/cell-status/cell-status",
+    "mp-toptips": "/components/weui/toptips/toptips",
     "logo-section": "/components/logo-section/logo-section",
-    "mp-cells": "weui-miniprogram/cells/cells",
-    "mp-cell": "weui-miniprogram/cell/cell"
+    "mp-cells": "/components/weui/cells/cells",
+    "mp-cell": "/components/weui/cell/cell"
   }
 } 

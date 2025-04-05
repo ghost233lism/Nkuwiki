@@ -3,6 +3,8 @@ const postBehavior = require('../../behaviors/postBehavior');
 const userBehavior = require('../../behaviors/userBehavior');
 const { formatRelativeTime } = require('../../utils/util.js');
 
+// 不再需要引入towxml解析器，由text-area组件负责处理
+
 Component({
   behaviors: [baseBehavior, postBehavior, userBehavior],
 
@@ -52,6 +54,11 @@ Component({
     customStyle: {
       type: String,
       value: ''
+    },
+    // 是否在详情页面显示，详情页不应折叠内容
+    detailPage: {
+      type: Boolean,
+      value: false
     }
   },
 
@@ -68,7 +75,10 @@ Component({
     },
     contentExpanded: false,
     contentOverflow: false,
-    formattedTime: ''
+    formattedTime: '',
+    // Markdown相关
+    isMarkdown: false,
+    markdownNodes: null
   },
 
   observers: {
@@ -110,6 +120,17 @@ Component({
             console.error('解析标签数据失败:', e);
           }
         }
+        
+        // 默认所有内容都使用text-area组件渲染
+        this.setData({ isMarkdown: true });
+      }
+    },
+    'detailPage': function(isDetailPage) {
+      // 在详情页面，默认展开内容
+      if (isDetailPage) {
+        this.setData({
+          contentExpanded: true
+        });
       }
     }
   },
@@ -159,19 +180,62 @@ Component({
     
     // 检查内容是否超出
     checkContentOverflow() {
+      // 如果是详情页，不检查内容溢出
+      if (this.properties.detailPage) {
+        this.setData({
+          contentExpanded: true,
+          contentOverflow: false
+        });
+        return;
+      }
+
+      // 防止重复检测过多
+      if (this.checkingContentOverflow) {
+        return;
+      }
+      this.checkingContentOverflow = true;
+
       try {
         const query = this.createSelectorQuery();
-        query.select('.post-body').boundingClientRect();
+        
+        // 根据内容类型选择对应的选择器
+        if (this.data.isMarkdown) {
+          query.select('.markdown-wrapper').boundingClientRect();
+        } else {
+          query.select('.post-body').boundingClientRect();
+        }
+        
         query.exec(rect => {
           if (rect && rect[0]) {
             const lineHeight = 28; // 根据CSS中的字体大小和行高估算
             const maxHeight = lineHeight * 3; // 3行文本的高度
-            const contentOverflow = rect[0].height > maxHeight;
+            
+            // 特殊处理Markdown内容，直接使用最大高度比较
+            const contentOverflow = this.data.isMarkdown ? true : (rect[0].height > maxHeight);
+            
+            // 如果高度为0，可能是因为内容还未渲染，延迟检测，但限制递归次数
+            if (rect[0].height === 0) {
+              if (!this.retryCount) {
+                this.retryCount = 0;
+              }
+              
+              if (this.retryCount < 2) {
+                this.retryCount++;
+                setTimeout(() => {
+                  this.checkingContentOverflow = false;
+                  this.checkContentOverflow();
+                }, 100);
+                return;
+              }
+            }
+            
             this.setData({ contentOverflow });
           }
+          this.checkingContentOverflow = false;
         });
       } catch (e) {
         console.error('检查内容高度失败', e);
+        this.checkingContentOverflow = false;
       }
     },
     
@@ -509,33 +573,26 @@ Component({
         'isProcessing.delete': true
       });
       
-      // 使用API删除帖子
-      const app = getApp();
-      const apiClient = app.createApiClient();
-      
-      apiClient.post('/post/delete', { id: post.id })
+      // 使用postBehavior中的_deletePost方法删除帖子
+      this._deletePost(post.id)
         .then(res => {
           // 显示成功消息
           this.showToast('删除成功', 'success');
           
-          // 删除成功后返回上一页
-          setTimeout(() => {
-            this.navigateBack({
-              delta: 1
-            });
-          }, 1500);
-        })
-        .catch(err => {
-          console.debug('删除帖子失败', err);
-          
-          // 显示错误消息
-          this.showToast({
-            title: '删除失败，请稍后重试',
-            icon: 'none'
+          // 触发删除成功事件
+          this.triggerEvent('postDeleted', {
+            id: post.id,
+            index: this.data.index
           });
         })
+        .catch(err => {
+          console.error('删除帖子失败', err);
+          
+          // 显示错误消息
+          this.showToast('删除失败，请稍后重试', 'error');
+        })
         .finally(() => {
-          this.updateState({
+          this.setData({
             'isProcessing.delete': false
           });
         });

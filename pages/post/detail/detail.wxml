@@ -1,137 +1,45 @@
 <!-- 安全区域占位 -->
 <view class="safe-area-top" style="height: {{statusBarHeight}}px;"></view>
 
-<!-- 顶部导航栏 -->
-<view class="header" style="top: {{statusBarHeight}}px;">
-  <view class="back-icon" bindtap="navigateBack">
-    <icon name="back" size="20"></icon>
-  </view>
-  <view class="title-container">
-    <text class="title">帖子详情</text>
-  </view>
-  <view style="width: 48px;"></view><!-- 占位 -->
-</view>
+<!-- 使用nav-bar组件 -->
+<nav-bar 
+  nav-title="{{postData.post.title || '帖子详情'}}"
+  allow-back="{{true}}"
+  nav-buttons="{{navButtons}}"
+></nav-bar>
 
 <!-- 帖子详情页 -->
-<view class="container" style="padding-top: {{containerPaddingTop}};">
-  <!-- 加载状态 -->
-  <block wx:if="{{isPostLoading}}">
-    <view class="loading-container">
-      <loading type="circle"></loading>
-    </view>
-  </block>
-  
-  <!-- 错误状态 -->
-  <block wx:elif="{{loadError}}">
-    <view class="error-container">
-      <icon name="error" size="64"></icon>
-      <view class="error-text">{{loadError}}</view>
-      <view class="retry-btn" bindtap="loadInitialData">重试</view>
-    </view>
-  </block>
-  
-  <!-- 帖子内容 -->
-  <block wx:elif="{{postDetail}}">
-    <view class="content-wrapper">
-      <!-- 帖子信息 -->
+<view class="container">
+  <!-- 使用cell-status组件 -->
+  <cell-status
+    loading="{{isPostLoading}}"
+    error="{{!!loadError}}"
+    errorMsg="{{loadError}}"
+    bindretry="handleRetry">
+
+    <!-- 内容区域 -->
+    <block wx:if="{{postDetail && !isPostLoading && !loadError}}">
+      <!-- 帖子详情 -->
       <post-item 
         post="{{postDetail}}" 
-        show-action="{{true}}" 
-        show-user-info="{{true}}"
-        show-content="{{true}}"
-        show-image="{{true}}"
-        is-card="{{false}}"
-        bind:like="onPostLike"
-        bind:favorite="onPostFavorite"
-        bind:follow="onAuthorFollow"
-        bind:userTap="onUserTap"
-        bind:delete="onPostDelete"
-        bind:edit="onPostEdit"
-      />
-      
-      <!-- 评论部分 -->
-      <view class="comment-section">
-        <view class="section-title">全部评论 ({{postDetail.comment_count || 0}})</view>
-        
-        <!-- 评论输入框 -->
-        <view class="comment-input-container">
-          <input class="comment-input" placeholder="写评论..." value="{{commentText}}" bindinput="onCommentInput" bindconfirm="submitComment" bindtap="onCommentFocus" focus="{{commentFocus}}" confirm-type="send" />
-          <button class="send-btn" bindtap="submitComment" hover-class="btn-hover">发送</button>
-        </view>
-        
-        <!-- 评论列表 -->
-        <view class="comment-list" wx:if="{{comments.length > 0}}">
-          <view class="comment-item" wx:for="{{comments}}" wx:key="id">
-            <!-- 评论头部 -->
-            <view class="comment-header">
-              <image class="avatar" src="{{item.avatar}}" bindtap="onUserTap" data-user-id="{{item.openid}}"></image>
-              <view class="comment-info">
-                <view class="nickname" bindtap="onUserTap" data-user-id="{{item.openid}}">{{item.nickname}}</view>
-                <view class="time">{{item.relativeTime}}</view>
-              </view>
-              
-              <!-- 删除按钮（仅自己的评论可见） -->
-              <view class="delete-btn" wx:if="{{item.openid === userInfo.openid}}" bindtap="onDeleteComment" data-id="{{item.id}}" data-index="{{index}}">删除</view>
-            </view>
-            
-            <!-- 评论内容 -->
-            <view class="comment-content">{{item.content}}</view>
-            
-            <!-- 评论图片(如果有) -->
-            <view class="comment-images" wx:if="{{item.images && item.images.length > 0}}">
-              <image 
-                class="comment-image" 
-                wx:for="{{item.images}}" 
-                wx:for-item="img" 
-                wx:key="index" 
-                src="{{img}}" 
-                mode="aspectFill"
-                bindtap="previewCommentImage" 
-                data-urls="{{item.images}}" 
-                data-current="{{img}}"
-              ></image>
-            </view>
-            
-            <!-- 评论底部工具栏 -->
-            <view class="comment-footer">
-              <view class="like-btn {{item.isLiked ? 'liked' : ''}}" bindtap="onLikeComment" data-id="{{item.id}}" data-index="{{index}}">
-                <text class="icon {{item.isLiked ? 'icon-liked' : 'icon-like'}}"></text>
-                <text class="count">{{item.like_count || 0}}</text>
-              </view>
-              
-              <view class="reply-btn" bindtap="onReplyComment" data-id="{{item.id}}" data-index="{{index}}">
-                <text class="icon icon-reply"></text>
-                <text>回复</text>
-              </view>
-            </view>
-          </view>
-        </view>
-        
-        <!-- 加载更多 -->
-        <view class="load-more" wx:if="{{hasMore && !loadingComment}}" bindtap="loadMoreComment">加载更多评论</view>
-        
-        <!-- 加载中 -->
-        <view class="loading-more" wx:if="{{loadingComment}}">
-          <image class="loading-icon" src="/icons/loading.gif"></image>
-          <text>加载中...</text>
-        </view>
-        
-        <!-- 暂无评论 -->
-        <view class="no-comment" wx:if="{{comments.length === 0 && !loadingComment && !commentError}}">
-          <text>暂无评论，快来抢沙发吧</text>
-        </view>
-        
-        <!-- 加载失败 -->
-        <view class="comment-error" wx:if="{{commentError}}">
-          <text>评论加载失败</text>
-          <view class="retry-btn" bindtap="loadComment">重试</view>
-        </view>
-      </view>
-    </view>
-  </block>
+        class="post-detail"
+        detail-page="{{true}}"
+        show-action="{{true}}"
+        bind:postDeleted="onPostDeleted">
+      </post-item>
+
+      <!-- 评论区域 -->
+      <comment-list 
+        id="commentList"
+        post-id="{{postDetail.id}}">
+      </comment-list>
+    </block>
+  </cell-status>
+
+  <!-- 底部安全区域，为输入框腾出空间 -->
+  <view class="bottom-safe-area" style="height: 70px;"></view>
 </view>
 
 <!-- WEUI组件 -->
 <mp-toptips msg="{{toptips.msg}}" type="{{toptips.type}}" show="{{toptips.show}}"></mp-toptips>
-<mp-dialog title="{{dialog.title}}" show="{{dialog.show}}" buttons="{{dialog.buttons}}"></mp-dialog>
-<mp-actionsheet bindactiontap="actionSheetClick" show="{{actionSheet.show}}" actions="{{actionSheet.actions}}"></mp-actionsheet> 
+<mp-dialog title="{{dialog.title}}" show="{{dialog.show}}" buttons="{{dialog.buttons}}"></mp-dialog> 

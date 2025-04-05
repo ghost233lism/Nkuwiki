@@ -22,100 +22,127 @@
 
   <!-- 表单内容 -->
   <view class="post-form">
-    <!-- 标题输入 -->
-    <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
-      bindinput="onFormChange" data-field="title" maxlength="50" />
-    
-    <!-- 内容输入 -->
-    <textarea class="post-content" placeholder="分享你的想法..." value="{{form.content}}" 
-      bindinput="onFormChange" data-field="content" maxlength="5000" />
-    
-    <!-- 已选图片预览 -->
-    <view class="image-preview-list" wx:if="{{form.images && form.images.length > 0}}">
-      <view class="preview-title">已选择 {{form.images.length}}/9 张图片</view>
-      <view class="preview-grid">
-        <view class="preview-item" wx:for="{{form.images}}" wx:key="index">
-          <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}"></image>
-          <view class="delete-icon" bindtap="deleteImage" data-index="{{index}}">
-            <icon name="close" size="20" color="#fff"></icon>
-          </view>
-        </view>
-      </view>
+    <!-- 模式切换按钮 -->
+    <view class="mode-switch">
+      <view class="mode-item {{isMarkdownMode ? '' : 'active'}}" bindtap="switchToNormalMode">富文本模式</view>
+      <view class="mode-item {{isMarkdownMode ? 'active' : ''}}" bindtap="switchToMarkdownMode">Markdown</view>
     </view>
     
-    <!-- 工具栏 -->
-    <view class="toolbar">
-      <view class="tool-item" bindtap="onBoldTap"><text class="tool-icon">B</text></view>
-      <view class="tool-item" bindtap="onItalicTap"><text class="tool-icon">I</text></view>
-      <view class="tool-item" bindtap="chooseImage">
-        <icon name="image" size="24"></icon>
-      </view>
-      <view class="tool-item" bindtap="onAtTap"><text class="tool-icon">@</text></view>
-      <view class="wiki-tool" bindtap="toggleWikiMode">
-        <icon name="wiki" size="16"></icon>
-        <text>Wiki润色</text>
-      </view>
-    </view>
+    <!-- 标题输入 - 仅在非markdown模式下显示 -->
+    <block wx:if="{{!isMarkdownMode}}">
+      <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
+        bindinput="onFormChange" data-field="title" maxlength="50" />
+    </block>
+    
+    <!-- 内容输入/预览切换 -->
+    <text-area
+      value="{{form.content}}"
+      placeholder="分享你的想法..."
+      maxlength="5000"
+      height="300"
+      showCount="{{true}}"
+      autoHeight="{{true}}"
+      markdownMode="{{isMarkdownMode}}"
+      showToolbar="{{true}}"
+      title="{{form.title}}"
+      data-field="content"
+      bindinput="onFormChange"
+      bindimagetap="showImageUploader"
+      bindpreviewchange="onPreviewChange"
+      binderror="_showToptips"
+    ></text-area>
+    
+    <!-- 图片上传组件 -->
+    <image-uploader
+      id="imageUploader"
+      images="{{form.images}}"
+      bind:uploadcomplete="onImagesUploaded"
+      bind:choose="onImagesChoose"
+      maxCount="9"
+      width="160rpx"
+      height="160rpx"
+    ></image-uploader>
   </view>
 
-  <!-- 话题选择 -->
-  <view class="topic-section">
+  <!-- 标签栏 -->
+  <view class="tag-section">
     <view class="section-title">选择话题</view>
-    <view class="topic-list">
-      <view class="topic-tag {{form.category_id === 2 ? 'active' : ''}}" 
-        data-category="2" bindtap="onTopicSelect">#校园生活</view>
-      <view class="topic-tag {{form.category_id === 1 ? 'active' : ''}}" 
-        data-category="1" bindtap="onTopicSelect">#学习交流</view>
-      <view class="topic-tag {{form.category_id === 3 ? 'active' : ''}}" 
-        data-category="3" bindtap="onTopicSelect">#求助</view>
-      <view class="add-topic-tag" bindtap="onAddTopicTap">#添加话题</view>
-    </view>
-  </view>
-
-  <!-- Wiki润色建议 -->
-  <view class="wiki-section" wx:if="{{form.wikiKnowledge}}">
-    <view class="wiki-header">
-      <view class="wiki-title">
-        <icon name="wiki" size="20"></icon>
-        <text>Wiki 润色建议</text>
+    <view class="tag-list">
+      <view wx:for="{{['校园生活', '学习交流', '求助']}}" wx:key="*this" 
+            class="tag-item {{tagSelected[item] ? 'active' : ''}}" 
+            bindtap="selectTag" 
+            data-tag="{{item}}">
+        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
       </view>
-      <view class="wiki-apply" bindtap="applyWikiSuggestion">应用</view>
     </view>
-    <view class="wiki-suggestions">
-      <text>建议调整：1. 增加段落间的过渡，使文章更加连贯</text>
-      <text>2. 补充更多具体细节，增强文章说服力</text>
-      <text>3. 优化标点符号使用，提升可读性</text>
+
+    <view class="tag-input-container">
+      <input 
+        class="tag-input" 
+        placeholder="输入话题名称，回车添加" 
+        value="{{tagInputValue}}" 
+        bindinput="onTagInput" 
+        bindconfirm="addTag"
+      />
+      <view class="tag-add-btn" bindtap="addTag">添加</view>
+    </view>
+    
+    <!-- 自定义标签显示 -->
+    <view class="custom-tag-list" wx:if="{{customTags.length > 0}}">
+      <view wx:for="{{customTags}}" wx:key="*this" class="tag-item" bindtap="removeCustomTag" data-tag="{{item}}">
+        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
+      </view>
     </view>
   </view>
 
-  <!-- 文风选择 -->
-  <view class="style-section">
-    <view class="section-title">文风选择</view>
-    <view class="style-options">
-      <view class="style-option {{form.style === 'formal' ? 'active' : ''}}" 
-        data-style="formal" bindtap="onStyleSelect">正式</view>
-      <view class="style-option {{form.style === 'casual' ? 'active' : ''}}" 
-        data-style="casual" bindtap="onStyleSelect">轻松</view>
-      <view class="style-option {{form.style === 'humorous' ? 'active' : ''}}" 
-        data-style="humorous" bindtap="onStyleSelect">幽默</view>
-      <view class="style-option {{form.style === 'professional' ? 'active' : ''}}" 
-        data-style="professional" bindtap="onStyleSelect">专业</view>
+  <!-- 分类选择 -->
+  <view class="category-section">
+    <view class="section-title">选择分类</view>
+    <view class="category-list">
+      <view class="category-item {{form.category_id === 1 ? 'active' : ''}}" 
+        data-category="1" bindtap="onTopicSelect">
+        <icon name="study" size="40"></icon>
+        <text class="category-text">学习交流</text>
+      </view>
+      <view class="category-item {{form.category_id === 2 ? 'active' : ''}}" 
+        data-category="2" bindtap="onTopicSelect">
+        <icon name="life" size="40"></icon>
+        <text class="category-text">校园生活</text>
+      </view>
+      <view class="category-item {{form.category_id === 3 ? 'active' : ''}}" 
+        data-category="3" bindtap="onTopicSelect">
+        <icon name="job" size="40"></icon>
+        <text class="category-text">就业创业</text>
+      </view>
+      <view class="category-item {{form.category_id === 4 ? 'active' : ''}}" 
+        data-category="4" bindtap="onTopicSelect">
+        <icon name="club" size="40"></icon>
+        <text class="category-text">社团活动</text>
+      </view>
+      <view class="category-item {{form.category_id === 5 ? 'active' : ''}}" 
+        data-category="5" bindtap="onTopicSelect">
+        <icon name="lost" size="40"></icon>
+        <text class="category-text">失物招领</text>
+      </view>
     </view>
   </view>
 
   <!-- 底部设置 -->
   <view class="post-settings">
-    <view class="setting-item">
-      <text>公开</text>
-      <switch checked="{{form.isPublic}}" bindchange="onSwitchChange" data-field="isPublic" color="#5853e2" />
-    </view>
-    <view class="setting-item">
-      <text>允许评论</text>
-      <switch checked="{{form.allowComment}}" bindchange="onSwitchChange" data-field="allowComment" color="#5853e2" />
-    </view>
-    <view class="setting-item">
-      <text>wiki小知识</text>
-      <switch checked="{{form.wikiKnowledge}}" bindchange="onSwitchChange" data-field="wikiKnowledge" color="#5853e2" />
+    <view class="settings-title">发布设置</view>
+    <view class="setting-group">
+      <view class="setting-item {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
+        <icon name="eye" size="20"></icon>
+        <text class="setting-text">公开</text>
+      </view>
+      <view class="setting-item {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
+        <icon name="comment" size="20"></icon>
+        <text class="setting-text">允许评论</text>
+      </view>
+      <view class="setting-item {{form.wikiKnowledge ? 'active' : ''}}" bindtap="onSwitchChange" data-field="wikiKnowledge" data-value="{{!form.wikiKnowledge}}">
+        <icon name="txt" size="20"></icon>
+        <text class="setting-text">wiki小知识</text>
+      </view>
     </view>
   </view>
 

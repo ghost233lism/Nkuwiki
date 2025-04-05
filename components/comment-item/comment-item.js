@@ -1,18 +1,20 @@
-const { formatTime, createApiClient } = require('../../utils/util');
-
-// 创建评论API客户端
-const commentApi = {
-  likeComment: createApiClient('/api/wxapp/comment', {}).like,
-  deleteComment: createApiClient('/api/wxapp/comment', {}).delete
-};
+const { formatTime } = require('../../utils/util');
+const baseBehavior = require('../../behaviors/baseBehavior');
+const commentBehavior = require('../../behaviors/commentBehavior');
 
 Component({
+  behaviors: [baseBehavior, commentBehavior],
+
   properties: {
     comment: {
       type: Object,
       value: {}
     },
     openid: {
+      type: String,
+      value: ''
+    },
+    postId: {
       type: String,
       value: ''
     }
@@ -29,7 +31,11 @@ Component({
   },
 
   data: {
-    formattedComment: null
+    formattedComment: null,
+    isProcessing: {
+      like: false,
+      delete: false
+    }
   },
 
   methods: {
@@ -49,7 +55,7 @@ Component({
     onTapUser() {
       const { openid } = this.data.formattedComment;
       if (openid) {
-        wx.navigateTo({
+        this.navigateTo({
           url: `/pages/profile/profile?id=${openid}`
         });
       }
@@ -57,27 +63,73 @@ Component({
     
     // 点赞评论
     onTapLike() {
+      if (this.data.isProcessing.like) return;
+      
       const { id, isLiked } = this.data.formattedComment;
       
-      if (isLiked) {
-        this.unlikeComment(id);
-      } else {
-        this.likeComment(id);
-      }
+      // 设置处理中状态
+      this.setData({
+        'isProcessing.like': true
+      });
+      
+      // 更新UI状态（乐观更新）
+      this.updateLikeStatus(!isLiked);
+      
+      // 使用commentBehavior的_toggleCommentLike方法
+      this._toggleCommentLike(id)
+        .then(res => {
+          // 服务器返回的实际状态
+          const serverIsLiked = res.data?.is_liked || false;
+          const likeCount = res.data?.like_count || this.data.formattedComment.like_count || 0;
+          
+          // 以服务器返回为准更新状态
+          this.updateLikeStatus(serverIsLiked, likeCount);
+          
+          // 触发事件通知父组件
+          this.triggerEvent('like', { 
+            id: id, 
+            isLiked: serverIsLiked,
+            likeCount: likeCount
+          });
+        })
+        .catch(err => {
+          console.error('评论点赞失败:', err);
+          
+          // 恢复原状态
+          this.updateLikeStatus(isLiked);
+          
+          // 显示错误提示
+          this.showToast('操作失败，请稍后重试', 'error');
+        })
+        .finally(() => {
+          this.setData({
+            'isProcessing.like': false
+          });
+        });
     },
     
     // 回复评论
     onTapReply() {
       const { id, nickname } = this.data.formattedComment;
-      this.triggerEvent('reply', { id, nickname });
+      // 生成回复前缀
+      const replyPrefix = `回复 @${nickname}: `;
+      
+      this.triggerEvent('reply', { 
+        commentId: id, 
+        replyPrefix: replyPrefix,
+        nickname: nickname
+      });
     },
     
     // 删除评论
     onTapDelete() {
+      if (this.data.isProcessing.delete) return;
+      
       const { id, isOwner } = this.data.formattedComment;
       if (!isOwner) return;
       
-      wx.showModal({
+      // 显示确认对话框
+      this.showModal({
         title: '提示',
         content: '确定删除这条评论吗？',
         success: (res) => {
@@ -88,91 +140,47 @@ Component({
       });
     },
     
-    // 点赞评论
-    likeComment(commentId) {
-      commentApi.likeComment({
-        comment_id: commentId,
-        openid: this.data.openid
-      })
-        .then(res => {
-          if (res.code === 0) {
-            this.updateLikeStatus(true);
-            this.triggerEvent('like', { id: commentId });
-          } else {
-            wx.showToast({
-              title: res.message || '点赞失败',
-              icon: 'none'
-            });
-          }
-        })
-        .catch(err => {
-          console.debug('点赞评论失败:', err);
-          wx.showToast({
-            title: '网络错误',
-            icon: 'none'
-          });
-        });
-    },
-    
-    // 取消点赞评论
-    unlikeComment(commentId) {
-      commentApi.likeComment({
-        comment_id: commentId,
-        openid: this.data.openid
-      })
-        .then(res => {
-          if (res.code === 0) {
-            this.updateLikeStatus(false);
-            this.triggerEvent('like', { id: commentId });
-          } else {
-            wx.showToast({
-              title: res.message || '取消点赞失败',
-              icon: 'none'
-            });
-          }
-        })
-        .catch(err => {
-          console.debug('取消点赞评论失败:', err);
-          wx.showToast({
-            title: '网络错误',
-            icon: 'none'
-          });
-        });
-    },
-    
     // 删除评论
     deleteComment(commentId) {
-      commentApi.deleteComment(commentId)
+      // 设置处理中状态
+      this.setData({
+        'isProcessing.delete': true
+      });
+      
+      // 使用commentBehavior的_deleteComment方法
+      this._deleteComment(commentId)
         .then(res => {
-          if (res.code === 0) {
-            wx.showToast({
-              title: '删除成功',
-              icon: 'success'
-            });
-            this.triggerEvent('delete', { id: commentId });
-          } else {
-            wx.showToast({
-              title: res.message || '删除失败',
-              icon: 'none'
-            });
-          }
+          // 显示成功提示
+          this.showToast('删除成功', 'success');
+          
+          // 触发事件通知父组件
+          this.triggerEvent('delete', { 
+            id: commentId,
+            postId: this.data.postId
+          });
         })
         .catch(err => {
-          console.debug('删除评论失败:', err);
-          wx.showToast({
-            title: '网络错误',
-            icon: 'none'
+          console.error('删除评论失败:', err);
+          
+          // 显示错误提示
+          this.showToast('删除失败，请稍后重试', 'error');
+        })
+        .finally(() => {
+          this.setData({
+            'isProcessing.delete': false
           });
         });
     },
     
     // 更新点赞状态
-    updateLikeStatus(isLiked) {
+    updateLikeStatus(isLiked, likeCount) {
       const formattedComment = { ...this.data.formattedComment };
       formattedComment.isLiked = isLiked;
       
-      // 更新点赞计数
-      if (formattedComment.like_count !== undefined) {
+      // 如果提供了点赞数则使用，否则根据当前状态计算
+      if (likeCount !== undefined) {
+        formattedComment.like_count = likeCount;
+      } else if (formattedComment.like_count !== undefined) {
         formattedComment.like_count = isLiked 
           ? formattedComment.like_count + 1 
           : Math.max(0, formattedComment.like_count - 1);
@@ -197,13 +205,13 @@ Component({
     // 头像加载失败
     onAvatarError() {
       const formattedComment = { ...this.data.formattedComment };
-      formattedComment.avatar = '/assets/icons/default-avatar.png';
+      formattedComment.avatar = '/icons/avatar1.png';
       this.setData({ formattedComment });
     },
     
     // 图片加载失败
     onImageError(e) {
-      console.debug('图片加载失败', e);
+      console.error('图片加载失败', e);
     }
   }
 }); 

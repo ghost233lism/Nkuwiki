@@ -5,7 +5,8 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "loading": "/components/loading/loading",
-    "icon": "/components/icon/icon",
-    "post-list": "/components/post-list/post-list"
+    "post-list": "/components/post-list/post-list",
+    "post-item": "/components/post-item/post-item",
+    "nav-bar": "/components/nav-bar/nav-bar"
   }
 }

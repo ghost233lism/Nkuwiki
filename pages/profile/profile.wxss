@@ -1,59 +1,128 @@
 /* 样式表 */
 page {
-  background: #f8f8f8;
-  min-height: 100vh;
+  background-color: #f5f5f5;
+  height: 100%;
 }
 
 .container {
-  padding-bottom: 40rpx;
-  min-height: 100vh;
-}
-
-/* 解决page-status组件的高度问题 */
-.container > page-status {
-  min-height: calc(100vh - 180rpx);
-  display: block;
-}
-
-.header {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  padding-bottom: 40rpx;
+  background-color: #f5f5f5;
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 20rpx;
+  justify-content: center;
+  margin-top: 200rpx;
 }
 
-.title {
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #333;
+.loading-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80rpx;
 }
 
-.settings-icon {
-  width: 48rpx;
-  height: 48rpx;
+.loading-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background-color: #1aad19;
+  margin: 0 10rpx;
+  animation: loading 1.4s infinite ease-in-out both;
 }
 
-/* 菜单区域样式 */
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes loading {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  } 
+  40% { 
+    transform: scale(1.0);
+  }
+}
+
+.loading-text {
+  margin-top: 30rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 错误状态样式 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 200rpx;
+}
+
+.error-text {
+  margin: 30rpx 0;
+  font-size: 28rpx;
+  color: #666;
+  max-width: 80%;
+  text-align: center;
+}
+
+.error-btn {
+  padding: 0 40rpx;
+  height: 70rpx;
+  line-height: 70rpx;
+  font-size: 28rpx;
+  color: #fff;
+  background: #1aad19;
+  border-radius: 35rpx;
+  margin-top: 20rpx;
+}
+
+/* 内容区域样式 */
+.content-area {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 20rpx 0;
+}
+
+/* 用户卡片包装器 */
+.user-card-wrapper {
+  margin: 10rpx 0 20rpx;
+  border-radius: 12rpx;
+}
+
+/* 菜单区块样式 */
 .menu-section {
-  margin: 30rpx 30rpx;
-  background: transparent;
+  width: 100%;
+  margin-top: 30rpx;
+  background-color: transparent;
 }
 
 .menu-title {
-  font-size: 28rpx;
-  color: #666;
-  padding: 20rpx 30rpx 10rpx;
-  font-weight: 500;
+  font-size: 30rpx;
+  color: #888;
+  padding: 20rpx 30rpx;
 }
 
 .menu-cells {
-  background: #fff !important;
-  border-radius: 12rpx;
   margin-top: 0 !important;
-  overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  padding-bottom: 0;
 }
 
+/* 菜单项样式 */
 .menu-item {
   display: flex;
   justify-content: space-between;
@@ -66,45 +135,19 @@ page {
   align-items: center;
 }
 
-.menu-text {
-  font-size: 30rpx;
-  margin-left: 20rpx;
-  color: #333;
+.menu-item-right {
+  display: flex;
+  align-items: center;
 }
 
-.menu-item-right {
-  color: #999;
-  font-size: 28rpx;
+.menu-text {
+  margin-left: 20rpx;
+  font-size: 30rpx;
 }
 
 .menu-value {
-  margin-right: 10rpx;
-}
-
-/* 加载和错误状态样式 */
-.loading-container, .error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: 100rpx;
-}
-
-.error-text {
-  margin: 20rpx 0;
-  font-size: 28rpx;
   color: #999;
-}
-
-.error-btn {
-  margin-top: 20rpx;
-  padding: 0 40rpx;
-  height: 70rpx;
-  line-height: 70rpx;
   font-size: 28rpx;
-  color: #fff;
-  background: #1890ff;
-  border-radius: 35rpx;
 }
 
 /* weui样式覆盖 */
@@ -124,4 +167,21 @@ page {
 .weui-cell__ft_in-access {
   padding-right: 0 !important; 
   font-size: 28rpx !important;
+}
+
+/* WebKit样式 */
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  color: transparent;
+}
+
+/* 登录卡片包装器 */
+.login-wrapper {
+  margin: 30rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  padding: 30rpx;
 }

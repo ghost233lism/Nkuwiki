@@ -1,16 +1,17 @@
 {
   "navigationBarTitleText": "搜索",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "page-status": "/components/page-status/page-status",
-    "mp-searchbar": "weui-miniprogram/searchbar/searchbar",
-    "mp-toptips": "weui-miniprogram/toptips/toptips",
-    "mp-dialog": "weui-miniprogram/dialog/dialog",
+    "mp-searchbar": "/components/weui/searchbar/searchbar",
+    "mp-toptips": "/components/weui/toptips/toptips",
+    "mp-dialog": "/components/weui/dialog/dialog",
+    "nav-bar": "/components/nav-bar/nav-bar",
     "category-tabs": "/components/category-tabs/category-tabs",
     "search-history": "/components/search-history/search-history",
-    "post-list": "/components/post-list/post-list",
-    "empty": "/components/empty/empty"
+    "cell-status": "/components/cell-status/cell-status",
+    "post-list": "/components/post-list/post-list"
   }
 }

@@ -75,6 +75,7 @@ Component({
       'like': '/icons/like.png',
       'like-active': '/icons/liked.png',
       'comment': '/icons/comment.png',
+      'comment-active': '/icons/comment-active.png',
       'favorite': '/icons/favorite.png',
       'favorite-active': '/icons/favorited.png',
       'share': '/icons/wechat.png',
@@ -85,6 +86,9 @@ Component({
       'copy': '/icons/copy.png',
       'clear': '/icons/clear.png',
       'refresh': '/icons/refresh.png',
+      'image': '/icons/image.png',
+      'eye': '/icons/eye.png',
+      'eye-active': '/icons/eye-active.png',
       
       // 状态图标
       'success': '/icons/success.png',

@@ -143,7 +143,7 @@
 }
 
 /* 优化文字间距 */
-button.login-button {
+.login-button-text {
   letter-spacing: 1rpx !important;
   line-height: 1 !important;
 }

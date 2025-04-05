@@ -3,31 +3,73 @@ const {getSystemInfo, createApiClient, storage, nav} = require('./utils/index');
 
 App({
   async onLaunch() {
-    if (!wx.cloud) {console.debug('请使用 2.2.3 或以上的基础库以使用云能力');}
-    else {wx.cloud.init({env: this.globalData.cloudEnv, traceUser: true});}
-    
-    // 获取系统信息并存储
-    const systemInfo = getSystemInfo();
-    storage.set('systemInfo', systemInfo);
-    
-    // 更新状态栏高度到全局数据
-    this.globalData.statusBarHeight = systemInfo.statusBarHeight || 20;
-    
-    storage.set('defaultAvatar', this.globalData.defaultAvatar);
-    
-    const aboutApi = createApiClient('/api/wxapp', {about: {method: 'GET', path: '/about'}});
     try {
-      const res = await aboutApi.about();
-      if (res.code === 200) {
-        storage.set('aboutInfo', res.data);
-        const isLoggedIn = storage.get('isLoggedIn');
-
-        if(!isLoggedIn){
-          nav.reLaunch('/pages/login/login');
-        }else nav.reLaunch('/pages/index/index');
+      if (!wx.cloud) {
+        console.debug('请使用 2.2.3 或以上的基础库以使用云能力');
+      } else {
+        wx.cloud.init({
+          env: this.globalData.cloudEnv, 
+          traceUser: true
+        });
       }
-    } catch (err) {throw err;}
+      
+      // 获取系统信息并存储
+      const systemInfo = getSystemInfo();
+      storage.set('systemInfo', systemInfo);
+      
+      // 更新状态栏高度到全局数据
+      this.globalData.statusBarHeight = systemInfo.statusBarHeight || 20;
+      
+      storage.set('defaultAvatar', this.globalData.defaultAvatar);
+      
+      // 设置超时，防止about接口阻塞启动
+      const aboutPromise = new Promise(async (resolve) => {
+        const aboutApi = createApiClient('/api/wxapp', {about: {method: 'GET', path: '/about'}});
+        try {
+          const res = await aboutApi.about();
+          if (res.code === 200) {
+            storage.set('aboutInfo', res.data);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } catch (err) {
+          console.debug('获取关于信息失败', err);
+          resolve(false);
+        }
+      });
+      
+      // 5秒超时
+      const timeoutPromise = new Promise(resolve => {
+        setTimeout(() => resolve(false), 5000);
+      });
+      
+      // 不管about接口结果如何，都继续导航
+      await Promise.race([aboutPromise, timeoutPromise]);
+      
+      // 导航到首页或登录页
+      const isLoggedIn = storage.get('isLoggedIn');
+      try {
+        if (!isLoggedIn) {
+          await nav.reLaunch('/pages/login/login');
+        } else {
+          await nav.reLaunch('/pages/index/index');
+        }
+      } catch (err) {
+        console.debug('导航失败，尝试直接跳转', err);
+        // 直接使用wx API尝试再次导航
+        wx.reLaunch({
+          url: isLoggedIn ? '/pages/index/index' : '/pages/login/login',
+          fail: () => {
+            console.error('导航重试失败，可能需要重启小程序');
+          }
+        });
+      }
+    } catch (err) {
+      console.error('应用启动失败', err);
+    }
   },
+  
   globalData: {
     defaultAvatar: 'cloud://nkuwiki-0g6bkdy9e8455d93.6e6b-nkuwiki-0g6bkdy9e8455d93-1346872102/default/default-avatar.png',
     cloudEnv: 'nkuwiki-0g6bkdy9e8455d93',

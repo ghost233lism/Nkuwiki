@@ -1,25 +1,25 @@
 <view class="nav-bar" style="padding-top: {{statusBarHeight}}px; background-color: #ffffff;">
   <view class="nav-content" style="height: {{navBarHeight}}px;">
     <view class="left">
-      <view wx:if="{{showBack}}" class="nav-btn" bindtap="onBack">
-        <icon name="back" size="24" color="{{textColor}}" outline="{{false}}" />
+      <view wx:if="{{buttonMap.back.show}}" class="nav-btn" bindtap="onButtonTap" data-type="back">
+        <icon name="{{buttonMap.back.icon}}" size="24" color="{{textColor}}" outline="{{false}}" />
       </view>
-      <view wx:if="{{showHome}}" class="nav-btn" bindtap="onHome">
-        <icon name="home" size="24" color="{{textColor}}" outline="{{false}}" />
+      <view wx:if="{{buttonMap.home.show}}" class="nav-btn" bindtap="onButtonTap" data-type="home">
+        <icon name="{{buttonMap.home.icon}}" size="24" color="{{textColor}}" outline="{{false}}" />
       </view>
-      <view wx:if="{{showLogo}}" class="logo-container">
-        <icon name="logo" size="100" color="{{textColor}}" outline="{{false}}" />
+      <view wx:if="{{buttonMap.logo.show}}" class="logo-container">
+        <icon name="{{buttonMap.logo.icon}}" size="100" color="{{textColor}}" outline="{{false}}" />
       </view>
     </view>
     <view wx:if="{{title}}" class="title" style="color: {{textColor}};">{{title}}</view>
-    <view class="center-right" style="left: {{notificationLeft}};">
-      <view class="nav-btn" bindtap="onNotificationClick">
-        <icon name="{{hasUnread ? 'notification-unread' : 'notification'}}" size="28" color="{{textColor}}" outline="{{false}}" />
+    <view wx:if="{{buttonMap.notification.show}}" class="center-right" style="left: {{notificationLeft}};">
+      <view class="nav-btn" bindtap="onButtonTap" data-type="notification">
+        <icon name="{{buttonMap.notification.hasUnread ? buttonMap.notification.unreadIcon : buttonMap.notification.icon}}" size="28" color="{{textColor}}" outline="{{false}}" />
       </view>
     </view>
     <view class="right">
-      <view class="avatar-container" bindtap="onAvatarTap">
-        <icon name="profile" size="28" color="{{textColor}}" outline="{{false}}" />
+      <view wx:if="{{buttonMap.avatar.show}}" class="avatar-container" bindtap="onButtonTap" data-type="avatar">
+        <icon name="{{buttonMap.avatar.icon}}" size="28" color="{{textColor}}" outline="{{false}}" />
       </view>
     </view>
   </view>

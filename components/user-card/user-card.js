@@ -31,6 +31,21 @@ Component({
     currentUserOpenid: {
       type: String,
       value: ''
+    },
+    // 加载状态
+    loading: {
+      type: Boolean,
+      value: false
+    },
+    // 错误状态
+    error: {
+      type: Boolean,
+      value: false
+    },
+    // 错误信息
+    errorMsg: {
+      type: String,
+      value: ''
     }
   },
 
@@ -59,7 +74,7 @@ Component({
       return {
         ...user,
         nickname: user.nickname || user.nickName || '未知用户',
-        avatar: user.avatar || user.avatarUrl || '/assets/icons/default-avatar.png',
+        avatar: user.avatar || user.avatarUrl || '/icons/avatar1.png',
         bio: user.bio || user.signature || '',
         // 合并统计数据
         post_count: stats?.posts || user.post_count || 0,
@@ -189,8 +204,13 @@ Component({
     // 头像加载失败
     onAvatarError() {
       const formattedUser = { ...this.data.formattedUser };
-      formattedUser.avatar = '/assets/icons/default-avatar.png';
+      formattedUser.avatar = '/icons/avatar1.png';
       this.setData({ formattedUser });
+    },
+
+    // 重试加载
+    onRetry() {
+      this.triggerEvent('retry');
     }
   }
 }); 

@@ -1,100 +1,54 @@
-<!-- 个人中心页面 -->
+<!-- profile.wxml -->
 <view class="container">
   <!-- 自定义导航栏 -->
   <nav-bar 
-    title="个人中心"
-    textColor="#000000"
-    bind:notification="onNotificationTap"
-    bind:avatar="onAvatarTap"
+    nav-buttons="{{navButtons}}"
+    bind:navEvent="onCustomNavEvent"
   ></nav-bar>
 
-  <page-status loading="{{loading}}" error="{{error}}" retry-text="重试" hasMore="{{false}}">
-    <!-- 加载状态 -->
-    <loading 
-      wx:if="{{loading}}" 
-      show="{{true}}"
-      type="fullscreen"
-      text="加载中..."
-    />
-
-    <!-- 错误状态 -->
-    <error 
-      wx:elif="{{error}}"
-      text="{{errorMsg}}"
-      show="{{error}}"
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <!-- 用户卡片 - 直接使用其内置的cell-status -->
+    <user-card
+      userInfo="{{userInfo}}"
+      stats="{{stats}}"
+      isCurrentUser="{{true}}"
+      currentUserOpenid="{{userInfo.openid}}"
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bind:edit="navigateToEditProfile"
       bind:retry="onRetry"
     />
 
-    <!-- 内容区域 -->
-    <block wx:else>
-      <!-- 用户卡片 -->
-      <user-card
-        wx:if="{{userInfo}}"
-        userInfo="{{userInfo}}"
-        stats="{{stats}}"
-        isCurrentUser="{{true}}"
-        currentUserOpenid="{{userInfo.openid}}"
-        bind:edit="navigateToEditProfile"
-      />
+    <!-- 未登录提示 - 如果用户卡片不显示，则需要单独处理 -->
+    <view wx:if="{{!loading && !error && !userInfo}}" class="login-wrapper">
+      <login-card bind:login="login" />
+    </view>
 
-      <!-- 未登录提示 -->
-      <login-card 
-        wx:else
-        bind:login="login"
-      />
+    <!-- 功能菜单 -->
+    <menu-list
+      title="{{MENU_CONFIG.CONTENT.title}}"
+      items="{{menuItems}}" 
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bind:itemTap="onMenuItemTap"
+      bind:retry="onMenuRetry"
+    />
 
-      <!-- 功能菜单 -->
-      <view class="menu-section">
-        <view class="menu-title">{{MENU_CONFIG.CONTENT.title}}</view>
-        <mp-cells ext-class="menu-cells">
-          <mp-cell 
-            wx:for="{{menuItems}}" 
-            wx:key="index"
-            link
-            hover
-            data-index="{{index}}"
-            bindtap="onMenuItemTap"
-          >
-            <view class="menu-item">
-              <view class="menu-item-left">
-                <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
-                <text class="menu-text">{{item.title}}</text>
-              </view>
-              <view class="menu-item-right">
-                <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
-              </view>
-            </view>
-          </mp-cell>
-        </mp-cells>
-      </view>
-
-      <!-- 设置菜单 -->
-      <view class="menu-section">
-        <view class="menu-title">{{MENU_CONFIG.SETTINGS.title}}</view>
-        <mp-cells ext-class="menu-cells">
-          <mp-cell 
-            wx:for="{{settingItems}}" 
-            wx:key="index"
-            link
-            hover
-            data-index="{{index}}"
-            bindtap="onSettingItemTap"
-          >
-            <view class="menu-item">
-              <view class="menu-item-left">
-                <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
-                <text class="menu-text">{{item.title}}</text>
-              </view>
-              <view class="menu-item-right">
-                <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
-              </view>
-            </view>
-          </mp-cell>
-        </mp-cells>
-      </view>
-    </block>
-    
-    <!-- WEUI组件 -->
-    <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
-  </page-status>
+    <!-- 设置菜单 -->
+    <menu-list
+      title="{{MENU_CONFIG.SETTINGS.title}}"
+      items="{{settingItems}}" 
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bind:itemTap="onSettingItemTap"
+      bind:retry="onSettingRetry"
+    />
+  </view>
+  
+  <!-- WEUI组件 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 </view>

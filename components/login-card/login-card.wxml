@@ -26,7 +26,7 @@
         hover-class="button-hover"
       >
         <icon wx:if="{{!loading}}" class="login-button-icon" name="wechat" size="30" color="#fff"></icon>
-        微信一键登录
+        <text class="login-button-text">微信一键登录</text>
       </button>
     </view>
 

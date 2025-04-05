@@ -1,59 +1,55 @@
-<page-status loading="{{loading}}" error="{{error}}" retry-text="重试">
-  <!-- 加载状态 -->
-  <loading 
-    wx:if="{{loading}}" 
-    text="加载中..."
-  />
-
-  <!-- 错误状态 -->
-  <error 
-    wx:elif="{{error}}"
-    text="获取信息失败"
-    bind:retry="onRetry"
-  />
+<view class="container">
+  <!-- 导航栏 -->
+  <nav-bar title="关于我们" back></nav-bar>
 
   <!-- 内容区域 -->
-  <block wx:else>
-    <!-- Logo区域 -->
-    <logo-section
-      app-name="{{companyInfo.app_name}}"
-      version="{{companyInfo.version}}"
-    />
+  <view class="content-area">
+    <cell-status
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bindretry="onRetry">
 
-    <!-- 公司信息区域 -->
-    <mp-cells title="公司信息">
-      <mp-cell title="公司名称" value="{{companyInfo.company}}" />
-      <mp-cell title="项目介绍" value="{{companyInfo.description}}" />
-      <mp-cell 
-        title="联系邮箱" 
-        value="{{companyInfo.email}}"
-        bindtap="contactUs"
-        footer="点击复制"
-      />
-      <mp-cell 
-        title="官方网站" 
-        value="{{companyInfo.website}}"
-        link
-        url="{{companyInfo.website}}"
-      />
-      <mp-cell 
-        title="GitHub" 
-        value="{{companyInfo.github}}"
-        link
-        url="{{companyInfo.github}}"
-      />
-    </mp-cells>
+      <!-- Logo -->
+      <view class="logo-section">
+        <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+        <view class="app-name">NKU Wiki</view>
+        <view class="version">Version {{version}}</view>
+      </view>
 
-    <!-- 项目介绍 -->
-    <mp-cells title="项目介绍">
-      <mp-cell>
-        <view class="about-description">{{companyInfo.description}}</view>
-      </mp-cell>
-    </mp-cells>
+      <!-- 关于项目 -->
+      <view class="section">
+        <view class="section-title">关于项目</view>
+        <view class="section-content">
+          <text class="intro-text">NKU Wiki是南开大学知识共享平台，旨在为南开学子提供学习资源、经验交流、答疑解惑的社区。</text>
+        </view>
+      </view>
 
-    <!-- 版权信息 -->
-    <view class="copyright">
-      <text>{{companyInfo.copyright}}</text>
-    </view>
-  </block>
-</page-status>
+      <!-- 相关链接 -->
+      <view class="section">
+        <view class="section-title">相关链接</view>
+        <mp-cells>
+          <mp-cell link hover value="官方网站" bindtap="onLinkTap" data-link="website"></mp-cell>
+          <mp-cell link hover value="用户协议" bindtap="onLinkTap" data-link="agreement"></mp-cell>
+          <mp-cell link hover value="隐私政策" bindtap="onLinkTap" data-link="privacy"></mp-cell>
+        </mp-cells>
+      </view>
+
+      <!-- 开发团队 -->
+      <view class="section">
+        <view class="section-title">开发团队</view>
+        <mp-cells>
+          <mp-cell wx:for="{{team}}" wx:key="name" value="{{item.name}}" footer="{{item.role}}"></mp-cell>
+        </mp-cells>
+      </view>
+
+      <!-- 版权信息 -->
+      <view class="copyright">
+        <text>© 2024 NKU Wiki Team. All rights reserved.</text>
+      </view>
+    </cell-status>
+  </view>
+
+  <!-- 顶部通知 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+</view>

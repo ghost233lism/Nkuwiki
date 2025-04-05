@@ -3,10 +3,7 @@
 <view class="container">
   <!-- 自定义导航栏 -->
   <nav-bar 
-    showLogo="{{true}}"
-    hasUnread="{{hasUnreadNotification}}"
-    bind:notification="onNotificationTap"
-    bind:avatar="onAvatarTap"
+    nav-buttons="{{navButtons}}"
   ></nav-bar>
 
   <!-- 搜索框 - 使用简单的input避免重复 -->
