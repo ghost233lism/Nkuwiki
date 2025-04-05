@@ -7,7 +7,7 @@ Component({
     },
     showBack: {
       type: Boolean,
-      value: false
+      value: true
     },
     showHome: {
       type: Boolean,

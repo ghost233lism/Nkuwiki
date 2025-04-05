@@ -16,12 +16,11 @@
     />
 
     <view class="scroll-position">
-      <text>\n</text>
     </view>
 
     <!-- 通知列表 -->
     <scroll-view
-      scroll-y = true
+      scroll-y
       enable-back-to-top
       bindscrolltolower="onReachBottom"
       class="notification-list"
@@ -75,7 +74,7 @@
 
     <!-- 全部标记已读按钮 -->
     <view class="footer" wx:if="{{activeTab === 0 && notifications.length}}">
-      <button class="mark-all-btn" bindtap="markAllRead">
+      <button class="mark-all-btn" bindtap="markAllAsRead">
         全部标记为已读
       </button>
     </view>
