@@ -130,6 +130,13 @@
 
 .footer {
   padding: 20rpx;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .mark-all-btn {
@@ -184,7 +191,11 @@
   font-size: 24rpx;
 }
 
-page {
+.page {
   background: #f5f5f5;
   min-height: 100vh;
-} 
+}
+
+.scroll-position{
+  padding: 16%;
+}

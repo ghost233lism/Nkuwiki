@@ -12,12 +12,16 @@
     <nav-tab-bar 
       tabTitles="{{[tabs[0].title, tabs[1].title]}}" 
       activeTab="{{activeTab}}" 
-      bind:change="onTabsChange"
+      bind:change="onTabChange"
     />
 
+    <view class="scroll-position">
+      <text>\n</text>
+    </view>
+
     <!-- 通知列表 -->
-    <scroll-view 
-      scroll-y 
+    <scroll-view
+      scroll-y = true
       enable-back-to-top
       bindscrolltolower="onReachBottom"
       class="notification-list"

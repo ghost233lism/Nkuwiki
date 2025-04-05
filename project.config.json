@@ -37,8 +37,6 @@
     "checkInvalidKey": true,
     "checkSiteMap": true,
     "compileHotReLoad": false,
-    "useApiHook": true,
-    "useApiHostProcess": true,
     "useMultiFrameRuntime": true,
     "useStaticServer": true,
     "nodeModules": true
@@ -51,10 +49,9 @@
   "simulatorPluginLibVersion": {},
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "cloudfunctionRoot": "cloudfunctions/",
-  "appid": "wx4af1d8244dee8b7e",
   "packOptions": {
     "ignore": [],
     "include": []
   },
-  "projectname": "nkuwiki"
+  "appid": "wx4af1d8244dee8b7e"
 }
