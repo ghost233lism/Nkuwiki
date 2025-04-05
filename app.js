@@ -5,17 +5,26 @@ App({
   async onLaunch() {
     if (!wx.cloud) {console.debug('请使用 2.2.3 或以上的基础库以使用云能力');}
     else {wx.cloud.init({env: this.globalData.cloudEnv, traceUser: true});}
+    
+    // 获取系统信息并存储
+    const systemInfo = getSystemInfo();
+    storage.set('systemInfo', systemInfo);
+    
+    // 更新状态栏高度到全局数据
+    this.globalData.statusBarHeight = systemInfo.statusBarHeight || 20;
+    
     storage.set('defaultAvatar', this.globalData.defaultAvatar);
-    storage.set('systemInfo', getSystemInfo());
+    
     const aboutApi = createApiClient('/api/wxapp', {about: {method: 'GET', path: '/about'}});
     try {
       const res = await aboutApi.about();
       if (res.code === 200) {
         storage.set('aboutInfo', res.data);
         const isLoggedIn = storage.get('isLoggedIn');
+
         if(!isLoggedIn){
-          nav.relaunch('/pages/login/login');
-        }else nav.relaunch('/pages/index/index');
+          nav.reLaunch('/pages/login/login');
+        }else nav.reLaunch('/pages/index/index');
       }
     } catch (err) {throw err;}
   },

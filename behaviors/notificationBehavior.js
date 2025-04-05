@@ -46,7 +46,7 @@ module.exports = Behavior({
     /**
      * 获取通知列表
      * @param {Object} params - 查询参数
-     * @returns {Promise<Array|null>} 通知列表或null
+     * @returns {Promise<{list: Array, total: number}|null>} 通知列表和总数，或null
      */
     async _getNotificationList(params = {}) {
       const openid = storage.get('openid');
@@ -54,7 +54,39 @@ module.exports = Behavior({
 
       try {
         const res = await notificationApi.getList({ openid, ...params });
-        return res.code === 200 ? res.data : null;
+        
+        if (res.code !== 200) {
+          console.debug('获取通知列表API响应异常:', res);
+          return null;
+        }
+        
+        // 处理API返回的不同格式
+        let list = [];
+        let total = 0;
+        
+        if (Array.isArray(res.data)) {
+          // 直接是数组的情况
+          list = res.data;
+          total = res.pagination?.total || list.length;
+        } else if (res.data && res.data.list && Array.isArray(res.data.list)) {
+          // data.list格式的情况
+          list = res.data.list;
+          total = res.pagination?.total || res.data.unread_count || list.length;
+        } else if (typeof res.data === 'object') {
+          // 其他对象格式
+          console.debug('通知API返回了非预期格式:', res.data);
+          list = res.data.list || [];
+          total = res.data.total || list.length;
+        }
+        
+        return {
+          list,
+          total,
+          pagination: res.pagination || { 
+            total, 
+            has_more: list.length < total
+          }
+        };
       } catch (err) {
         console.debug('获取通知列表失败:', err);
         return null;

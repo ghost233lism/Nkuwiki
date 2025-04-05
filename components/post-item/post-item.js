@@ -229,7 +229,7 @@ Component({
       const postId = this.data.post.id;
       if (postId) {
         wx.navigateTo({
-          url: `/pages/post-detail/post-detail?post_id=${postId}`
+          url: `/pages/post/detail/detail?id=${postId}`
         });
       }
     },
@@ -374,7 +374,7 @@ Component({
       const postId = this.data.post.id;
       if (postId) {
         wx.navigateTo({
-          url: `/pages/post-detail/post-detail?post_id=${postId}&focus=comment`
+          url: `/pages/post/detail/detail?id=${postId}&focus=comment`
         });
       }
     },
@@ -443,7 +443,7 @@ Component({
       const postId = this.data.post.id;
       if (postId) {
         wx.navigateTo({
-          url: `/pages/post-detail/post-detail?post_id=${postId}&tab=comment`
+          url: `/pages/post/detail/detail?id=${postId}&tab=comment`
         });
       }
     },

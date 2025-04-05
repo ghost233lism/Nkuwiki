@@ -4,7 +4,7 @@
   "backgroundColor": "#f7f9fc",
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "mp-loading": "weui-miniprogram/loading/loading",
+    "loading": "/components/loading/loading",
     "icon": "/components/icon/icon",
     "post-list": "/components/post-list/post-list"
   }

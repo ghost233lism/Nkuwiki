@@ -41,9 +41,19 @@ module.exports = Behavior({
       try {
         const res = await commentApi.list(params);
         if (res.code !== 200) throw new Error(res.message || '获取评论列表失败');
+        
+        // 处理新的响应格式：直接使用data数组作为评论列表
+        if (Array.isArray(res.data)) {
+          return {
+            list: res.data, 
+            total: res.pagination?.total || res.data.length
+          };
+        }
+        
+        // 兼容旧格式
         return { 
-          list: res.data || [], 
-          total: res.pagination?.total || 0 
+          list: res.data?.list || [], 
+          total: res.pagination?.total || res.data?.total || 0 
         };
       } catch (err) {
         console.debug('获取评论失败:', err);
@@ -95,11 +105,28 @@ module.exports = Behavior({
           openid 
         });
         
-        if (res.code !== 200 || !res.data) {
+        if (res.code !== 200) {
           throw new Error(res.message || '评论失败');
         }
         
-        return res.data;
+        // 处理新的响应格式，从details中获取comment_id
+        if (res.details?.comment_id) {
+          // 如果details中有comment_id，创建一个简单的评论对象返回
+          return {
+            id: res.details.comment_id,
+            post_id: postId,
+            content: content.trim(),
+            parent_id: parentId,
+            openid,
+            // 添加创建时间
+            create_time: new Date().toISOString()
+          };
+        } else if (res.data) {
+          // 兼容旧格式，如果data中有完整评论数据
+          return res.data;
+        }
+        
+        throw new Error('评论创建成功但未返回评论数据');
       } catch (err) {
         console.debug('创建评论失败:', err);
         return null;

@@ -10,7 +10,6 @@
     "empty": "/components/empty/empty",
     "icon": "/components/icon/icon",
     "post-list": "/components/post-list/post-list",
-    "mp-loading": "/miniprogram_npm/weui-miniprogram/loading/loading",
     "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar"
   }
 } 
