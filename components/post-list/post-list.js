@@ -243,7 +243,6 @@ Component({
             // 更新数据
             this.setData({ post: updatedPosts });
             console.debug('帖子状态已更新');
-            console.log(posts);
           }
         } else {
           console.debug('获取帖子状态返回错误:', statusRes);
