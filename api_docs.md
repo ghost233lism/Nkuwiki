@@ -824,6 +824,7 @@ API接口的参数类型规范如下：
       "nickname": "用户昵称",
       "avatar": "用户头像URL",
       "bio": "用户个人简介",
+      "bio": "用户个人简介",
       "category_id": 1,
       "title": "帖子标题",
       "content": "帖子内容",
