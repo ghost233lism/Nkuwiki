@@ -121,17 +121,19 @@
 }
 
 .unread-dot {
+  position: relative;
+  right: 5%;
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: #EE0000;
   margin-left: 20rpx;
 }
 
 .footer {
   padding: 20rpx;
   position: fixed;
-  bottom: 0;
+  bottom: 5%;
   width: 100%;
   display: flex;
   align-items: center;
