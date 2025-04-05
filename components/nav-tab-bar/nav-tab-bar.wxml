@@ -2,8 +2,8 @@
   <!-- 顶部导航栏 -->
   <nav-bar
     title="{{title}}"
-    show-back="{{showBack}}"
-    show-home="{{showHome}}"
+    showBack="{{showBack}}"
+    showHome="{{showHome}}"
     bg-color="{{bgColor}}"
     text-color="{{textColor}}"
   />

@@ -2,3 +2,4 @@
 .vscode/
 .idea/
 cloudfunctions/*/node_modules
+node_modules/

@@ -257,7 +257,7 @@ Component({
     _onLikeTap() {
       const post = this.data.post;
       if (!post || !post.id) return;
-      
+
       // 检查用户登录状态
       const openid = this.getStorage('openid');
       if (!openid) {
@@ -267,8 +267,8 @@ Component({
 
       const isLiked = this.data.isLiked;
       const newLikeCount = post.like_count + (isLiked ? -1 : 1);
-      
-      // 乐观更新UI
+
+      // 立刻更新UI
       this.setData({
         isLiked: !isLiked,
         'post.like_count': newLikeCount >= 0 ? newLikeCount : 0,
@@ -282,15 +282,16 @@ Component({
             // 获取服务器返回的状态数据
             // 服务器返回格式: {data: {"post_id": {is_liked: true, like_count: 2}}}
             const postId = post.id.toString();
-            const statusData = res.data[postId] || {};
-            
+            const statusData = res.data || {};
+
             // 使用服务器返回的状态更新
             this.setData({
               isLiked: statusData.is_liked || false,
               'post.like_count': statusData.like_count || 0,
               'post.is_liked': statusData.is_liked ? 1 : 0
             });
-            
+
+
             // 触发事件通知父组件
             this.triggerEvent('like', {
               id: post.id,
@@ -340,7 +341,7 @@ Component({
             // 获取服务器返回的状态数据
             // 服务器返回格式: {data: {"post_id": {is_favorited: true, favorite_count: 2}}}
             const postId = post.id.toString();
-            const statusData = res.data[postId] || {};
+            const statusData = res.data || {};
             
             // 使用服务器返回的状态更新
             this.setData({

@@ -12,7 +12,7 @@ Page({
 
   onLoad: async function() {
     // 确保用户已登录
-    const isLoggedIn = await this.ensureLogin();
+    const isLoggedIn = await this._checkLogin();
     if (!isLoggedIn) return;
 
     // 加载发现页数据
