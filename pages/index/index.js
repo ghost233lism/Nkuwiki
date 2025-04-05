@@ -18,6 +18,19 @@ const searchApi = createApiClient('/api/wxapp/search', {
   }
 });
 
+const notificationApi = createApiClient('/api/wxapp/notificationsApi', {
+  search: {
+    method: 'GET',
+    path: '',
+    params: {
+      keyword: true,
+      search_type: false,
+      page: false,
+      limit: false
+    }
+  }
+})
+
 // 分类配置
 const CATEGORY_CONFIG = [
   { category_id: 1, tag:'study', text: '学习交流' },
@@ -152,7 +165,10 @@ Page({
       // 静默检查未读通知
       const openid = this.getStorage('openid');
       if (openid) {
-        this.checkUnreadNotification().catch(err => {
+        this.checkUnreadNotification().
+            then(res=>{
+              console.log(res);
+        }).catch(err => {
           console.debug('检查未读通知失败:', err);
         });
       }
@@ -179,6 +195,7 @@ Page({
     if (postList) {
       postList.loadInitialData();
     }
+
     wx.stopPullDownRefresh();
   },
 
