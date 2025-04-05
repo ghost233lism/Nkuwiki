@@ -46,3 +46,7 @@ page {
 .content-area {
   margin-top: 150rpx;
 }
+
+.page-position {
+  padding: 9%;
+}

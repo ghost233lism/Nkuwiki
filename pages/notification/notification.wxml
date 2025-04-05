@@ -12,12 +12,15 @@
     <nav-tab-bar 
       tabTitles="{{[tabs[0].title, tabs[1].title]}}" 
       activeTab="{{activeTab}}" 
-      bind:change="onTabsChange"
+      bind:change="onTabChange"
     />
 
+    <view class="scroll-position">
+    </view>
+
     <!-- 通知列表 -->
-    <scroll-view 
-      scroll-y 
+    <scroll-view
+      scroll-y
       enable-back-to-top
       bindscrolltolower="onReachBottom"
       class="notification-list"
@@ -71,7 +74,7 @@
 
     <!-- 全部标记已读按钮 -->
     <view class="footer" wx:if="{{activeTab === 0 && notifications.length}}">
-      <button class="mark-all-btn" bindtap="markAllRead">
+      <button class="mark-all-btn" bindtap="markAllAsRead">
         全部标记为已读
       </button>
     </view>
