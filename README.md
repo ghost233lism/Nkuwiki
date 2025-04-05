@@ -70,13 +70,14 @@ services/app/
 │   ├── button/         # 按钮
 │   ├── card/           # 卡片
 │   ├── category-tabs/  # 分类标签页
+│   ├── cell-status/    # 单元格状态组件
+│   ├── comment-input/  # 评论输入框
 │   ├── comment-item/   # 评论项
 │   ├── comment-list/   # 评论列表
-│   ├── empty/          # 空状态
-│   ├── error/          # 错误状态
 │   ├── floating-button/ # 浮动按钮
 │   ├── form-item/      # 表单项
 │   ├── form-panel/     # 表单面板
+│   ├── function-grid-menu/ # 功能网格菜单
 │   ├── icon/           # 图标
 │   ├── image-uploader/ # 图片上传
 │   ├── input-field/    # 输入框
@@ -86,7 +87,6 @@ services/app/
 │   ├── menu-list/      # 菜单列表
 │   ├── nav-bar/        # 导航栏
 │   ├── nav-tab-bar/    # 底部标签栏
-│   ├── page-status/    # 页面状态
 │   ├── picker-field/   # 选择器
 │   ├── post-item/      # 帖子项
 │   ├── post-list/      # 帖子列表
@@ -94,12 +94,9 @@ services/app/
 │   ├── search-history/ # 搜索历史
 │   ├── setting-item/   # 设置项
 │   ├── text-area/      # 文本区域
-│   └── user-card/      # 用户卡片
-├── wxcomponents/       # 第三方组件
-│   ├── towxml/         # Markdown/HTML渲染组件
-│   └── function-grid-menu/ # 功能网格菜单
-├── miniprogram_npm/    # npm构建后的第三方库
-│   ├── weui-miniprogram/  # WEUI组件库
+│   ├── towxml/         # Markdown渲染组件
+│   ├── user-card/      # 用户卡片
+│   └── weui/           # WeUI组件
 ├── utils/              # 工具函数
 │   ├── util.js         # 通用工具函数
 ├── cloudfunctions/     # 云函数
@@ -363,6 +360,213 @@ Page({
 - 点击标签：自动跳转至相关标签页面
 
 这种"智能组件"设计是本项目的特色，通过在组件内部集成behavior提供完整功能，使页面代码更加精简。使用者只需提供数据，组件自动处理交互和业务逻辑，无需在页面层面处理事件绑定和回调。
+
+##### 使用状态管理组件 (`cell-status`)
+
+`cell-status`组件是一个强大的状态管理组件，用于统一处理加载、错误、空状态和成功状态的显示，使页面代码更加简洁：
+
+```html
+<!-- wxml文件中使用 -->
+<cell-status 
+  status="{{status}}" 
+  error-msg="{{errorMsg}}"
+  empty-text="暂无数据"
+  loading-text="加载中..."
+  has-more="{{hasMore}}"
+  bind:retry="handleRetry"
+  bind:loadMore="handleLoadMore">
+  
+  <!-- 正常内容放在这里 -->
+  <view slot="content">
+    <!-- 您的内容 -->
+  </view>
+  
+</cell-status>
+```
+
+```javascript
+// js文件中
+Page({
+  data: {
+    status: 'loading', // loading, error, empty, success, normal
+    errorMsg: '',
+    hasMore: true,
+    // 其他数据
+  },
+  
+  onLoad() {
+    this.loadData();
+  },
+  
+  // 加载数据
+  async loadData() {
+    try {
+      this.setData({ status: 'loading' });
+      
+      // 调用API或执行数据加载逻辑
+      const result = await someApiCall();
+      
+      if (result.data && result.data.length > 0) {
+        this.setData({
+          dataList: result.data,
+          status: 'normal',
+          hasMore: result.has_more
+        });
+      } else {
+        // 设置空状态
+        this.setData({ status: 'empty' });
+      }
+    } catch (err) {
+      console.debug('加载数据失败:', err);
+      this.setData({
+        status: 'error',
+        errorMsg: '加载失败，请重试'
+      });
+    }
+  },
+  
+  // 重试处理
+  handleRetry() {
+    this.loadData();
+  },
+  
+  // 加载更多
+  handleLoadMore() {
+    // 实现加载更多逻辑
+  }
+});
+```
+
+**注意事项**：
+- 不要将`cell-status`组件包裹在整个页面外面，它应该只管理特定内容块的状态
+- 正常内容必须放在组件的默认插槽或`content`具名插槽中
+- `status`属性控制显示状态，可选值有`loading`、`error`、`empty`、`success`、`normal`
+- 当有更多数据需要分页加载时，设置`has-more`属性和监听`loadMore`事件
+
+##### 使用功能网格菜单 (`function-grid-menu`)
+
+`function-grid-menu`组件提供了网格布局的功能菜单，适合用于功能入口的展示：
+
+```html
+<!-- wxml文件中使用 -->
+<function-grid-menu
+  title="常用功能"
+  menu-items="{{menuItems}}"
+  bind:itemtap="handleMenuItemTap">
+</function-grid-menu>
+```
+
+```javascript
+// js文件中
+Page({
+  data: {
+    menuItems: [
+      { icon: 'post', text: '发布', type: 'post' },
+      { icon: 'question', text: '提问', type: 'question' },
+      { icon: 'favorite', text: '收藏', type: 'favorite' },
+      { icon: 'history', text: '历史', type: 'history' }
+    ]
+  },
+  
+  // 点击菜单项处理
+  handleMenuItemTap(e) {
+    const { type } = e.detail;
+    
+    // 根据类型执行不同操作
+    switch(type) {
+      case 'post':
+        wx.navigateTo({ url: '/pages/post/create' });
+        break;
+      case 'question':
+        wx.navigateTo({ url: '/pages/question/create' });
+        break;
+      case 'favorite':
+        wx.navigateTo({ url: '/pages/profile/favorite' });
+        break;
+      case 'history':
+        wx.navigateTo({ url: '/pages/profile/history' });
+        break;
+    }
+  }
+});
+```
+
+##### 使用Markdown渲染组件 (`towxml`)
+
+`towxml`是第三方的Markdown/HTML渲染组件，本项目集成了该组件用于渲染富文本内容：
+
+```html
+<!-- wxml文件中使用 -->
+<towxml 
+  nodes="{{article.nodes}}" 
+  base-url="{{baseUrl}}"
+  bind:tap="handleLinkTap">
+</towxml>
+```
+
+```javascript
+// js文件中
+const towxml = require('../../components/towxml/index');
+
+Page({
+  data: {
+    article: {},
+    baseUrl: 'https://example.com'
+  },
+  
+  onLoad(options) {
+    const { content } = options;
+    if (content) {
+      this.renderMarkdown(content);
+    }
+  },
+  
+  // 渲染Markdown内容
+  renderMarkdown(content) {
+    // 调用towxml解析markdown
+    const article = towxml.toJson(
+      content,               // markdown或html字符串
+      'markdown',            // 'markdown'或'html'
+      this.data.baseUrl,     // 图片、代码等资源的相对基础路径
+      {
+        theme: 'light',      // 主题，light或dark
+        highlight: true      // 是否代码高亮
+      }
+    );
+    
+    this.setData({ article });
+  },
+  
+  // 处理链接点击
+  handleLinkTap(e) {
+    const { href } = e.detail;
+    
+    if (href) {
+      // 处理链接跳转逻辑
+      if (href.startsWith('http')) {
+        // 外部链接
+        wx.setClipboardData({
+          data: href,
+          success: () => {
+            wx.showToast({
+              title: '链接已复制',
+              icon: 'success'
+            });
+          }
+        });
+      } else {
+        // 内部链接，可以在这里处理页面跳转
+        wx.navigateTo({ url: href });
+      }
+    }
+  }
+});
+```
+
+**注意事项**：
+- `towxml`组件支持Markdown和HTML格式转换
+- 可以通过`theme`属性设置明暗主题
+- 必须提供`base-url`属性来指定资源基础路径
 
 #### 工具函数复用 (Utils)
 
