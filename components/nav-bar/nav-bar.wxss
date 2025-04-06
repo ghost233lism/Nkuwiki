@@ -3,33 +3,81 @@
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999;
+  z-index: 999;
   background: #ffffff;
-  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.with-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .nav-content {
   position: relative;
-  height: 100rpx;
-  padding: 0 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16rpx;
   box-sizing: border-box;
 }
 
-.left {
-  position: absolute;
-  left: 10rpx;
-  top: 50%;
-  transform: translateY(-50%);
+/* 左侧按钮区域 */
+.left-area {
   display: flex;
   align-items: center;
+  height: 100%;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-.nav-btn {
-  height: 72rpx;
-  width: 72rpx;
+/* 中间标题区域 */
+.title-area {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none; /* 让点击事件穿透到下层 */
+  z-index: 5;
+}
+
+.title-text {
+  font-size: 34rpx;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* 右侧区域 */
+.right-area {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* 导航按钮样式 */
+.nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72rpx;
+  height: 72rpx;
+  padding: 0 8rpx;
+  margin-right: 8rpx;
+}
+
+.button-text {
+  font-size: 28rpx;
+  margin-left: 4rpx;
 }
 
 .logo-container {
@@ -39,20 +87,6 @@
   padding-left: 0rpx;
   width: 160rpx;
   height: 80rpx;
-}
-
-.title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 34rpx;
-  font-weight: 500;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 60%;
 }
 
 /* 添加中间偏右的通知按钮位置 */

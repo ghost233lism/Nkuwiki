@@ -71,8 +71,8 @@ App({
   },
   
   globalData: {
-    defaultAvatar: 'cloud://nkuwiki-0g6bkdy9e8455d93.6e6b-nkuwiki-0g6bkdy9e8455d93-1346872102/default/default-avatar.png',
-    cloudEnv: 'nkuwiki-0g6bkdy9e8455d93',
+    defaultAvatar: 'cloud://cloud1-7gu881ir0a233c29.636c-cloud1-7gu881ir0a233c29-1352978573/avatar1.png',
+    cloudEnv: 'cloud1-7gu881ir0a233c29',
     version: '0.0.1',
     API_CONFIG: {
       base_url: 'https://nkuwiki.com',

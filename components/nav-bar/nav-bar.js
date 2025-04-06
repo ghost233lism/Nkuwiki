@@ -5,10 +5,12 @@ Component({
     // 启用简化的样式隔离
     styleIsolation: 'isolated',
     // 允许页面样式覆盖组件样式
-    pureDataPattern: /^_/
+    pureDataPattern: /^_/,
+    multipleSlots: true // 启用多slot支持
   },
 
   properties: {
+    // 导航栏标题
     title: {
       type: String,
       value: ''
@@ -18,36 +20,81 @@ Component({
       type: String,
       value: '#000000'
     },
-    // 应用工厂生成模式 - 只传必要参数，其他用默认值
-    // 示例1: [ {type: 'notification', hasUnread: true} ]
-    // 示例2: [ {type: 'back'}, {type: 'home'} ]
+    // 背景颜色
+    bgColor: {
+      type: String,
+      value: '#ffffff'
+    },
+    // 是否显示阴影
+    showShadow: {
+      type: Boolean,
+      value: true
+    },
+    // 是否自动调整标题宽度
+    autoAdjustTitleWidth: {
+      type: Boolean,
+      value: true
+    },
+    // 快捷按钮属性 (简化调用)
+    showBack: {
+      type: Boolean,
+      value: true,
+      observer: function(newVal) {
+        this.updateQuickButtons();
+      }
+    },
+    showHome: {
+      type: Boolean,
+      value: false,
+      observer: function(newVal) {
+        this.updateQuickButtons();
+      }
+    },
+    showNotification: {
+      type: Boolean,
+      value: false,
+      observer: function(newVal) {
+        this.updateQuickButtons();
+      }
+    },
+    showAvatar: {
+      type: Boolean,
+      value: true,
+      observer: function(newVal) {
+        this.updateQuickButtons();
+      }
+    },
+    // 高级配置 (完整配置，优先级更高)
     navButtons: {
       type: Array,
-      value: []
-    }
+      value: [],
+      observer: function(newVal) {
+        this.initNavButtons();
+      }
+    },
   },
 
   data: {
     statusBarHeight: 0,
-    navBarHeight: 50,
+    navBarHeight: 48,
     totalHeight: 0,
     notificationLeft: '140rpx',
+    buttons: [],
     // 导航按钮映射，方便在WXML和方法中使用
     buttonMap: {},
     // 默认按钮配置
-    defaultButtons: {
+    defaultButtonConfig: {
       back: {
         type: 'back',
         icon: 'back',
-        show: false,
-        url: '',
-        delta: 1
+        text: '返回',
+        show: false
       },
       home: {
         type: 'home',
         icon: 'home',
-        show: false,
-        url: '/pages/index/index'
+        text: '首页',
+        show: false
       },
       logo: {
         type: 'logo',
@@ -68,46 +115,283 @@ Component({
         show: false,
         url: '/pages/profile/profile'
       }
+    },
+    titleMaxWidth: '60%', // 标题最大宽度，会根据按钮自动调整
+    layout: {
+      leftWidth: 0,
+      rightWidth: 0
     }
   },
 
   lifetimes: {
     attached() {
-      // 获取系统信息
-      const systemInfo = storage.get('systemInfo')
-      const statusBarHeight = systemInfo.statusBarHeight
-      
-      // 根据不同平台设置导航栏高度
-      let navBarHeight = 50;
-      if (systemInfo.platform === 'android') {
-        navBarHeight = 54;
+      this.initSystemInfo();
+      // 初始化时优先处理navButtons，如果为空，则使用快捷属性
+      if (this.properties.navButtons && this.properties.navButtons.length > 0) {
+        this.initNavButtons();
+      } else {
+        this.updateQuickButtons();
       }
-      
-      // 设置总高度
-      const totalHeight = statusBarHeight + navBarHeight;
-      
-      // 初始化按钮映射
-      this.initButtonMap();
-      
-      // 计算通知按钮位置
-      this.calculateNotificationPosition();
-      
-      this.setData({
-        statusBarHeight,
-        navBarHeight,
-        totalHeight
-      });
     }
   },
   
   observers: {
     'navButtons': function(navButtons) {
-      this.initButtonMap();
-      this.calculateNotificationPosition();
+      this.initNavButtons();
     }
   },
 
   methods: {
+    // 初始化系统信息
+    initSystemInfo() {
+      try {
+        // 获取系统信息
+        const systemInfo = wx.getSystemInfoSync() || storage.get('systemInfo');
+        if (!systemInfo) {
+          console.error('获取系统信息失败');
+          return;
+        }
+        
+        // 状态栏高度
+        const statusBarHeight = systemInfo.statusBarHeight || 20;
+        
+        // 根据不同平台设置导航栏高度
+        let navBarHeight = 48;
+        if (systemInfo.platform === 'android') {
+          navBarHeight = 48;
+        } else if (systemInfo.platform === 'ios') {
+          navBarHeight = 44;
+        }
+        
+        // 设置总高度
+        const totalHeight = statusBarHeight + navBarHeight;
+        
+        this.setData({
+          statusBarHeight,
+          navBarHeight,
+          totalHeight
+        });
+
+        // 延迟执行一次布局计算
+        setTimeout(() => this.updateLayout(), 50);
+      } catch (err) {
+        console.error('初始化导航栏尺寸失败:', err);
+        // 使用默认值
+        this.setData({
+          statusBarHeight: 20,
+          navBarHeight: 48,
+          totalHeight: 68
+        });
+      }
+    },
+
+    // 根据快捷属性更新按钮
+    updateQuickButtons() {
+      // 如果已经通过navButtons设置，则不处理
+      if (this.properties.navButtons && this.properties.navButtons.length > 0) {
+        return;
+      }
+      
+      const buttons = [];
+      
+      // 添加返回按钮
+      if (this.properties.showBack) {
+        buttons.push({
+          type: 'back',
+          icon: 'back',
+          text: '返回',
+          showText: false,
+          show: true
+        });
+      }
+      
+      // 添加首页按钮
+      if (this.properties.showHome) {
+        buttons.push({
+          type: 'home',
+          icon: 'home',
+          text: '首页',
+          showText: false,
+          show: true
+        });
+      }
+      if(this.properties.showNotification){
+        const notificationButton = {...this.data.defaultButtonConfig.notification, show: true};
+        notificationButton.position = 'left';
+        buttons.push(notificationButton);
+      }
+      // 添加头像按钮 (左侧)
+      if (this.properties.showAvatar) {
+        buttons.push({
+          type: 'avatar',
+          icon: 'profile',
+          position: 'left',
+          show: true
+        });
+      }
+      
+      this.setData({ buttons }, () => {
+        this.updateLayout();
+      });
+    },
+
+    // 初始化导航按钮
+    initNavButtons() {
+      const navButtons = this.properties.navButtons || [];
+      const buttons = [];
+      const defaultButtons = {
+        back: {
+          type: 'back',
+          icon: 'back',
+          text: '返回',
+          showText: false
+        },
+        home: {
+          type: 'home',
+          icon: 'home',
+          text: '首页',
+          showText: false
+        },
+        avatar: {
+          type: 'avatar',
+          icon: 'profile',
+          position: 'right'
+        },
+        notification: {
+          type: 'notification',
+          icon: 'notification',
+          unreadIcon: 'notification-unread',
+          position: 'right',
+          hasUnread: false
+        }
+      };
+
+      // 处理导航按钮配置
+      navButtons.forEach(config => {
+        if (!config || !config.type) return;
+        
+        const type = config.type;
+        const defaultConfig = defaultButtons[type] || {};
+        
+        // 合并默认配置和自定义配置
+        const buttonConfig = {
+          ...defaultConfig,
+          ...config,
+          show: config.show !== false // 除非明确设置为false，否则默认显示
+        };
+        
+        buttons.push(buttonConfig);
+      });
+      
+      this.setData({ buttons }, () => {
+        this.updateLayout();
+      });
+    },
+
+    // 更新布局计算
+    updateLayout() {
+      if (!this.data.buttons || this.data.buttons.length === 0) return;
+      
+      try {
+        // 获取左右区域宽度
+        const query = this.createSelectorQuery();
+        
+        // 获取左侧区域宽度
+        query.select('.left-area').boundingClientRect();
+        
+        // 获取右侧区域宽度
+        query.select('.right-area').boundingClientRect();
+        
+        query.exec(res => {
+          if (!res || !res[0] || !res[1]) return;
+          
+          const leftWidth = res[0].width || 0;
+          const rightWidth = res[1].width || 0;
+          
+          // 动态计算标题最大宽度
+          let titleMaxWidth = '60%';
+          
+          if (this.properties.autoAdjustTitleWidth) {
+            // 获取可用空间(总宽度减去左右区域宽度和安全边距)
+            const systemInfo = wx.getSystemInfoSync();
+            const screenWidth = systemInfo.windowWidth || 375;
+            const safetyMargin = 32; // 两侧安全边距(rpx)
+            const rpxRatio = 750 / screenWidth; // rpx与px的转换比例
+            
+            // 安全边距转为px
+            const safetyMarginPx = safetyMargin / rpxRatio;
+            
+            // 计算标题可用宽度(px)
+            const availableWidth = screenWidth - leftWidth - rightWidth - safetyMarginPx * 2;
+            
+            // 转换为百分比
+            const availablePercent = Math.floor((availableWidth / screenWidth) * 100);
+            
+            // 确保至少有30%的空间
+            titleMaxWidth = Math.max(30, availablePercent) + '%';
+          }
+          
+          this.setData({
+            layout: {
+              leftWidth,
+              rightWidth
+            },
+            titleMaxWidth
+          });
+        });
+      } catch (err) {
+        console.error('更新布局计算失败:', err);
+      }
+    },
+
+    // 处理按钮点击事件
+    handleButtonTap(e) {
+      const { type } = e.currentTarget.dataset;
+      if (!type) return;
+      
+      // 触发点击事件，允许外部处理
+      const detail = { type };
+      const buttonHandled = this.triggerEvent('buttonTap', detail);
+      
+      // 如果外部已处理，则不执行默认行为
+      if (buttonHandled === false) {
+        return;
+      }
+      
+      // 默认行为处理
+      this.handleDefaultButtonAction(type);
+    },
+    
+    // 处理默认按钮行为
+    handleDefaultButtonAction(type) {
+      switch (type) {
+        case 'back':
+          const pages = getCurrentPages();
+          if (pages.length > 1) {
+            wx.navigateBack({ delta: 1 });
+          } else {
+            wx.switchTab({ url: '/pages/index/index' });
+          }
+          break;
+          
+        case 'home':
+          wx.switchTab({ url: '/pages/index/index' });
+          break;
+          
+        case 'avatar':
+          wx.navigateTo({ url: '/pages/profile/profile' });
+          break;
+          
+        case 'notification':
+          wx.navigateTo({ url: '/pages/notification/list/list' });
+          break;
+          
+        default:
+          // 其他类型的按钮不执行默认行为
+          break;
+      }
+    },
+
     // 初始化按钮映射
     initButtonMap() {
       const buttonMap = {};
@@ -115,7 +399,7 @@ Component({
       // 处理传入的按钮配置，与默认配置合并
       this.properties.navButtons.forEach(button => {
         const type = button.type;
-        const defaultButton = this.data.defaultButtons[type];
+        const defaultButton = this.data.defaultButtonConfig[type];
         
         // 如果存在默认配置，则合并配置
         if (defaultButton) {

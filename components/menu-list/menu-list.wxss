@@ -1,19 +1,40 @@
 /* 菜单区块样式 */
 .menu-section {
   width: 100%;
-  margin-top: 30rpx;
+  margin-top: 0rpx;
   background-color: transparent;
 }
 
 .menu-title {
-  font-size: 30rpx;
-  color: #888;
-  padding: 20rpx 30rpx;
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+  padding: 10rpx 30rpx;
+  display: flex;
+  align-items: center;
+}
+
+.menu-title::before {
+  content: '';
+  display: inline-block;
+  width: 8rpx;
+  height: 32rpx;
+  background-color: #3B7FD9;
+  margin-right: 16rpx;
+  border-radius: 4rpx;
+}
+
+/* 无装饰线的标题 */
+.menu-title.no-decoration::before {
+  display: none;
 }
 
 .menu-cells {
   margin-top: 0 !important;
   padding-bottom: 0;
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
 }
 
 /* 菜单项样式 */
@@ -22,11 +43,13 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  padding: 24rpx 0;
 }
 
 .menu-item-left {
   display: flex;
   align-items: center;
+  flex: 1;
 }
 
 .menu-item-right {
@@ -37,9 +60,60 @@
 .menu-text {
   margin-left: 20rpx;
   font-size: 30rpx;
+  color: #333;
 }
 
 .menu-value {
-  color: #999;
+  color: #888;
   font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+/* 添加右箭头图标 */
+.menu-item-right::after {
+  content: '';
+  display: inline-block;
+  width: 16rpx;
+  height: 16rpx;
+  border-top: 2rpx solid #ccc;
+  border-right: 2rpx solid #ccc;
+  transform: rotate(45deg);
+}
+
+/* 徽章样式 */
+.badge {
+  display: inline-block;
+  min-width: 30rpx;
+  height: 30rpx;
+  line-height: 30rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  color: white;
+  background-color: #f43f3b;
+  border-radius: 30rpx;
+  margin-left: 12rpx;
+  text-align: center;
+}
+
+.badge.blue {
+  background-color: #3B7FD9;
+}
+
+.badge.green {
+  background-color: #07c160;
+}
+
+.badge.orange {
+  background-color: #ff9900;
+}
+
+.badge.gray {
+  background-color: #8799a3;
+}
+
+/* 额外内容样式 */
+.extra-content {
+  font-size: 24rpx;
+  color: #888;
+  margin-right: 10rpx;
 } 

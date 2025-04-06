@@ -1,67 +1,25 @@
 <!-- 顶部消息提示 -->
-<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"/>
 
-<!-- 确认对话框 -->
-<mp-dialog 
-  title="{{dialogTitle}}" 
-  show="{{dialogShow}}" 
-  bindbuttontap="tapDialogButton" 
-  buttons="{{dialogButtons}}">
-  <view>{{dialogContent}}</view>
-</mp-dialog>
-
-<mp-form-page title="意见反馈">
-  <mp-form>
-    <mp-cells>
-      <!-- 反馈类型 -->
-      <mp-cell title="反馈类型">
-        <radio-group class="radio-group" bindchange="onTypeChange">
-          <label class="weui-cell weui-check__label" wx:for="{{typeOptions}}" wx:key="value">
-            <radio class="weui-check" value="{{item.value}}" checked="{{item.checked}}"/>
-            <view class="weui-cell__bd">{{item.label}}</view>
-            <view class="weui-cell__ft weui-cell__ft_in-radio" wx:if="{{item.checked}}">
-              <icon class="weui-icon-radio" type="success_no_circle" size="16"></icon>
-            </view>
-          </label>
-        </radio-group>
-      </mp-cell>
-
-      <!-- 反馈内容 -->
-      <mp-cell title="反馈内容" required>
-        <text-area
-          value="{{form.content}}"
-          placeholder="请详细描述您遇到的问题或建议"
-          bind:input="onContentInput"
-        />
-      </mp-cell>
-
-      <!-- 图片上传 -->
-      <mp-cell title="相关截图">
-        <image-uploader
-          images="{{form.images}}"
-          maxCount="{{imageConfig.maxCount}}"
-          bind:choose="onImagesChoose"
-          bind:uploadcomplete="onImagesUploaded"
-        />
-      </mp-cell>
-
-      <!-- 联系方式 -->
-      <mp-cell title="联系方式">
-        <input-field
-          value="{{form.contact}}"
-          placeholder="请留下您的联系方式(选填)"
-          bind:input="onContactInput"
-        />
-      </mp-cell>
-    </mp-cells>
-  </mp-form>
-
-  <!-- 提交按钮 -->
-  <view slot="button">
-    <button 
-      class="weui-btn weui-btn_primary"
-      loading="{{submitting}}"
-      bindtap="onSubmit"
-    >提交反馈</button>
+<!-- 页面容器 -->
+<view class="container">
+  <view class="page-header">
+    <text class="page-title">意见反馈</text>
+    <text class="page-subtitle">遇到问题？告诉我们改进</text>
   </view>
-</mp-form-page> 
+
+  <form-panel
+    id="feedbackForm"
+    title="反馈信息"
+    fields="{{formFields}}"
+    submitText="提交反馈"
+    bind:change="onFormChange"
+    bind:submit="onFormSubmit"
+  >
+    <!-- 自定义设备信息展示 -->
+    <view slot="footer" class="device-info">
+      <text class="info-label">设备信息：</text>
+      <text class="info-text">{{deviceInfo.model}} ({{deviceInfo.system}})</text>
+    </view>
+  </form-panel>
+</view> 

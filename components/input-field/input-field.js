@@ -1,5 +1,9 @@
 Component({
   properties: {
+    label: {
+      type: String,
+      value: ''
+    },
     value: {
       type: String,
       value: ''
@@ -10,7 +14,7 @@ Component({
     },
     type: {
       type: String,
-      value: 'text' // text, number, idcard, digit
+      value: 'text' // text, number, idcard, digit, textarea
     },
     password: {
       type: Boolean,

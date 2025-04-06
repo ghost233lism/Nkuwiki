@@ -1,11 +1,11 @@
 {
-  "enablePullDownRefresh": true,
-  "backgroundColor": "#f7f9fc",
-  "backgroundTextStyle": "dark",
   "usingComponents": {
     "nav-bar": "/components/nav-bar/nav-bar",
     "cell-status": "/components/cell-status/cell-status",
+    "form-panel": "/components/form-panel/form-panel",
     "mp-toptips": "/components/weui/toptips/toptips"
   },
-  "navigationStyle": "custom"
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f7f7f7"
 } 

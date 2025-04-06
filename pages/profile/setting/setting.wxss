@@ -1,0 +1,113 @@
+/* pages/profile/setting/setting.wxss */
+
+page {
+  background-color: #f7f7f7;
+  height: 100%;
+}
+
+.container {
+  padding: 30rpx;
+  background: #f8f9fa;
+}
+
+.content-area {
+  flex: 1;
+  padding: 20rpx 30rpx 30rpx;
+}
+
+/* 分区样式 */
+.section {
+  margin-top: 30rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+  padding: 20rpx 30rpx 10rpx;
+  display: flex;
+  align-items: center;
+}
+
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 8rpx;
+  height: 32rpx;
+  background-color: #3B7FD9;
+  margin-right: 16rpx;
+  border-radius: 4rpx;
+}
+
+/* 设置项样式 */
+.setting-cells {
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10rpx 0;
+}
+
+.setting-title {
+  font-size: 30rpx;
+  color: #333;
+}
+
+/* 选择器样式 */
+.setting-picker {
+  min-width: 120rpx;
+  text-align: right;
+}
+
+.picker-value {
+  color: #3B7FD9;
+  font-size: 28rpx;
+}
+
+/* 开关样式 */
+.setting-switch {
+  transform: scale(0.9);
+}
+
+/* 按钮样式 */
+.setting-button {
+  font-size: 28rpx;
+  padding: 6rpx 30rpx;
+  background-color: #3B7FD9;
+  color: white;
+  border-radius: 30rpx;
+  margin: 0;
+}
+
+.setting-button::after {
+  border: none;
+}
+
+/* 设置面板 */
+.setting-panels {
+  margin-top: 30rpx;
+}
+
+/* 清除缓存按钮样式 */
+.cache-button {
+  padding: 16rpx 32rpx;
+  background: #fff2f0;
+  border-radius: 8rpx;
+}
+
+.cache-button .button-text {
+  color: #ff4d4f;
+  font-size: 28rpx;
+}
+
+/* 开发者面板 */
+.developer-panel {
+  margin-top: 40rpx;
+  opacity: 0.8;
+} 

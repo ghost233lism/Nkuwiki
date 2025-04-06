@@ -110,6 +110,10 @@ Component({
     loadingSize: {
       type: String,
       value: '' // small, medium, large
+    },
+    showNoMore: {
+      type: Boolean,
+      value: true
     }
   },
   

@@ -1,16 +1,7 @@
 {
   "navigationBarTitleText": "意见反馈",
   "usingComponents": {
-    "mp-form-page": "/components/weui/form-page/form-page",
-    "mp-form": "/components/weui/form/form",
-    "mp-cells": "/components/weui/cells/cells",
-    "mp-cell": "/components/weui/cell/cell",
-    "mp-checkbox-group": "/components/weui/checkbox-group/checkbox-group",
-    "mp-checkbox": "/components/weui/checkbox/checkbox",
-    "text-area": "/components/text-area/text-area",
-    "input-field": "/components/input-field/input-field",
-    "image-uploader": "/components/image-uploader/image-uploader",
     "mp-toptips": "/components/weui/toptips/toptips",
-    "mp-dialog": "/components/weui/dialog/dialog"
+    "form-panel": "/components/form-panel/form-panel"
   }
 } 

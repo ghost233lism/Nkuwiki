@@ -1,26 +1,41 @@
-<view class="nav-bar" style="padding-top: {{statusBarHeight}}px; background-color: #ffffff;">
+<view class="nav-bar {{showShadow ? 'with-shadow' : ''}}" style="padding-top: {{statusBarHeight}}px; background-color: {{bgColor}};">
   <view class="nav-content" style="height: {{navBarHeight}}px;">
-    <view class="left">
-      <view wx:if="{{buttonMap.back.show}}" class="nav-btn" bindtap="onButtonTap" data-type="back">
-        <icon name="{{buttonMap.back.icon}}" size="24" color="{{textColor}}" outline="{{false}}" />
-      </view>
-      <view wx:if="{{buttonMap.home.show}}" class="nav-btn" bindtap="onButtonTap" data-type="home">
-        <icon name="{{buttonMap.home.icon}}" size="24" color="{{textColor}}" outline="{{false}}" />
-      </view>
-      <view wx:if="{{buttonMap.logo.show}}" class="logo-container">
-        <icon name="{{buttonMap.logo.icon}}" size="100" color="{{textColor}}" outline="{{false}}" />
-      </view>
+    <!-- 左侧按钮区域 -->
+    <view class="left-area">
+      <block wx:for="{{buttons}}" wx:key="type">
+        <view 
+          wx:if="{{item.show && (!item.position || item.position === 'left')}}"
+          class="nav-button"
+          data-type="{{item.type}}"
+          bind:tap="handleButtonTap"
+        >
+          <icon name="{{item.hasUnread && item.unreadIcon ? item.unreadIcon : item.icon}}" size="24" color="{{textColor}}" />
+          <text wx:if="{{item.text && item.showText}}" class="button-text" style="color: {{textColor}}">{{item.text}}</text>
+        </view>
+      </block>
+      <slot name="left"></slot>
     </view>
-    <view wx:if="{{title}}" class="title" style="color: {{textColor}};">{{title}}</view>
-    <view wx:if="{{buttonMap.notification.show}}" class="center-right" style="left: {{notificationLeft}};">
-      <view class="nav-btn" bindtap="onButtonTap" data-type="notification">
-        <icon name="{{buttonMap.notification.hasUnread ? buttonMap.notification.unreadIcon : buttonMap.notification.icon}}" size="28" color="{{textColor}}" outline="{{false}}" />
-      </view>
+    
+    <!-- 中间标题区域 -->
+    <view class="title-area" wx:if="{{title}}">
+      <text class="title-text" style="color: {{textColor}}; max-width: {{titleMaxWidth}};">{{title}}</text>
     </view>
-    <view class="right">
-      <view wx:if="{{buttonMap.avatar.show}}" class="avatar-container" bindtap="onButtonTap" data-type="avatar">
-        <icon name="{{buttonMap.avatar.icon}}" size="28" color="{{textColor}}" outline="{{false}}" />
-      </view>
+    <slot name="center" wx:else></slot>
+    
+    <!-- 右侧区域 -->
+    <view class="right-area">
+      <block wx:for="{{buttons}}" wx:key="type">
+        <view 
+          wx:if="{{item.show && item.position === 'right'}}"
+          class="nav-button"
+          data-type="{{item.type}}"
+          bind:tap="handleButtonTap"
+        >
+          <icon name="{{item.hasUnread && item.unreadIcon ? item.unreadIcon : item.icon}}" size="24" color="{{textColor}}" />
+          <text wx:if="{{item.text && item.showText}}" class="button-text" style="color: {{textColor}}">{{item.text}}</text>
+        </view>
+      </block>
+      <slot name="right"></slot>
     </view>
   </view>
 </view>

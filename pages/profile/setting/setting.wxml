@@ -1,0 +1,40 @@
+<view class="container">
+  <!-- 导航栏 -->
+  <nav-bar title="设置" back></nav-bar>
+
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <cell-status
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bindretry="onRetry">
+
+      <view class="setting-panels">
+        <!-- 主设置面板 -->
+        <form-panel
+          title="基本设置"
+          fields="{{filteredSettings}}"
+          bind:change="handleSettingChange"
+        >
+          <!-- 自定义清除缓存按钮样式 -->
+          <view slot="cache" class="cache-button">
+            <text class="button-text">{{settings[2].buttonText}}</text>
+          </view>
+        </form-panel>
+
+        <!-- 开发者选项 (需要激活后显示) -->
+        <view wx:if="{{settings[4].value}}" class="developer-panel">
+          <form-panel
+            title="开发者选项"
+            fields="{{[settings[4]]}}"
+            bind:change="handleSettingChange"
+          />
+        </view>
+      </view>
+    </cell-status>
+  </view>
+
+  <!-- 顶部通知 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+</view> 

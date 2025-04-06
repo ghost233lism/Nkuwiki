@@ -9,6 +9,7 @@
     "mp-toptips": "/components/weui/toptips/toptips",
     "mp-dialog": "/components/weui/dialog/dialog",
     "nav-bar": "/components/nav-bar/nav-bar",
+    "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar",
     "category-tabs": "/components/category-tabs/category-tabs",
     "search-history": "/components/search-history/search-history",
     "cell-status": "/components/cell-status/cell-status",

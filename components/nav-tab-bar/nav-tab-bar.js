@@ -13,6 +13,10 @@ Component({
       type: Boolean,
       value: false
     },
+    showAvatar: {
+      type: Boolean,
+      value: false
+    },
     bgColor: {
       type: String,
       value: '#ffffff'
@@ -34,12 +38,19 @@ Component({
   },
 
   methods: {
+    // 处理选项卡变更
     onTabChange(e) {
       const index = parseInt(e.currentTarget.dataset.index);
       if (index === this.data.activeTab) return;
       
       this.setData({ activeTab: index });
       this.triggerEvent('change', { index });
+    },
+    
+    // 处理导航栏按钮点击
+    onButtonTap(e) {
+      // 将事件传递给父组件
+      this.triggerEvent('buttonTap', e.detail);
     }
   }
 })

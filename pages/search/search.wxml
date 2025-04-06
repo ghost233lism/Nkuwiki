@@ -1,68 +1,75 @@
 <!-- 美化的搜索页面 -->
-<!-- 搜索栏 -->
-<mp-searchbar 
-	value="{{searchValue}}"
-	placeholder="搜索校园知识"
-	search="{{search}}"
-	cancel="{{cancel}}"
-/>
+<view class="container">
+	<!-- 导航和标签栏 -->
+	<nav-tab-bar
+		title="搜索"
+		showBack="{{true}}"
+		tabTitles="{{categories}}"
+		activeTab="{{currentCategory}}"
+		bind:tabChange="onCategoryChange"
+	/>
 
-<!-- 分类标签 -->
-<category-tabs
-	categories="{{categories}}"
-	current="{{currentCategory}}"
-	bind:change="onCategoryChange"
-/>
-
-<cell-status 
-	loading="{{loading}}" 
-	error="{{error}}" 
-	errorMsg="{{errorMsg}}"
-	bindretry="onRetry">
-	
-	<!-- 搜索历史 -->
-	<view wx:if="{{!searchValue && searchHistory.length > 0}}" class="history-container">
-		<view class="history-title">搜索历史</view>
-		<view class="history-list">
-			<view 
-				class="history-item" 
-				wx:for="{{searchHistory}}" 
-				wx:key="index"
-				bindtap="onHistoryItemTap"
-				data-query="{{item}}"
-			>
-				{{item}}
-			</view>
-			<view class="clear-history" bindtap="onClearHistory" wx:if="{{searchHistory.length > 0}}">
-				清除历史记录
-			</view>
-		</view>
-	</view>
-
-	<!-- 搜索结果 -->
-	<view wx:elif="{{searchValue && !loading && !error && searchResults.length > 0}}" class="search-results">
-		<post-list 
-			posts="{{searchResults}}"
-			loading="{{resultsLoading}}"
-			error="{{resultsError}}"
-			errorMsg="{{resultsErrorMsg}}"
-			empty="{{!resultsLoading && !resultsError && searchResults.length === 0}}"
-			emptyText="没有找到匹配的内容"
-			hasMore="{{pagination.hasMore}}"
-			bind:loadMore="loadMore"
-			bind:retry="onResultsRetry"
+	<!-- 内容区域 -->
+	<view class="content-area">
+		<!-- 搜索栏 -->
+		<mp-searchbar 
+			value="{{searchValue}}"
+			placeholder="搜索校园知识"
+			search="{{search}}"
+			cancel="{{cancel}}"
 		/>
+
+		<cell-status 
+			loading="{{loading}}" 
+			error="{{error}}" 
+			errorMsg="{{errorMsg}}"
+			bindretry="onRetry">
+			
+			<!-- 搜索历史 -->
+			<view wx:if="{{!searchValue && searchHistory.length > 0}}" class="history-container">
+				<view class="history-title">搜索历史</view>
+				<view class="history-list">
+					<view 
+						class="history-item" 
+						wx:for="{{searchHistory}}" 
+						wx:key="index"
+						bindtap="onHistoryItemTap"
+						data-query="{{item}}"
+					>
+						{{item}}
+					</view>
+					<view class="clear-history" bindtap="onClearHistory" wx:if="{{searchHistory.length > 0}}">
+						清除历史记录
+					</view>
+				</view>
+			</view>
+
+			<!-- 搜索结果 -->
+			<view wx:elif="{{searchValue && !loading && !error && searchResults.length > 0}}" class="search-results">
+				<post-list 
+					posts="{{searchResults}}"
+					loading="{{resultsLoading}}"
+					error="{{resultsError}}"
+					errorMsg="{{resultsErrorMsg}}"
+					empty="{{!resultsLoading && !resultsError && searchResults.length === 0}}"
+					emptyText="没有找到匹配的内容"
+					hasMore="{{pagination.hasMore}}"
+					bind:loadMore="loadMore"
+					bind:retry="onResultsRetry"
+				/>
+			</view>
+			
+			<!-- WEUI组件 -->
+			<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+			
+			<mp-dialog 
+				title="{{dialogTitle}}" 
+				show="{{dialogShow}}" 
+				buttons="{{dialogButtons}}" 
+				bindbuttontap="tapDialogButton"
+			>
+				<view>{{dialogContent}}</view>
+			</mp-dialog>
+		</cell-status>
 	</view>
-	
-	<!-- WEUI组件 -->
-	<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
-	
-	<mp-dialog 
-		title="{{dialogTitle}}" 
-		show="{{dialogShow}}" 
-		buttons="{{dialogButtons}}" 
-		bindbuttontap="tapDialogButton"
-	>
-		<view>{{dialogContent}}</view>
-	</mp-dialog>
-</cell-status>
+</view>

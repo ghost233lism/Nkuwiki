@@ -1,0 +1,59 @@
+<!-- 顶部标题栏和标签栏 -->
+
+
+
+<view class="container">
+  <nav-tab-bar
+    title="我的内容"
+    show-back="{{true}}"
+    tab-titles="{{tabTitles}}"
+    active-tab="{{tabIndex}}"
+    bind:change="switchTab"
+  />
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <!-- 我的帖子 -->
+    <post-list
+      wx:if="{{tabIndex === 0}}"
+      data-api-url="/api/wxapp/post/list"
+      data-api-params="{{postApiParams}}"
+      empty-text="您还没有发布任何帖子"
+      bind:postTap="onPostTap"
+    ></post-list>
+
+    <!-- 我的点赞 -->
+    <post-list
+      wx:if="{{tabIndex === 1}}"
+      data-api-url="/api/wxapp/user/like"
+      data-api-params="{{likeApiParams}}"
+      empty-text="您还没有点赞任何帖子"
+      bind:postTap="onPostTap"
+    ></post-list>
+
+    <!-- 我的收藏 -->
+    <post-list
+      wx:if="{{tabIndex === 2}}"
+      data-api-url="/api/wxapp/user/favorite"
+      data-api-params="{{favoriteApiParams}}"
+      empty-text="您还没有收藏任何帖子"
+      bind:postTap="onPostTap"
+    ></post-list>
+
+    <!-- 我的评论 -->
+    <comment-list
+      wx:if="{{tabIndex === 3}}"
+      data-api-url="/api/wxapp/user/comment"
+      data-api-params="{{commentApiParams}}"
+      empty-text="您还没有评论任何帖子"
+      bind:commentTap="onCommentTap"
+    ></comment-list>
+  </view>
+</view>
+
+<!-- 只在我的帖子页显示发帖按钮 -->
+<floating-button
+  wx:if="{{tabIndex === 0}}"
+  icon="add"
+  text="发帖"
+  bind:tap="onNewPost"
+/> 

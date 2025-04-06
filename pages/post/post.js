@@ -1,8 +1,5 @@
 const { ui, error, ToastType, createApiClient, storage } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/baseBehavior');
-const postBehavior = require('../../behaviors/postBehavior');
-const authBehavior = require('../../behaviors/authBehavior');
-const weuiBehavior = require('../../behaviors/weuiBehavior');
+const behaviors = require('../../../behaviors/index');
 
 // 常量配置
 const CATEGORIES = [
@@ -16,10 +13,10 @@ const CATEGORIES = [
 /** @type {WechatMiniprogram.Page.Instance<IPostPageData>} */
 Page({
   behaviors: [
-    baseBehavior,
-    postBehavior,
-    authBehavior,
-    weuiBehavior
+    behaviors.baseBehavior,
+    behaviors.postBehavior,
+    behaviors.authBehavior,
+    behaviors.weuiBehavior
   ],
 
   data: {

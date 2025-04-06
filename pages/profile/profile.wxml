@@ -2,8 +2,10 @@
 <view class="container">
   <!-- 自定义导航栏 -->
   <nav-bar 
-    nav-buttons="{{navButtons}}"
-    bind:navEvent="onCustomNavEvent"
+    title="我的"
+    showBack="{{false}}"
+    showAvatar="{{false}}"
+    showNotification="{{true}}"
   ></nav-bar>
 
   <!-- 内容区域 -->
@@ -19,6 +21,8 @@
       errorMsg="{{errorMsg}}"
       bind:edit="navigateToEditProfile"
       bind:retry="onRetry"
+      bind:refresh="syncUserAndInitPage"
+      hasMore="{{false}}"
     />
 
     <!-- 未登录提示 - 如果用户卡片不显示，则需要单独处理 -->
@@ -26,24 +30,14 @@
       <login-card bind:login="login" />
     </view>
 
-    <!-- 功能菜单 -->
-    <menu-list
-      title="{{MENU_CONFIG.CONTENT.title}}"
-      items="{{menuItems}}" 
-      loading="{{loading}}"
-      error="{{error}}"
-      errorMsg="{{errorMsg}}"
-      bind:itemTap="onMenuItemTap"
-      bind:retry="onMenuRetry"
-    />
-
     <!-- 设置菜单 -->
     <menu-list
-      title="{{MENU_CONFIG.SETTINGS.title}}"
+      title="设置"
       items="{{settingItems}}" 
       loading="{{loading}}"
       error="{{error}}"
       errorMsg="{{errorMsg}}"
+      customStyle="settings-menu"
       bind:itemTap="onSettingItemTap"
       bind:retry="onSettingRetry"
     />

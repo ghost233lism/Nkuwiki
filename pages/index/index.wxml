@@ -3,7 +3,10 @@
 <view class="container">
   <!-- 自定义导航栏 -->
   <nav-bar 
-    nav-buttons="{{navButtons}}"
+      title="nkuwiki"
+      showBack="{{false}}"
+      showAvatar="{{true}}"
+      showNotification="{{true}}"
   ></nav-bar>
 
   <!-- 搜索框 - 使用简单的input避免重复 -->

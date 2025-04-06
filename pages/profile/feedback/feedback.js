@@ -34,121 +34,99 @@ Page({
   behaviors: [baseBehavior, authBehavior, weuiBehavior],
 
   data: {
-    // 表单数据
-    form: {
-      type: 'bug',
-      content: '',
-      contact: '',
-      images: []
-    },
-    // 反馈类型选项
-    typeOptions: [
-      { label: '功能异常', value: 'bug', checked: true },
-      { label: '功能建议', value: 'suggestion' },
-      { label: '其他问题', value: 'other' }
+    formFields: [
+      {
+        type: 'radio-group',
+        name: 'type',
+        label: '反馈类型',
+        options: [
+          { label: '功能异常', value: 'bug' },
+          { label: '功能建议', value: 'suggestion' },
+          { label: '其他问题', value: 'other' }
+        ],
+        value: 'bug',
+        required: true
+      },
+      {
+        type: 'textarea',
+        name: 'content',
+        label: '反馈内容',
+        placeholder: '请详细描述问题或建议（5-500字）',
+        maxlength: 500,
+        required: true,
+        autoHeight: true
+      },
+      {
+        type: 'image-uploader',
+        name: 'images',
+        label: '相关截图',
+        maxCount: 3,
+        uploadUrl: '/api/upload/image'
+      },
+      {
+        type: 'input',
+        name: 'contact',
+        label: '联系方式',
+        placeholder: '手机/邮箱/微信（选填）'
+      }
     ],
-    // 图片上传配置
-    imageConfig: {
-      maxCount: 3,
-      sizeType: ['original', 'compressed'],
-      sourceType: ['album', 'camera']
-    },
-    // 加载状态
-    submitting: false
+    submitting: false,
+    deviceInfo: null
   },
   
   onLoad() {
-    // 不再需要初始化uploader
+    // 初始化页面数据
+    console.debug('页面初始化');
+    this.initDeviceInfo();
   },
 
-  // --- Event Handlers ---
-  onTypeChange(e) {
+  // 初始化设备信息
+  initDeviceInfo() {
+    const systemInfo = wx.getSystemInfoSync();
     this.setData({
-      'form.type': e.detail.value
+      deviceInfo: {
+        model: systemInfo.model,
+        system: systemInfo.system,
+        platform: systemInfo.platform,
+        sdkVersion: systemInfo.SDKVersion
+      }
     });
   },
 
-  onContentInput(e) {
-    this.setData({
-      'form.content': e.detail.value.trim()
-    });
+  // 表单字段变更
+  onFormChange(e) {
+    const { name, value } = e.detail;
+    console.debug(`[Feedback] 字段变更: ${name}=`, value);
   },
 
-  onContactInput(e) {
-    this.setData({
-      'form.contact': e.detail.value.trim()
-    });
-  },
-
-  // 重写图片选择回调，适配表单结构
-  onImageSelect(e) {
-    const updatedImages = this.methods.onImageSelect.call(this, e);
-    this.setData({ 'form.images': updatedImages });
-  },
-
-  // 重写图片删除回调，适配表单结构
-  onImageDelete(e) {
-    const images = this.methods.onImageDelete.call(this, e);
-    this.setData({ 'form.images': images });
-  },
-
-  // --- 新的图片上传组件事件处理 ---
-  // 图片选择事件
-  onImagesChoose(e) {
-    console.debug('选择图片', e.detail);
-  },
-
-  // 图片上传完成事件
-  onImagesUploaded(e) {
-    console.debug('图片上传完成', e.detail);
-    // 更新表单中的图片列表
-    const images = e.detail.images || [];
-    this.setData({ 'form.images': images });
-  },
-
-  // --- Form Submit ---
-  async onSubmit() {
-    const { content, type, contact } = this.data.form;
-    
-    if (!content) {
-      this.showToptips({ msg: '请输入反馈内容', type: 'error' });
-      return;
-    }
-
+  // 表单提交
+  async onFormSubmit(e) {
     if (this.data.submitting) return;
-    this.setData({ submitting: true });
-
+    
     try {
-      ui.showLoading('提交中...');
+      this.setData({ submitting: true });
+      this.showLoading('提交中...');
 
-      // 获取设备信息
-      const deviceInfo = {
-        system: wx.getSystemInfoSync().system,
-        model: wx.getSystemInfoSync().model,
-        platform: wx.getSystemInfoSync().platform,
-        brand: wx.getSystemInfoSync().brand
+      const formData = e.detail;
+      const payload = {
+        ...formData,
+        openid: this.data.openid,
+        device_info: this.data.deviceInfo
       };
 
-      const res = await feedbackApi.submit({
-        openid: this.data.openid,
-        content,
-        type,
-        contact,
-        device_info: deviceInfo
-      });
-
+      const res = await feedbackApi.submit(payload);
+      
       if (res.code === 200) {
-        ui.showToast('反馈提交成功', { type: ToastType.SUCCESS });
-        // 延迟返回上一页
+        this.showToptips('提交成功，感谢您的反馈', 'success');
         setTimeout(() => wx.navigateBack(), 1500);
       } else {
         throw new Error(res.message || '提交失败');
       }
     } catch (err) {
-      error.handle(err, '提交反馈失败');
+      this.showToptips(err.message || '提交失败，请稍后重试', 'error');
     } finally {
+      this.hideLoading();
       this.setData({ submitting: false });
-      ui.hideLoading();
     }
   }
 }); 

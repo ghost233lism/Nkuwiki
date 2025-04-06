@@ -1,26 +1,40 @@
-<view class="input-field {{isFocus ? 'is-focus' : ''}} {{disabled ? 'disabled' : ''}}" style="{{customStyle}}">
-  <input
-    class="input"
-    type="{{type}}"
-    value="{{inputValue}}"
-    password="{{password}}"
-    placeholder="{{placeholder}}"
-    placeholder-class="placeholder"
-    disabled="{{disabled}}"
-    readonly="{{readonly}}"
-    maxlength="{{maxlength}}"
-    focus="{{focus}}"
-    confirm-type="{{confirmType}}"
-    confirm-hold="{{confirmHold}}"
-    bindinput="onInput"
-    bindfocus="onFocus"
-    bindblur="onBlur"
-    bindconfirm="onConfirm"
-  />
-  <view wx:if="{{showClear && inputValue.length > 0 && isFocus}}" class="clear-icon" bindtap="onClear">
-    <icon name="close" size="32" color="#999999" />
+<view class="weui-cell">
+  <view class="field-container">
+    <view class="field-label" wx:if="{{label}}">{{label}}</view>
+    <textarea
+      wx:if="{{type === 'textarea'}}"
+      class="field-textarea"
+      value="{{inputValue}}"
+      placeholder="{{placeholder}}"
+      placeholder-class="field-placeholder"
+      disabled="{{disabled}}"
+      maxlength="{{maxlength}}"
+      auto-height="{{true}}"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+    />
+    <input
+      wx:else
+      class="field-input"
+      type="{{type}}"
+      value="{{inputValue}}"
+      password="{{password}}"
+      placeholder="{{placeholder}}"
+      placeholder-class="field-placeholder"
+      disabled="{{disabled}}"
+      readonly="{{readonly}}"
+      maxlength="{{maxlength}}"
+      focus="{{focus}}"
+      confirm-type="{{confirmType}}"
+      confirm-hold="{{confirmHold}}"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+      bindconfirm="onConfirm"
+    />
   </view>
-  <view wx:if="{{showCounter}}" class="counter">
+  <view class="weui-cell__ft" wx:if="{{showCounter}}">
     {{inputValue.length}}/{{maxlength}}
   </view>
 </view> 

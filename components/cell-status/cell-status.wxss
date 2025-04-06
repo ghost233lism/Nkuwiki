@@ -353,7 +353,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  margin: 10rpx 0 30rpx;
+  margin: 10rpx 0 0;
   animation: fadeIn 0.3s ease-in-out;
 }
 
@@ -376,7 +376,7 @@
   font-size: 24rpx;
   color: #999;
   text-align: center;
-  padding: 20rpx 0;
+  padding: 20rpx 0 0;
 }
 
 /* 尺寸调整 */

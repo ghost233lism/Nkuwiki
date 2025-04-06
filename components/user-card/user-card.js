@@ -52,6 +52,42 @@ Component({
   data: {
     formattedUser: null
   },
+  
+  // 页面显示时检查是否需要刷新
+  pageLifetimes: {
+    show() {
+      if (this.properties.isCurrentUser) {
+        // 检查是否需要刷新
+        const storage = wx.getStorageSync('needRefreshProfile');
+        if (storage) {
+          // 清除标记
+          wx.removeStorageSync('needRefreshProfile');
+          // 通知父组件需要刷新数据
+          this.triggerEvent('refresh');
+          
+          // 同时获取最新的本地存储用户信息更新UI
+          const localUserInfo = wx.getStorageSync('userInfo');
+          if (localUserInfo && this.data.formattedUser) {
+            // 更新用户信息显示
+            const formattedUser = { ...this.data.formattedUser };
+            
+            // 更新关键字段
+            if (localUserInfo.nickname) formattedUser.nickname = localUserInfo.nickname;
+            if (localUserInfo.avatar) formattedUser.avatar = localUserInfo.avatar;
+            if (localUserInfo.bio !== undefined) formattedUser.bio = localUserInfo.bio;
+            
+            // 更新统计数据
+            if (localUserInfo.post_count !== undefined) formattedUser.post_count = localUserInfo.post_count;
+            if (localUserInfo.like_count !== undefined) formattedUser.like_count = localUserInfo.like_count;
+            if (localUserInfo.favorite_count !== undefined) formattedUser.favorite_count = localUserInfo.favorite_count;
+            if (localUserInfo.token !== undefined) formattedUser.token = localUserInfo.token;
+            
+            this.setData({ formattedUser });
+          }
+        }
+      }
+    }
+  },
 
   observers: {
     'user, userInfo, stats': function(user, userInfo, stats) {
@@ -61,6 +97,19 @@ Component({
         this.setData({
           formattedUser: this.formatUser(userData, stats)
         });
+      }
+    },
+    
+    // 单独监听userInfo的变化，确保实时更新
+    'userInfo.nickname, userInfo.avatar, userInfo.bio': function(nickname, avatar, bio) {
+      if (this.data.formattedUser) {
+        const formattedUser = { ...this.data.formattedUser };
+        
+        if (nickname !== undefined) formattedUser.nickname = nickname;
+        if (avatar !== undefined) formattedUser.avatar = avatar;
+        if (bio !== undefined) formattedUser.bio = bio;
+        
+        this.setData({ formattedUser });
       }
     }
   },
@@ -82,6 +131,12 @@ Component({
         favorite_count: stats?.favorites || user.favorite_count || 0,
         token: user.token || 0
       };
+    },
+
+    // 强制刷新用户数据
+    refreshUserData() {
+      // 通知父组件需要刷新数据
+      this.triggerEvent('refresh');
     },
 
     // 跳转到用户主页
@@ -148,7 +203,6 @@ Component({
           }
         })
         .catch(err => {
-          console.debug('关注失败:', err);
           wx.showToast({
             title: '网络错误',
             icon: 'none'
@@ -178,7 +232,6 @@ Component({
           }
         })
         .catch(err => {
-          console.debug('取消关注失败:', err);
           wx.showToast({
             title: '网络错误',
             icon: 'none'
@@ -211,6 +264,31 @@ Component({
     // 重试加载
     onRetry() {
       this.triggerEvent('retry');
+    },
+    
+    // 点击帖子、点赞或收藏跳转到myContent页面
+    onTapPosts(e) {
+      // 只有当前用户可以点击查看自己的内容
+      if (!this.data.isCurrentUser) {
+        return;
+      }
+      
+      const tabIndex = e.currentTarget.dataset.tab;
+      wx.navigateTo({
+        url: `/pages/profile/myContent/myContent?tab=${tabIndex}`
+      });
+    },
+    
+    // 点击积分跳转到积分页面
+    onTapPoints() {
+      // 只有当前用户可以点击查看自己的积分
+      if (!this.data.isCurrentUser) {
+        return;
+      }
+      
+      wx.navigateTo({
+        url: '/pages/profile/points/points'
+      });
     }
   }
 }); 

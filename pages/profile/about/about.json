@@ -1,5 +1,4 @@
 {
-  "navigationBarTitleText": "关于我们",
   "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {

@@ -1,9 +1,5 @@
 const { createApiClient } = require('../../utils/util');
-const baseBehavior = require('../../behaviors/baseBehavior');
-const userBehavior = require('../../behaviors/userBehavior');
-const authBehavior = require('../../behaviors/authBehavior');
-const notificationBehavior = require('../../behaviors/notificationBehavior');
-
+const behaviors = require('../../behaviors/index');
 // 搜索API
 const searchApi = createApiClient('/api/wxapp/search', {
   search: {
@@ -18,18 +14,6 @@ const searchApi = createApiClient('/api/wxapp/search', {
   }
 });
 
-const notificationApi = createApiClient('/api/wxapp/notificationsApi', {
-  search: {
-    method: 'GET',
-    path: '',
-    params: {
-      keyword: true,
-      search_type: false,
-      page: false,
-      limit: false
-    }
-  }
-})
 
 // 分类配置
 const CATEGORY_CONFIG = [
@@ -42,10 +26,11 @@ const CATEGORY_CONFIG = [
 
 Page({
   behaviors: [
-    baseBehavior,
-    userBehavior,
-    authBehavior,
-    notificationBehavior
+    behaviors.baseBehavior,
+    behaviors.authBehavior, 
+    behaviors.userBehavior,
+    behaviors.postBehavior,
+    behaviors.notificationBehavior
   ],
 
   data: {
@@ -60,13 +45,6 @@ Page({
     filter: {
       category_id: 0  // 默认不筛选分类
     },
-    
-    // 导航按钮配置
-    navButtons: [
-      {type: "logo", show: true},
-      {type: "notification", hasUnread: false},
-      {type: "avatar"}
-    ],
     
     // 通知状态
     hasUnreadNotification: false,
@@ -255,25 +233,6 @@ Page({
       });
     }
   },
-
-  // 自定义事件处理 - 可以捕获nav-bar组件发出的事件
-  onCustomNavEvent(e) {
-    const { type, button } = e.detail;
-    
-    switch (type) {
-      case 'notification':
-        console.debug('进入通知页面');
-        // 默认行为已由nav-bar处理，无需额外代码
-        break;
-      case 'avatar':
-        console.debug('进入个人中心');
-        // 默认行为已由nav-bar处理，无需额外代码
-        break;
-      default:
-        break;
-    }
-  },
-
   // 处理发帖按钮点击
   onCreatePost() {
     // 使用_checkLogin函数检查登录状态
@@ -300,18 +259,8 @@ Page({
       const result = await this._checkUnreadNotification();
       const hasUnread = result && result.hasUnread;
       
-      // 更新通知红点状态，并同时更新navButtons中的hasUnread属性
-      const navButtons = this.data.navButtons;
-      for (let i = 0; i < navButtons.length; i++) {
-        if (navButtons[i].type === "notification") {
-          navButtons[i].hasUnread = hasUnread;
-          break;
-        }
-      }
-      
       this.updateState({
-        hasUnreadNotification: hasUnread,
-        navButtons: navButtons
+        hasUnreadNotification: hasUnread
       });
       
       return hasUnread;
@@ -356,5 +305,21 @@ Page({
     } catch (err) {
       console.debug('刷新帖子状态发生错误:', err);
     }
-  }
+  },
+
+  // 处理导航栏按钮点击
+  onNavButtonTap(e) {
+    const { type } = e.detail;
+    
+    switch (type) {
+      case 'avatar':
+        this.navigateTo({ url: '/pages/profile/profile' });
+        break;
+      case 'notification':
+        this.navigateTo({ url: '/pages/notification/notification' });
+        break;
+      default:
+        break;
+    }
+  },
 });

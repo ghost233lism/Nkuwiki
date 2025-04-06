@@ -78,12 +78,17 @@ Component({
     formattedTime: '',
     // Markdown相关
     isMarkdown: false,
-    markdownNodes: null
+    markdownNodes: null,
+    // 默认头像
+    defaultAvatar: '/icons/avatar1.png'
   },
 
   observers: {
     'post': function(post) {
-      if (post && post.id) {
+      if (!post || !post.id) return;
+      
+      // 使用nextTick避免框架渲染冲突
+      wx.nextTick(() => {
         this._initPost();
         
         // 格式化发布时间
@@ -123,7 +128,7 @@ Component({
         
         // 默认所有内容都使用text-area组件渲染
         this.setData({ isMarkdown: true });
-      }
+      });
     },
     'detailPage': function(isDetailPage) {
       // 在详情页面，默认展开内容
@@ -137,9 +142,16 @@ Component({
 
   lifetimes: {
     attached() {
-      this.init();
-      this.checkContentOverflow();
-      this.checkUserInteraction();
+      // 获取默认头像
+      const defaultAvatar = this.getStorage('defaultAvatar') || '/icons/avatar1.png';
+      this.setData({ defaultAvatar });
+      
+      // 延迟初始化，避免渲染框架内部状态冲突
+      wx.nextTick(() => {
+        this.init();
+        this.checkContentOverflow();
+        this.checkUserInteraction();
+      });
     },
     ready() {
       // 在组件完全渲染后检查内容是否溢出
@@ -149,21 +161,23 @@ Component({
 
   methods: {
     async init() {      
-      if (this.properties.post) {
-        this.updatePostStatus();
-        
-        // 获取用户信息补充bio
-        try {
-          // 使用_enrichPostWithUserInfo方法获取用户信息
-          const enrichedPost = await this._enrichPostWithUserInfo(this.properties.post);
-          if (enrichedPost && enrichedPost.bio) {
+      if (!this.properties.post || !this.properties.post.id) return;
+      
+      this.updatePostStatus();
+      
+      // 获取用户信息补充bio
+      try {
+        // 使用_enrichPostWithUserInfo方法获取用户信息
+        const enrichedPost = await this._enrichPostWithUserInfo(this.properties.post);
+        if (enrichedPost && enrichedPost.bio) {
+          wx.nextTick(() => {
             this.setData({
               'post.bio': enrichedPost.bio
             });
-          }
-        } catch (e) {
-          console.debug('获取用户信息失败:', e);
+          });
         }
+      } catch (e) {
+        console.debug('获取用户信息失败:', e);
       }
     },
     

@@ -4,6 +4,7 @@
   error-msg="{{errorMsg}}"
   retry-text="重试"
   bind:retry="onRetry"
+  showNoMore="{{false}}"
   class="user-card-cell-status">
 
   <view class="user-card" wx:if="{{formattedUser}}">
@@ -39,21 +40,21 @@
       </view>
     </view>
     
-    <!-- 用户数据统计 -->
+    <!-- 用户数据统计 - 添加点击事件导航到对应页面 -->
     <view class="user-stats">
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onTapPosts" data-tab="0">
         <view class="stat-value">{{formattedUser.post_count || 0}}</view>
         <view class="stat-label">帖子</view>
       </view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onTapPosts" data-tab="1">
         <view class="stat-value">{{formattedUser.like_count || 0}}</view>
         <view class="stat-label">获赞</view>
       </view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onTapPosts" data-tab="2">
         <view class="stat-value">{{formattedUser.favorite_count || 0}}</view>
         <view class="stat-label">收藏</view>
       </view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onTapPoints">
         <view class="stat-value">{{formattedUser.token || 0}}</view>
         <view class="stat-label">积分</view>
       </view>

@@ -24,10 +24,39 @@ Component({
     errorMsg: {
       type: String,
       value: ''
+    },
+    // 是否显示标题前的装饰线
+    showTitleDecoration: {
+      type: Boolean,
+      value: true
+    },
+    // 自定义样式
+    customStyle: {
+      type: String,
+      value: ''
     }
   },
 
   data: {
+    // 处理后的菜单项
+    processedItems: []
+  },
+
+  observers: {
+    'items': function(items) {
+      // 处理菜单项，确保所有必要字段都存在
+      if (Array.isArray(items)) {
+        const processedItems = items.map(item => {
+          return {
+            ...item,
+            // 确保icon和iconName正确处理
+            icon: item.icon || false,
+            iconName: item.iconName || ''
+          };
+        });
+        this.setData({ processedItems });
+      }
+    }
   },
 
   methods: {

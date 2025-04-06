@@ -58,5 +58,20 @@ Page({
   onRetry() {
     console.debug('【About】点击重试');
     this.loadAboutInfo();
+  },
+
+  // 处理导航栏按钮点击
+  onNavButtonTap(e) {
+    const { type } = e.detail;
+    
+    if (type === 'back') {
+      wx.navigateBack({
+        fail: () => {
+          wx.switchTab({
+            url: '/pages/index/index'
+          });
+        }
+      });
+    }
   }
 }); 

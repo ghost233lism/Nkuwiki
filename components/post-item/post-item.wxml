@@ -2,7 +2,7 @@
 <view class="post-item" style="{{customStyle}}">
   <view class="post-header">
     <view class="post-header-left">
-      <image class="author-avatar" src="{{post.avatar || '/icons/avatar1.png'}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
+      <image class="author-avatar" src="{{post.avatar || defaultAvatar}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
       <view class="post-info">
         <view class="author-name" bindtap="_onAuthorTap">{{post.nickname || '未知用户'}}</view>
         <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>

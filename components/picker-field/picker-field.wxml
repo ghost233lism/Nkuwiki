@@ -1,113 +1,15 @@
-<view class="picker-field {{disabled ? 'disabled' : ''}}">
-  <view class="picker-label" wx:if="{{label}}">
-    <text>{{label}}</text>
-    <text class="required" wx:if="{{required}}">*</text>
-  </view>
-  
-  <view class="picker-container">
-    <!-- 普通选择器 -->
+<view class="weui-cell">
+  <view class="field-container">
+    <view class="field-label">{{label}}</view>
     <picker 
-      wx:if="{{mode === 'selector'}}"
-      mode="selector"
+      mode="selector" 
+      value="{{index}}" 
       range="{{range}}"
-      range-key="{{rangeKey}}"
-      value="{{value}}"
-      disabled="{{disabled}}"
-      bindchange="onPickerChange"
-      bindcancel="onPickerCancel"
-    >
-      <view class="picker-inner">
-        <view class="picker-value {{!displayValue ? 'placeholder' : ''}}">
-          {{displayValue || placeholder}}
-        </view>
-        <view class="picker-arrow">
-          <view class="arrow-icon"></view>
-        </view>
-      </view>
-    </picker>
-    
-    <!-- 多列选择器 -->
-    <picker 
-      wx:elif="{{mode === 'multiSelector'}}"
-      mode="multiSelector"
-      range="{{multiRange}}"
-      range-key="{{rangeKey}}"
-      value="{{multiValue}}"
-      disabled="{{disabled}}"
-      bindchange="onPickerChange"
-      bindcolumnchange="onColumnChange"
-      bindcancel="onPickerCancel"
-    >
-      <view class="picker-inner">
-        <view class="picker-value {{!displayValue ? 'placeholder' : ''}}">
-          {{displayValue || placeholder}}
-        </view>
-        <view class="picker-arrow">
-          <view class="arrow-icon"></view>
-        </view>
-      </view>
-    </picker>
-    
-    <!-- 时间选择器 -->
-    <picker 
-      wx:elif="{{mode === 'time'}}"
-      mode="time"
-      value="{{value}}"
-      start="{{start}}"
-      end="{{end}}"
-      disabled="{{disabled}}"
-      bindchange="onPickerChange"
-      bindcancel="onPickerCancel"
-    >
-      <view class="picker-inner">
-        <view class="picker-value {{!displayValue ? 'placeholder' : ''}}">
-          {{displayValue || placeholder}}
-        </view>
-        <view class="picker-arrow">
-          <view class="arrow-icon"></view>
-        </view>
-      </view>
-    </picker>
-    
-    <!-- 日期选择器 -->
-    <picker 
-      wx:elif="{{mode === 'date'}}"
-      mode="date"
-      value="{{value}}"
-      start="{{start}}"
-      end="{{end}}"
-      fields="{{fields}}"
-      disabled="{{disabled}}"
-      bindchange="onPickerChange"
-      bindcancel="onPickerCancel"
-    >
-      <view class="picker-inner">
-        <view class="picker-value {{!displayValue ? 'placeholder' : ''}}">
-          {{displayValue || placeholder}}
-        </view>
-        <view class="picker-arrow">
-          <view class="arrow-icon"></view>
-        </view>
-      </view>
-    </picker>
-    
-    <!-- 地区选择器 -->
-    <picker 
-      wx:elif="{{mode === 'region'}}"
-      mode="region"
-      value="{{value}}"
-      custom-item="{{customItem}}"
-      disabled="{{disabled}}"
-      bindchange="onPickerChange"
-      bindcancel="onPickerCancel"
-    >
-      <view class="picker-inner">
-        <view class="picker-value {{!displayValue ? 'placeholder' : ''}}">
-          {{displayValue || placeholder}}
-        </view>
-        <view class="picker-arrow">
-          <view class="arrow-icon"></view>
-        </view>
+      range-key="{{rangeKey}}" 
+      bindchange="onChange">
+      <view class="field-value {{value ? '' : 'placeholder'}}">
+        {{value || placeholder}}
+        <view class="arrow"></view>
       </view>
     </picker>
   </view>

@@ -109,7 +109,7 @@ Component({
       'notification': '/icons/notification.png',
       'notification-active': '/icons/notification.png',
       'notification-unread': '/icons/notification-unread.png',
-      'settings': '/icons/settings.png',
+      'setting': '/icons/settings.png',
       'back': '/icons/back.png',
       'arrow-right': '/icons/arrow-right.png',
       'history': '/icons/history.png',

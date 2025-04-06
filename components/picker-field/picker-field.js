@@ -14,8 +14,8 @@ Component({
     },
     // 默认选中项索引
     value: {
-      type: Number,
-      value: 0
+      type: String,
+      value: ''
     },
     // 对于多列选择器，默认选中项索引数组
     multiValue: {
@@ -76,6 +76,10 @@ Component({
     fields: {
       type: String,
       value: 'day' // year, month, day
+    },
+    index: {
+      type: Number,
+      value: -1
     }
   },
   
@@ -142,17 +146,21 @@ Component({
     },
     
     // 选择事件
-    onPickerChange(e) {
-      const { value } = e.detail;
+    onChange(e) {
+      const index = e.detail.value;
+      let value = '';
       
-      if (this.properties.mode === 'selector') {
-        this.setData({ value });
+      if (this.properties.rangeKey) {
+        value = this.properties.range[index][this.properties.rangeKey];
       } else {
-        this.setData({ multiValue: value });
+        value = this.properties.range[index];
       }
       
-      this.updateDisplayValue();
-      this.triggerEvent('change', e.detail);
+      this.setData({ index });
+      this.triggerEvent('change', {
+        name: this.dataset.name,
+        value: value
+      });
     },
     
     // 列选择事件（多列选择器）

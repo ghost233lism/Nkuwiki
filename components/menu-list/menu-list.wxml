@@ -3,12 +3,13 @@
   error="{{error}}"
   error-text="{{errorMsg}}"
   bindretry="onRetry"
-  class="menu-list-wrapper">
+  showNoMore="{{false}}"
+  class="menu-list-wrapper {{customStyle}}">
   <view class="menu-section">
-    <view class="menu-title">{{title}}</view>
+    <view class="menu-title {{!showTitleDecoration ? 'no-decoration' : ''}}">{{title}}</view>
     <mp-cells ext-class="menu-cells">
       <mp-cell 
-        wx:for="{{items}}" 
+        wx:for="{{processedItems.length > 0 ? processedItems : items}}" 
         wx:key="index"
         link
         hover
@@ -17,11 +18,13 @@
       >
         <view class="menu-item">
           <view class="menu-item-left">
-            <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="40"></icon>
+            <icon wx:if="{{item.icon}}" name="{{item.iconName}}" size="44"></icon>
             <text class="menu-text">{{item.title}}</text>
+            <view wx:if="{{item.badge}}" class="badge {{item.badgeType || ''}}">{{item.badge}}</view>
           </view>
           <view class="menu-item-right">
-            <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
+            <text wx:if="{{item.value !== undefined && item.value !== null}}" class="menu-value">{{item.value}}</text>
+            <view wx:if="{{item.extraContent}}" class="extra-content">{{item.extraContent}}</view>
           </view>
         </view>
       </mp-cell>

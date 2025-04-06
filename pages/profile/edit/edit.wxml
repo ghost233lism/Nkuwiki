@@ -2,18 +2,9 @@
 <!-- 顶部消息提示 -->
 <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 
-<!-- 确认对话框 -->
-<mp-dialog 
-  title="{{dialogTitle}}" 
-  show="{{dialogShow}}" 
-  bindbuttontap="tapDialogButton" 
-  buttons="{{dialogButtons}}">
-  <view>{{dialogContent}}</view>
-</mp-dialog>
-
 <view class="container">
   <!-- 导航栏 -->
-  <nav-bar title="编辑资料" back></nav-bar>
+  <nav-bar nav-buttons="{{navButtons}}"></nav-bar>
 
   <!-- 内容区域 -->
   <view class="content-area">
@@ -23,82 +14,27 @@
       errorMsg="{{errorMsg}}"
       bindretry="onRetry">
 
-      <!-- 表单内容 -->
-      <form bindsubmit="formSubmit">
-        <!-- 头像 -->
-        <view class="avatar-section">
-          <image-uploader
-            image="{{userInfo.avatar}}"
-            bindchange="onAvatarChange"
-          ></image-uploader>
-          <view class="avatar-hint">点击更换头像</view>
-        </view>
+      <!-- 头像 -->
+      <view class="avatar-section">
+        <button class="avatar-wrapper" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <image 
+            class="avatar" 
+            src="{{userInfo.avatar || defaultAvatar}}"
+            binderror="onAvatarError"
+          ></image>
+        </button>
+        <view class="avatar-hint">点击更换头像</view>
+      </view>
 
-        <!-- 基本资料 -->
-        <view class="form-section">
-          <mp-cells title="基本资料">
-            <mp-cell title="昵称">
-              <input 
-                name="nickname"
-                class="input" 
-                placeholder="请输入昵称" 
-                value="{{userInfo.nickname}}"
-                maxlength="20"
-              />
-            </mp-cell>
-            <mp-cell title="个性签名">
-              <textarea
-                name="bio"
-                class="textarea"
-                placeholder="介绍一下自己吧"
-                value="{{userInfo.bio}}"
-                maxlength="100"
-                auto-height
-              ></textarea>
-            </mp-cell>
-          </mp-cells>
-        </view>
-
-        <!-- 校园信息 -->
-        <view class="form-section">
-          <mp-cells title="校园信息">
-            <mp-cell title="学院">
-              <picker 
-                name="college"
-                mode="selector"
-                range="{{colleges}}"
-                value="{{collegeIndex}}"
-                bindchange="onCollegeChange"
-              >
-                <view class="picker">
-                  {{collegeIndex >= 0 ? colleges[collegeIndex] : '请选择学院'}}
-                </view>
-              </picker>
-            </mp-cell>
-            <mp-cell title="年级">
-              <picker 
-                name="grade"
-                mode="selector"
-                range="{{grades}}"
-                value="{{gradeIndex}}"
-                bindchange="onGradeChange"
-              >
-                <view class="picker">
-                  {{gradeIndex >= 0 ? grades[gradeIndex] : '请选择年级'}}
-                </view>
-              </picker>
-            </mp-cell>
-          </mp-cells>
-        </view>
-
-        <!-- 提交按钮 -->
-        <view class="button-area">
-          <button class="save-button" form-type="submit" type="primary">保存修改</button>
-        </view>
-      </form>
+      <!-- 使用新的表单面板组件 -->
+      <form-panel 
+        id="profileForm"
+        fields="{{formFields}}"
+        submitText="保存修改"
+        bind:change="onFieldChange"
+        bind:submit="onFormSubmit"
+      ></form-panel>
+      
     </cell-status>
   </view>
-
-  <!-- 顶部通知 -->
-  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
 </view>

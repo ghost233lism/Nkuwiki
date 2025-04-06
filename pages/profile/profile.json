@@ -9,6 +9,7 @@
     "mp-cells": "/components/weui/cells/cells",
     "mp-cell": "/components/weui/cell/cell",
     "mp-toptips": "/components/weui/toptips/toptips",
-    "nav-bar": "/components/nav-bar/nav-bar"
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "menu-list": "/components/menu-list/menu-list"
   }
 }

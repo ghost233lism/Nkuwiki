@@ -1,13 +1,12 @@
 {
-  "component": true,
+  "navigationStyle": "custom", 
+  "navigationBarTitleText": "编辑资料",
+  "enablePullDownRefresh": false,
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#f7f9fc",
   "usingComponents": {
     "nav-bar": "/components/nav-bar/nav-bar",
-    "cell-status": "/components/cell-status/cell-status",
-    "image-uploader": "/components/image-uploader/image-uploader",
-    "mp-toptips": "/components/weui/toptips/toptips",
-    "mp-cells": "/components/weui/cells/cells",
-    "mp-cell": "/components/weui/cell/cell"
-  },
-  "navigationBarTitleText": "编辑资料",
-  "navigationStyle": "custom"
+    "form-panel": "/components/form-panel/form-panel",
+    "mp-toptips": "/components/weui/toptips/toptips"
+  }
 }

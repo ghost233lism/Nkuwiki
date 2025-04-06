@@ -11,8 +11,8 @@
     "pages/profile/about/about",
     "pages/profile/edit/edit",
     "pages/profile/feedback/feedback",
-    "pages/profile/mylike_fav_comment/mylike_fav_comment",
-    "pages/profile/myPost/myPost"
+    "pages/profile/myContent/myContent",
+    "pages/profile/setting/setting"
   ],
   "window": {
     "backgroundTextStyle": "light",
