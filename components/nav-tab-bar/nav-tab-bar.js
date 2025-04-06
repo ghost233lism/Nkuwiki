@@ -3,7 +3,7 @@ Component({
     // nav-bar 属性
     title: {
       type: String,
-      value: ''
+      value: '消息通知'
     },
     showBack: {
       type: Boolean,
@@ -15,7 +15,7 @@ Component({
     },
     showAvatar: {
       type: Boolean,
-      value: false
+      value: true
     },
     bgColor: {
       type: String,
