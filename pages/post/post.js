@@ -1,5 +1,5 @@
-const { ui, error, ToastType, createApiClient, storage } = require('../../utils/util');
-const behaviors = require('../../../behaviors/index');
+const { ToastType } = require('../../utils/util');
+const behaviors = require('../../behaviors/index');
 
 // 常量配置
 const CATEGORIES = [
@@ -10,7 +10,6 @@ const CATEGORIES = [
   { id: 5, name: '失物招领', tag: 'lost' }
 ];
 
-/** @type {WechatMiniprogram.Page.Instance<IPostPageData>} */
 Page({
   behaviors: [
     behaviors.baseBehavior,
@@ -31,6 +30,11 @@ Page({
       category_id: 1,
       tags: []
     },
+
+    // 导航按钮配置
+    navButtons: [
+      {type: "back", show: true}
+    ],
 
     tagInputValue: '',
     tagSelected: {}, // 用于标记标签选中状态
@@ -192,21 +196,21 @@ Page({
       
       // 如果内容不为空且（有Markdown标题或表单标题），则视为有效
       if (content.length >= 10 && (hasMarkdownTitle || hasFormTitle)) {
-        this.updateState({ canSubmit: true });
+        this.setData({ canSubmit: true });
         return true;
       }
     }
     
     // 常规验证
     const isValid = this.validateForm(this.data.rules);
-    this.updateState({ canSubmit: isValid });
+    this.setData({ canSubmit: isValid });
     return isValid;
   },
   
   // 表单变更
   onFormChange(e) {
     const { field } = e.currentTarget.dataset;
-    const value = e.detail.value;
+    const { value } = e.detail;
     
     this.setFormField(field, value);
     this.validatePostForm();
@@ -240,19 +244,22 @@ Page({
 
   // 返回上一页
   navigateBack() {
-    // 使用baseBehavior中的navigateBack方法
-    try {
-      console.debug('从发帖页面返回');
-      wx.navigateBack({
-        delta: 1,
-        fail: (err) => {
-          console.error('返回失败，尝试跳转到首页:', err);
-          this.switchTab('/pages/index/index');
-        }
-      });
-    } catch (e) {
-      console.error('返回操作异常:', e);
-      this.switchTab('/pages/index/index');
+    // 返回上一页
+    wx.navigateBack({
+      delta: 1,
+      fail: () => {
+        wx.switchTab({
+          url: '/pages/index/index'
+        });
+      }
+    });
+  },
+
+  // 处理导航栏按钮点击
+  onNavButtonTap(e) {
+    const { type } = e.detail;
+    if (type === 'publish') {
+      this.submitForm();
     }
   },
 
@@ -270,7 +277,7 @@ Page({
     } else {
       // 检查标签数量限制
       if (Object.keys(newTagSelected).length >= 3) {
-        this._showToptips('最多添加3个标签', ToastType.ERROR);
+        this._showToptips('最多添加3个标签', ToastType.error);
         return;
       }
       newTagSelected[tag] = true;
@@ -378,21 +385,21 @@ Page({
 
   // 提交表单
   async submitForm() {
+    // 防止重复提交
+    if (this.data.submitting) return;
+
     // 验证表单
     if (!this.validatePostForm()) {
-      const errorFields = this.getFormErrors();
-      if (errorFields && Object.keys(errorFields).length > 0) {
-        const firstError = Object.values(errorFields)[0];
-        this._showToptips(firstError, ToastType.ERROR);
-      }
+      wx.showToast({
+        title: '请完善内容',
+        icon: 'none'
+      });
       return;
     }
-    
-    // 如果已经在提交中，防止重复提交
-    if (this.data.submitting) return;
-    
-    this.updateState({ submitting: true });
-    
+
+    // 设置提交状态
+    this.setData({ submitting: true });
+
     try {
       // 准备提交数据
       const formData = this.data.form;
@@ -438,9 +445,32 @@ Page({
         // 设置需要刷新首页帖子列表的标记
         this.setStorage('needRefreshPosts', true);
         
+        // 设置全局app变量，确保返回首页后立即刷新
+        const app = getApp();
+        if (app) {
+          app.globalData = app.globalData || {};
+          app.globalData.refreshPostList = true;
+        }
+        
         // 延迟返回，等待显示成功提示
         setTimeout(() => {
-          this.switchTab('/pages/index/index');
+          wx.switchTab({
+            url: '/pages/index/index',
+            success: () => {
+              // 尝试通过页面栈获取首页实例并触发刷新
+              const pages = getCurrentPages();
+              const indexPage = pages.find(p => p.route === 'pages/index/index');
+              if (indexPage) {
+                // 如果能获取到首页实例，直接调用其刷新方法
+                const postList = indexPage.selectComponent('#postList');
+                if (postList) {
+                  setTimeout(() => {
+                    postList.loadInitialData();
+                  }, 300);
+                }
+              }
+            }
+          });
         }, 1500);
       } else {
         throw new Error(result.message || '发布失败');
@@ -449,7 +479,7 @@ Page({
       console.error('提交帖子失败:', err);
       this._showToptips(err.message || '发布失败，请稍后再试', ToastType.ERROR);
     } finally {
-      this.updateState({ submitting: false });
+      this.setData({ submitting: false });
     }
   },
 
@@ -473,6 +503,15 @@ Page({
     const { showPreview } = e.detail;
     this.setData({
       showMarkdownPreview: showPreview
+    });
+  },
+
+  // 设置表单字段
+  setFormField(field, value) {
+    const newData = {};
+    newData[`form.${field}`] = value;
+    this.setData(newData, () => {
+      this.validatePostForm();
     });
   }
 }); 

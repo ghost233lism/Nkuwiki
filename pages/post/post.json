@@ -1,8 +1,9 @@
 {
-  "navigationBarTitleText": "发布帖子",
   "navigationStyle": "custom",
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "image-uploader": "/components/image-uploader/image-uploader",
+    "nav-bar": "/components/nav-bar/nav-bar",
     "text-area": "/components/text-area/text-area",
     "mp-toptips": "/components/weui/toptips/toptips",
     "mp-badge": "/components/weui/badge/badge",

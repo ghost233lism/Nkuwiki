@@ -78,12 +78,6 @@ Component({
     },
     page: 1,
     limit: 10,
-    comments: [],
-    loading: false,
-    error: false,
-    errorMsg: '',
-    hasMore: true,
-    total: 0,
     // 评论输入相关
     commentText: '',
     commentFocus: false,

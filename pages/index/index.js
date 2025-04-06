@@ -125,17 +125,26 @@ Page({
         this._refreshPostStatus();
       }, 100);
       
-      // 检查是否刚发布了新帖子
-      const needRefreshPosts = this.getStorage('needRefreshPosts');
+      // 检查全局变量是否需要刷新
+      const app = getApp();
+      const refreshFromGlobal = app && app.globalData && app.globalData.refreshPostList;
+      
+      // 检查是否刚发布了新帖子或全局变量标记了需要刷新
+      const needRefreshPosts = this.getStorage('needRefreshPosts') || refreshFromGlobal;
       if (needRefreshPosts) {
         console.debug('检测到新发布的帖子，刷新列表');
         // 清除标记
         this.setStorage('needRefreshPosts', false);
+        if (refreshFromGlobal) {
+          app.globalData.refreshPostList = false;
+        }
         
         // 刷新帖子列表
         const postList = this.selectComponent('#postList');
         if (postList) {
-          postList.loadInitialData();
+          setTimeout(() => {
+            postList.loadInitialData();
+          }, 200);
         }
         return;
       }

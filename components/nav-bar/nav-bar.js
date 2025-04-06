@@ -106,7 +106,7 @@ Component({
         icon: 'notification',
         unreadIcon: 'notification-unread',
         show: false,
-        url: '/pages/notification/list/list',
+        url: '/pages/notification/notification',
         hasUnread: false
       },
       avatar: {
@@ -383,7 +383,7 @@ Component({
           break;
           
         case 'notification':
-          wx.navigateTo({ url: '/pages/notification/list/list' });
+          wx.navigateTo({ url: '/pages/notification/notification' });
           break;
           
         default:
@@ -473,7 +473,7 @@ Component({
           break;
         case 'notification':
           wx.navigateTo({
-            url: button.url || '/pages/notification/list/list'
+            url: button.url || '/pages/notification/notification'
           });
           break;
         case 'avatar':

@@ -12,13 +12,16 @@
 
 <view class="post-container">
   <!-- 顶部导航栏 -->
-  <view class="post-header">
-    <view class="back-icon" bindtap="navigateBack">
-      <icon name="back" size="24"></icon>
+  <nav-bar 
+    nav-buttons="{{navButtons}}"
+    bind:buttonTap="onNavButtonTap">
+    <view slot="center" class="publish-btn-container">
+      <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">
+        <text wx:if="{{canSubmit}}">发布</text>
+        <text wx:else>请完善内容</text>
+      </button>
     </view>
-    <view class="page-title">发布帖子</view>
-    <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">发布</button>
-  </view>
+  </nav-bar>
 
   <!-- 表单内容 -->
   <view class="post-form">
@@ -51,17 +54,6 @@
       bindpreviewchange="onPreviewChange"
       binderror="_showToptips"
     ></text-area>
-    
-    <!-- 图片上传组件 -->
-    <image-uploader
-      id="imageUploader"
-      images="{{form.images}}"
-      bind:uploadcomplete="onImagesUploaded"
-      bind:choose="onImagesChoose"
-      maxCount="9"
-      width="160rpx"
-      height="160rpx"
-    ></image-uploader>
   </view>
 
   <!-- 标签栏 -->

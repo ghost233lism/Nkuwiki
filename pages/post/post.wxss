@@ -6,6 +6,18 @@
   background-color: #f8f8f8;
 }
 
+/* 发布按钮容器 */
+.publish-btn-container {
+  width: 300rpx;
+  height: 84rpx;
+  margin: 0 auto;
+  position: relative;
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* 顶部导航 */
 .post-header {
   display: flex;
@@ -34,20 +46,72 @@
   flex: 1;
 }
 
-.post-btn {
+/* 中间发布按钮样式 - 更加显眼 */
+.nav-bar .post-btn {
   background-color: #5853e2;
   color: #fff;
-  font-size: 14px;
-  padding: 0 24rpx;
-  height: 68rpx;
-  line-height: 68rpx;
-  border-radius: 34rpx;
-  font-weight: normal;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 0 40rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 42rpx;
+  min-width: 280rpx;
+  text-align: center;
+  box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.4);
+  letter-spacing: 4rpx;
+  transition: all 0.3s;
+  margin: 0 auto;
+  display: block;
+  position: relative;
+  z-index: 100;
+  /* 添加一个小小的呼吸效果 */
+  animation: pulse 2s infinite;
 }
 
-.post-btn.disabled {
-  background-color: #c0c0c0;
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8rpx 20rpx rgba(88, 83, 226, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.4);
+  }
+}
+
+.nav-bar .post-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+  animation: none;
+}
+
+.nav-bar .post-btn.disabled {
+  background-color: #ff9500; /* 使用明亮的橙色作为禁用状态 */
   color: #fff;
+  box-shadow: 0 4rpx 12rpx rgba(255, 149, 0, 0.4);
+  opacity: 0.9;
+  animation: attention 2s infinite;
+}
+
+/* 为禁用状态添加注意动画 */
+@keyframes attention {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4rpx 12rpx rgba(255, 149, 0, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6rpx 16rpx rgba(255, 149, 0, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4rpx 12rpx rgba(255, 149, 0, 0.4);
+  }
 }
 
 /* 模式切换 */
@@ -680,4 +744,10 @@ page {
   margin-top: 16rpx;
   display: flex;
   flex-wrap: wrap;
+}
+
+/* 覆盖 nav-bar 组件的样式 */
+.nav-bar .title-area {
+  z-index: 99;
+  pointer-events: auto !important;
 }
