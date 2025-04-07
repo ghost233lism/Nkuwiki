@@ -12,7 +12,12 @@ Component({
     // 文本内容
     value: {
       type: String,
-      value: ''
+      value: '',
+      observer: function(newVal) {
+        if (newVal !== this.data._lastValue) {
+          this._updateContent(newVal);
+        }
+      }
     },
     // 占位文本
     placeholder: {
@@ -75,7 +80,7 @@ Component({
     // 是否为Markdown编辑模式
     markdownMode: {
       type: Boolean,
-      value: false
+      value: true
     },
     // 是否显示工具栏
     showToolbar: {
@@ -107,7 +112,15 @@ Component({
     // 预览内容
     markdownNodes: null,
     // 内部使用的高度值，确保为数字
-    _height: 200
+    _height: 200,
+    _lastValue: '',
+    _timer: null,
+    nodes: [],
+    rendering: false,
+    // 内部状态
+    focus: false,
+    rows: 1,
+    markdownHTML: ''
   },
   
   observers: {
@@ -127,6 +140,9 @@ Component({
         this.setData({ showPreview: true });
         this.updatePreview();
       }
+    },
+    'markdownMode, value': function(markdownMode, value) {
+      this._updateContent(value);
     }
   },
   
@@ -141,12 +157,21 @@ Component({
       if (this.properties.readOnly && !this.data.showPreview) {
         this.setData({ showPreview: true });
       }
+      
+      // 初始化value
+      this._updateContent(this.data.value);
     },
     
     ready() {
       // 如果已经在预览模式，初始化预览内容
       if (this.data.showPreview && this.properties.value) {
         this.updatePreview();
+      }
+    },
+    detached() {
+      // 清理定时器
+      if (this.data._timer) {
+        clearTimeout(this.data._timer);
       }
     }
   },
@@ -262,6 +287,38 @@ Component({
     // 工具栏操作 - 添加图片
     onImageTap() {
       this.triggerEvent('imagetap');
+    },
+    
+    // 更新内容
+    _updateContent(value) {
+      // 保存最新值
+      this.setData({
+        _lastValue: value || ''
+      });
+      
+      if (!this.properties.markdownMode) {
+        return;
+      }
+
+      // 解析Markdown
+      if (value && this.data.showPreview) {
+        try {
+          const result = towxml(value, 'markdown', {
+            theme: 'light',
+            events: {
+              tap: (e) => {
+                this.triggerEvent('linktap', e.currentTarget.dataset);
+              }
+            }
+          });
+          
+          this.setData({
+            markdownNodes: result
+          });
+        } catch (err) {
+          console.error('解析markdown失败:', err);
+        }
+      }
     }
   }
 }); 

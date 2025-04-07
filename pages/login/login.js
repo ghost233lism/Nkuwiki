@@ -5,7 +5,6 @@ Page({
   behaviors: [baseBehavior, authBehavior],
 
   data: {
-    isLogging: false,
     appInfo: {
       version: '0.0.2',
       appName: 'nkuwiki',
@@ -13,92 +12,36 @@ Page({
     }
   },
   async onLoad() {
-    await this.getVersionInfo();
-    const res = await this._syncUserInfo();
-    if(res.details.message === '用户已存在'){
-      this.setStorage('isLoggedIn', true);
-      this.reLaunch('/pages/index/index');
-    }
-    // 初始化页面状态，确保组件状态正确
     this.updateState({
+      version: this.getStorage('aboutInfo').version,
       loading: false,
       error: false,
-      empty: false,
-      success: false,
-      errorText: '出错了，请稍后再试'
     });
-  },
-
-  // 从storage中获取版本信息
-  async getVersionInfo() {
-    try {
-      const aboutInfo = this.getStorage('aboutInfo');
-      if (aboutInfo && aboutInfo.version) {
-        this.updateState({
-          appInfo: {
-            ...this.data.appInfo,
-            version: aboutInfo.version
-          }
-        });
+    const res = await this._syncUserInfo();
+    if(res.code === 200){
+      this.setStorage('isLoggedIn', true);
+      if(res.details.message === '用户已存在'){
+        this.reLaunch('/pages/index/index');
       }
-      return aboutInfo;
-    } catch (err) {throw err;}
+      //这里不直接进index页面单纯是为了让新用户点一下登录按钮qwq
+    }
   },
 
-  onPullDownRefresh() {
+  async onPullDownRefresh() {
     this.refreshPage();
     wx.stopPullDownRefresh();
   },
-  
   // 刷新页面
   async refreshPage() {
     this.updateState({ error: false, errorText: '' });
     await this.getVersionInfo();
   },
 
-  // 隐藏错误
-  hideError() {
-    this.updateState({ error: false });
-  },
-
-  onUnload() {
-    // 注释掉这一行，登录成功后不应该清除登录状态
-    // this.setStorage('isLoggedIn', false);
-  },
-
   async handleLogin() {
-    if (this.data.isLogging) {
-      return;
-    }
-    this.updateState({ isLogging: true, error: false, errorText: '' });
-    try {
-      const res = await this._syncUserInfo();
-      if (res.code === 200) {
-        // 设置登录状态
-        this.setStorage('isLoggedIn', true);
-        console.debug('isloggedin', this.getStorage('isLoggedIn'));
-        
-        // 直接跳转到首页
-        wx.switchTab({
-          url: '/pages/index/index',
-          complete: () => {
-            // 无论成功或失败，都重置登录状态
-            this.updateState({ isLogging: false });
-          }
-        });
-      } else {
-        throw new Error(res.message || '登录失败');
-      }
-    } catch (err) {
-      console.error('登录失败:', err);
-      this.updateState({ 
-        isLogging: false,
-        error: true,
-        errorText: err.message || '登录失败，请重试'
-      });
-    }
+    this.reLaunch('/pages/index/index');
   },
-  onAgreementTap(e) {
+
+  async onAgreementTap(e) {
     const type = e.detail?.type || e.currentTarget.dataset.type;
     const title = type === 'user' ? '用户协议' : '隐私政策';
     this.showModal({

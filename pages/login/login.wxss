@@ -82,12 +82,3 @@ page {
   font-weight: 400;
   white-space: nowrap;
 }
-
-/* 覆盖微信原生按钮样式 */
-button[type=primary] {
-  background-color: #07c160 !important;
-}
-
-button.button-hover {
-  background-color: #06ad56 !important;
-}

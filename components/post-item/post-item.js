@@ -3,8 +3,6 @@ const postBehavior = require('../../behaviors/postBehavior');
 const userBehavior = require('../../behaviors/userBehavior');
 const { formatRelativeTime } = require('../../utils/util.js');
 
-// 不再需要引入towxml解析器，由text-area组件负责处理
-
 Component({
   behaviors: [baseBehavior, postBehavior, userBehavior],
 
@@ -80,7 +78,29 @@ Component({
     isMarkdown: false,
     markdownNodes: null,
     // 默认头像
-    defaultAvatar: '/icons/avatar1.png'
+    defaultAvatar: '',
+    // 用户信息
+    userInfo: null,
+    likeIcon: {
+      name: 'like',
+      size: 24,
+      color: '#666'
+    },
+    commentIcon: {
+      name: 'comment',
+      size: 24,
+      color: '#666'
+    },
+    favoriteIcon: {
+      name: 'favorite',
+      size: 24,
+      color: '#666'
+    },
+    shareIcon: {
+      name: 'share',
+      size: 24,
+      color: '#666'
+    }
   },
 
   observers: {
@@ -108,7 +128,6 @@ Component({
               });
             }
           } catch (e) {
-            console.error('解析图片数据失败:', e);
           }
         }
         
@@ -122,11 +141,18 @@ Component({
               });
             }
           } catch (e) {
-            console.error('解析标签数据失败:', e);
           }
         }
         
         // 默认所有内容都使用text-area组件渲染
+        // 检查是否包含Markdown格式
+        const isMarkdown = post.content && (
+          post.content.includes('#') || 
+          post.content.includes('*') || 
+          post.content.includes('[') || 
+          post.content.includes('```')
+        );
+        
         this.setData({ isMarkdown: true });
       });
     },
@@ -137,20 +163,55 @@ Component({
           contentExpanded: true
         });
       }
+    },
+    'isLiked': function(isLiked) {
+      this.setData({
+        likeIcon: {
+          name: 'like',
+          size: 24,
+          color: isLiked ? '#ff6b6b' : '#666'
+        },
+        commentIcon: {
+          name: 'comment',
+          size: 24,
+          color: '#666'
+        },
+        shareIcon: {
+          name: 'share',
+          size: 24,
+          color: '#666'
+        },
+        
+      });
+    },
+    'isFavorited': function(isFavorited) {
+      this.setData({
+        favoriteIcon: {
+          name: 'favorite',
+          size: 24,
+          color: isFavorited ? '#ffc107' : '#666'
+        }
+      });
     }
   },
 
   lifetimes: {
     attached() {
-      // 获取默认头像
-      const defaultAvatar = this.getStorage('defaultAvatar') || '/icons/avatar1.png';
-      this.setData({ defaultAvatar });
+      // 获取默认头像和用户信息
+      const defaultAvatar = this.getStorage('defaultAvatar');
+      const userInfo = this.getStorage('userInfo');
+      
+      this.setData({ 
+        defaultAvatar,
+        userInfo: userInfo || null
+      });
       
       // 延迟初始化，避免渲染框架内部状态冲突
       wx.nextTick(() => {
         this.init();
         this.checkContentOverflow();
         this.checkUserInteraction();
+        this._updateIcons();
       });
     },
     ready() {
@@ -177,19 +238,27 @@ Component({
           });
         }
       } catch (e) {
-        console.debug('获取用户信息失败:', e);
       }
     },
     
     // 初始化帖子数据和状态
     _initPost() {
-      if (!this.data.post) return;
+      const post = this.data.post;
       
-      // 检查内容是否超出
-      this.checkContentOverflow();
+      // 判断当前用户是否已点赞、收藏和关注
+      const isLiked = post.is_liked === 1;
+      const isFavorited = post.is_favorited === 1;
+      const isFollowed = post.is_followed === 1;
       
-      // 更新交互状态
-      this.updatePostStatus();
+      // 更新状态
+      this.setData({
+        isLiked,
+        isFavorited,
+        isFollowed
+      });
+      
+      // 更新图标
+      this._updateIcons();
     },
     
     // 检查内容是否超出
@@ -199,6 +268,16 @@ Component({
         this.setData({
           contentExpanded: true,
           contentOverflow: false
+        });
+        return;
+      }
+      
+      // 检查是否有内容
+      const content = this.data.post && this.data.post.content;
+      if (!content || content.trim() === '') {
+        this.setData({
+          contentOverflow: false,
+          isMarkdown: false // 空内容不使用Markdown渲染
         });
         return;
       }
@@ -222,10 +301,19 @@ Component({
         query.exec(rect => {
           if (rect && rect[0]) {
             const lineHeight = 28; // 根据CSS中的字体大小和行高估算
-            const maxHeight = lineHeight * 3; // 3行文本的高度
+            const maxHeight = lineHeight * 4; // 减少到4行文本的高度
             
-            // 特殊处理Markdown内容，直接使用最大高度比较
-            const contentOverflow = this.data.isMarkdown ? true : (rect[0].height > maxHeight);
+            // 判断内容是否超出最大高度
+            let contentOverflow = false;
+            
+            // 检查内容实际高度
+            if (rect[0].height > maxHeight) {
+              // 内容超过最大高度，显示展开按钮
+              contentOverflow = true;
+            } else if (this.data.isMarkdown && content.length > 60) {
+              // Markdown内容特殊处理，减少字符阈值
+              contentOverflow = rect[0].height > lineHeight * 2;
+            }
             
             // 如果高度为0，可能是因为内容还未渲染，延迟检测，但限制递归次数
             if (rect[0].height === 0) {
@@ -248,7 +336,6 @@ Component({
           this.checkingContentOverflow = false;
         });
       } catch (e) {
-        console.error('检查内容高度失败', e);
         this.checkingContentOverflow = false;
       }
     },
@@ -326,68 +413,46 @@ Component({
     // 点击标签
     _onTagTap(e) {
       const tag = e.currentTarget.dataset.tag;
-      wx.navigateTo({
-        url: `/pages/tag-posts/tag-posts?tag=${encodeURIComponent(tag)}`
-      });
+      this.triggerEvent('tagtap', { tag });
     },
     
-    // 点赞
-    _onLikeTap() {
-      const post = this.data.post;
-      if (!post || !post.id) return;
-
-      // 检查用户登录状态
-      const openid = this.getStorage('openid');
-      if (!openid) {
-        this.showToast('请先登录', 'error');
-        return;
-      }
-
+    // 处理点赞事件
+    async _onLikeTap() {
+      // 防止重复点击
+      if (this.data.isProcessing.like) return;
+      
+      const postId = this.properties.post.id;
+      if (!postId) return;
+      
       const isLiked = this.data.isLiked;
-      const newLikeCount = post.like_count + (isLiked ? -1 : 1);
-
-      // 立刻更新UI
+      
+      // 设置按钮状态为处理中，避免重复操作
       this.setData({
-        isLiked: !isLiked,
-        'post.like_count': newLikeCount >= 0 ? newLikeCount : 0,
-        'post.is_liked': !isLiked ? 1 : 0 // 同时更新is_liked字段
+        'isProcessing.like': true,
+        'isLiked': !isLiked
       });
       
-      // 调用行为方法处理实际的点赞/取消点赞操作
-      this._likePost(post.id)
-        .then(res => {
-          if (res && res.code === 200 && res.data) {
-            // 获取服务器返回的状态数据
-            // 服务器返回格式: {data: {"post_id": {is_liked: true, like_count: 2}}}
-            const postId = post.id.toString();
-            const statusData = res.data || {};
-
-            // 使用服务器返回的状态更新
-            this.setData({
-              isLiked: statusData.is_liked || false,
-              'post.like_count': statusData.like_count || 0,
-              'post.is_liked': statusData.is_liked ? 1 : 0
-            });
-
-
-            // 触发事件通知父组件
-            this.triggerEvent('like', {
-              id: post.id,
-              index: this.data.index,
-              isLiked: statusData.is_liked || false,
-              likeCount: statusData.like_count || 0
-            });
-          }
-        })
-        .catch(err => {
-          console.error('点赞操作失败', err);
-          // 恢复原状态
+      try {
+        // 调用post行为的点赞/取消点赞方法
+        const action = isLiked ? 'unlike' : 'like';
+        const res = await this._doPostAction(postId, action);
+        
+        // 更新帖子状态
+        if (res && res.code === 200) {
+          // 更新点赞数
+          const currentLikes = parseInt(this.properties.post.like_count || 0);
           this.setData({
-            isLiked: isLiked,
-            'post.like_count': post.like_count,
-            'post.is_liked': isLiked ? 1 : 0
+            'post.like_count': isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1,
+            'isProcessing.like': false
           });
+        }
+      } catch (err) {
+        // 恢复原状态
+        this.setData({
+          'isLiked': isLiked,
+          'isProcessing.like': false
         });
+      }
     },
     
     // 收藏
@@ -438,7 +503,6 @@ Component({
           }
         })
         .catch(err => {
-          console.error('收藏操作失败', err);
           // 恢复原状态
           this.setData({
             isFavorited: isFavorited,
@@ -508,7 +572,6 @@ Component({
           }
         })
         .catch(err => {
-          console.error('关注操作失败', err);
           // 恢复原状态
           this.setData({ 
             isFollowed: isFollowed,
@@ -600,8 +663,6 @@ Component({
           });
         })
         .catch(err => {
-          console.error('删除帖子失败', err);
-          
           // 显示错误消息
           this.showToast('删除失败，请稍后重试', 'error');
         })
@@ -610,6 +671,36 @@ Component({
             'isProcessing.delete': false
           });
         });
+    },
+
+    // 更新图标状态
+    _updateIcons() {
+      // 确保使用最新的状态
+      const isLiked = this.data.isLiked;
+      const isFavorited = this.data.isFavorited;
+      
+      this.setData({
+        likeIcon: {
+          name: 'like',
+          size: 24,
+          color: isLiked ? '#ff6b6b' : '#666'
+        },
+        commentIcon: {
+          name: 'comment',
+          size: 24,
+          color: '#666'
+        },
+        favoriteIcon: {
+          name: 'favorite',
+          size: 24,
+          color: isFavorited ? '#ffc107' : '#666'
+        },
+        shareIcon: {
+          name: 'share',
+          size: 24,
+          color: '#666'
+        }
+      });
     }
   }
 }); 

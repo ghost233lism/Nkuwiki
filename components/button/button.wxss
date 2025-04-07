@@ -1,78 +1,251 @@
-.btn {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  font-size: 32rpx;
-  border-radius: 44rpx;
-  overflow: hidden;
-  background: #f5f5f5;
-  color: #333;
-  border: none;
-  padding: 0;
-}
-
-.btn::after {
-  border: none;
-}
-
 .btn-content {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  line-height: 1;
+  flex-direction: row;
+  width: auto !important;
+  min-width: 40rpx;
+  box-sizing: border-box;
+  position: relative;
 }
 
-.btn-icon {
-  margin-right: 12rpx;
+/* 调整文本与图标间距 */
+.btn-content icon + .btn-text {
+  margin-left: 8rpx;
 }
 
-.loading {
-  margin-right: 10rpx;
-  animation: rotate 1s linear infinite;
+/* 计数样式 */
+.btn-count {
+  position: relative;
+  margin-left: 0;
 }
 
-.primary {
+/* 红点样式 */
+.badge {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #fa5151;
+}
+
+/* 文本计数样式 */
+.text-count {
+  font-size: 24rpx;
+  color: #999;
+  font-weight: normal;
+  padding: 0;
+  margin: 0;
+  margin-left: 6rpx;
+}
+
+/* 气泡计数样式 */
+.bubble-count {
+  min-width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  border-radius: 36rpx;
+  padding: 0 8rpx;
+  font-size: 22rpx;
+  background: #fa5151;
+  color: #fff;
+  text-align: center;
+  font-weight: normal;
+}
+
+/* 气泡在按钮外部时的样式 */
+.bubble-count.outside {
+  position: absolute;
+  top: -12rpx;
+  right: -12rpx;
+  transform: scale(0.8);
+  transform-origin: right top;
+}
+
+/* 计数样式与按钮类型组合 */
+.type-primary .text-count {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.plain.type-primary .text-count {
+  color: #07c160;
+}
+
+.type-warn .text-count {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.plain.type-warn .text-count {
+  color: #fa5151;
+}
+
+/* 主要按钮 */
+.type-primary {
   background: #07c160;
   color: #fff;
 }
 
-.warn {
+/* 警告按钮 */
+.type-warn {
   background: #fa5151;
   color: #fff;
 }
 
+/* 默认按钮 */
+.type-default {
+  background: #f8f8f8;
+  color: #333;
+}
+
+/* 次要按钮 */
+.type-secondary {
+  background: #07c16033;
+  color: #07c160;
+}
+
+/* 文本按钮 */
+.type-text {
+  background: transparent;
+  color: #07c160;
+  height: auto;
+  line-height: 1.5;
+  padding: 8rpx 16rpx;
+}
+
+/* 链接按钮 */
+.type-link {
+  background: transparent;
+  color: #576b95;
+  text-decoration: underline;
+  height: auto;
+  line-height: 1.5;
+  padding: 4rpx 8rpx;
+}
+
+/* 轮廓按钮 */
 .plain {
   background: transparent;
   border: 2rpx solid currentColor;
 }
 
-.plain.primary {
+.plain.type-primary {
   color: #07c160;
 }
 
-.plain.warn {
+.plain.type-warn {
   color: #fa5151;
 }
 
-.mini {
+.plain.type-default {
+  color: #999;
+}
+
+/* 按钮尺寸变体 */
+.size-medium {
+  height: 76rpx;
+  line-height: 76rpx;
+  font-size: 30rpx;
+}
+
+.size-mini {
   display: inline-block;
-  width: auto;
   height: 64rpx;
   line-height: 64rpx;
   font-size: 28rpx;
   padding: 0 32rpx;
 }
 
+.size-large {
+  height: 100rpx;
+  line-height: 100rpx;
+  font-size: 34rpx;
+  letter-spacing: 2rpx;
+}
+
+/* 按钮特殊状态 */
 .disabled {
   opacity: 0.5;
+  pointer-events: none;
 }
 
-.btn-hover {
-  opacity: 0.8;
+/* 圆形按钮 */
+.circle {
+  border-radius: 50%;
+  padding: 0;
 }
 
+/* 按钮阴影 */
+.shadow {
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.1);
+}
+
+/* 胶囊按钮（默认） */
+.capsule {
+  border-radius: 999rpx;
+}
+
+/* 方形按钮 */
+.square {
+  border-radius: 8rpx;
+}
+
+/* 全宽按钮 */
+.block {
+  display: block;
+  width: 100%;
+}
+
+/* 仅图标按钮 */
+.icon-only {
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-only .btn-icon {
+  margin: 0;
+}
+
+/* 自适应布局样式 */
+.content-fit {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 14rpx !important;
+  height: 14rpx !important;
+}
+
+.text-fit {
+  font-size: 10rpx !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  transform: scale(0.85);
+  transform-origin: left center;
+}
+
+.badge-fit {
+  width: 6rpx !important;
+  height: 6rpx !important;
+  margin-left: 0 !important;
+}
+
+.bubble-fit {
+  min-width: 14rpx !important;
+  height: 14rpx !important;
+  line-height: 14rpx !important;
+  font-size: 10rpx !important;
+  padding: 0 2rpx !important;
+  margin-left: 0 !important;
+  transform: scale(0.85);
+  transform-origin: left center;
+}
+
+/* 按钮动画效果 */
 @keyframes rotate {
   from {
     transform: rotate(0deg);
@@ -80,4 +253,65 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  flex-direction: row;
+}
+
+.button-group .weui-btn {
+  flex: 1;
+  margin: 0 10rpx;
+}
+
+.button-group .weui-btn:first-child {
+  margin-left: 0;
+}
+
+.button-group .weui-btn:last-child {
+  margin-right: 0;
+}
+
+/* 按钮文本样式 */
+.btn-text {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: normal;
+  padding: 0 10rpx;
+  text-align: center;
+  line-height: 1.4;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: initial;
+  max-width: none;
+  width: auto;
+}
+
+/* 文本按钮容器 */
+.btn-content.text-only {
+  padding: 8rpx 16rpx;
+  border-radius: 4rpx;
+  min-height: 40rpx;
+  max-width: none;
+  width: auto !important;
+  box-sizing: border-box;
+}
+
+.btn-text.primary {
+  color: #07c160;
+}
+
+.btn-text.warn {
+  color: #fa5151;
+}
+
+.btn-text.secondary {
+  color: #576b95;
+}
+
+.text-default {
+  color: #333;
 } 

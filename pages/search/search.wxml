@@ -79,7 +79,7 @@
 			<source-list 
 				sources="{{searchResults}}" 
 				binditemtap="onResultTap"
-				show-rank="{{false}}"
+				show-rank="{{true}}"
 			/>
 			
 			<!-- 加载更多 -->

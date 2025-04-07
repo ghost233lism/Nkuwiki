@@ -8,18 +8,24 @@
         <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>
       </view> 
     </view>
-    <view wx:if="{{showFollow && post.openid && post.openid !== userInfo.openid}}" class="follow-container">
-      <button class="follow-btn {{isFollowed ? 'followed' : ''}}" 
-              catchtap="_onFollowTap">
-        {{isFollowed ? '已关注' : '关注'}}
-      </button>
+    <view class="header-right">
+      <view wx:if="{{showFollow && post.openid && userInfo && userInfo.openid && post.openid !== userInfo.openid}}" class="follow-container">
+        <button 
+          class="follow-button {{isFollowed ? 'followed' : ''}}"
+          text="{{isFollowed ? '已关注' : '关注'}}"
+          textColor="{{isFollowed ? '#999' : '#07c160'}}"
+          textSize="30"
+          textBackground="{{isFollowed ? '#f2f2f2' : '#e8f8ed'}}"
+          bind:tap="_onFollowTap"
+        ></button>
+      </view>
     </view>
   </view>
 
   <view class="post-content-wrapper" bindtap="_onPostTap">
     <!-- 只在非Markdown模式下显示标题 -->
     <view wx:if="{{post.title && !isMarkdown}}" class="post-title">{{post.title}}</view>
-    <view class="post-content">
+    <view class="post-content" wx:if="{{post.content && post.content.trim() !== ''}}">
       <!-- 根据是否为Markdown内容，使用不同的渲染方式 -->
       <block wx:if="{{isMarkdown}}">
         <!-- 使用text-area组件渲染Markdown内容 -->
@@ -29,29 +35,38 @@
             readOnly="{{true}}"
             markdownMode="{{true}}"
             title="{{post.title}}"
-            height="{{contentExpanded ? 600 : 200}}"
+            height="{{contentExpanded ? 600 : 140}}"
             showToolbar="{{false}}"
           ></text-area>
+          
+          <!-- 展开全文按钮 - Markdown模式 -->
+          <view wx:if="{{contentOverflow}}" catchtap="_onExpandTap" class="read-more-wrapper">
+            <view class="read-more">
+              {{contentExpanded ? '收起' : '展开全文'}}
+              <icon class="expand-icon" name="{{contentExpanded ? 'up' : 'down'}}" size="12"></icon>
+            </view>
+          </view>
         </view>
       </block>
       <block wx:else>
         <!-- 普通文本内容渲染 -->
         <view class="post-text">
           <rich-text class="post-body {{contentExpanded ? '' : 'collapsed'}}" nodes="{{post.content}}"></rich-text>
+          
+          <!-- 展开全文按钮 - 普通文本模式 -->
+          <view wx:if="{{contentOverflow}}" catchtap="_onExpandTap" class="read-more-wrapper">
+            <view class="read-more">
+              {{contentExpanded ? '收起' : '展开全文'}}
+              <icon class="expand-icon" name="{{contentExpanded ? 'up' : 'down'}}" size="12"></icon>
+            </view>
+          </view>
         </view>
       </block>
-      
-      <view wx:if="{{contentOverflow}}" catchtap="_onExpandTap" class="read-more-wrapper">
-        <view class="read-more">
-          {{contentExpanded ? '收起' : '展开全文'}}
-          <icon class="expand-icon" name="{{contentExpanded ? 'up' : 'down'}}" size="12"></icon>
-        </view>
-      </view>
     </view>
     
     <view wx:if="{{post.images && post.images.length > 0}}" 
           class="post-images {{post.images.length === 1 ? 'single-image' : (post.images.length === 2 ? 'double-image' : 'multi-image')}}">
-      <block wx:for="{{post.images}}" wx:key="index">
+      <block wx:for="{{post.images}}" wx:key="*this">
         <image class="post-image" src="{{item}}" mode="{{post.images.length === 1 ? 'widthFix' : 'aspectFill'}}" 
                data-index="{{index}}" data-images="{{post.images}}" 
                catchtap="_onImageTap"></image>
@@ -60,45 +75,59 @@
     </view>
   </view>
 
+  <!-- 标签移到正文下方，按钮上方 -->
+  <view wx:if="{{post.tags && post.tags.length > 0}}" class="tag-list">
+    <view wx:for="{{post.tags}}" wx:key="*this"
+          class="tag-item"
+          data-tag="{{item}}" 
+          catchtap="_onTagTap">
+      #{{item}}
+    </view>
+  </view>
+
   <view class="post-footer">
     <view class="post-footer-row">
       <text class="post-time-container">{{formattedTime}}</text>
-      <view class="post-actions" wx:if="{{showAction}}">
-        <view class="action-item {{isLiked ? 'active' : ''}}" catchtap="_onLikeTap">
-          <icon name="{{isLiked ? 'like-active' : 'like'}}" color="{{isLiked ? '#1aad19' : '#666'}}" size="24"></icon>
-          <text class="action-text">{{post.like_count || 0}}</text>
-        </view>
+        <!-- 点赞按钮 -->
+        <button 
+          icon="{{likeIcon}}"
+          showCount="{{true}}"
+          count="{{post.like_count || 0}}"
+          bind:tap="_onLikeTap"
+          style="background-color: #fff;"
+        ></button>
         
-        <view class="action-item {{isFavorited ? 'active' : ''}}" catchtap="_onFavoriteTap">
-          <icon name="{{isFavorited ? 'favorite-active' : 'favorite'}}" color="{{isFavorited ? '#1aad19' : '#666'}}" size="24"></icon>
-          <text class="action-text">{{post.favorite_count || 0}}</text>
-        </view>
+        <!-- 评论按钮 -->
+        <button 
+          icon="{{commentIcon}}" 
+          showCount="{{true}}"
+          count="{{post.comment_count || 0}}"
+          bind:tap="_onCommentTap"
+          style="background-color: #fff;"
+        ></button>
+
+        <!-- 收藏按钮 -->
+        <button 
+          icon="{{favoriteIcon}}" 
+          showCount="{{true}}"
+          count="{{post.favorite_count || 0}}"
+          bind:tap="_onFavoriteTap"
+          style="background-color: #fff;"
+        ></button>
         
-        <view class="action-item" catchtap="_onCommentTap">
-          <icon name="comment" color="#666" size="24"></icon>
-          <text class="action-text">{{post.comment_count || 0}}</text>
-        </view>
-        
-        <button class="share-button action-item" open-type="share">
-          <icon name="share" color="#666" size="24"></icon>
-          <text class="action-text">分享</text>
-        </button>
-      </view>
-    </view>
-    
-    <!-- 修改标签显示为mp-badge组件 -->
-    <view wx:if="{{post.tags && post.tags.length > 0}}" class="tag-list">
-      <mp-badge wx:for="{{post.tags}}" wx:key="index"
-               content="{{item}}"
-               data-tag="{{item}}" 
-               catchtap="_onTagTap"
-               class="tag-badge">
-      </mp-badge>
+        <!-- 分享按钮 -->
+        <button 
+          icon="{{shareIcon}}" 
+          showCount="{{true}}"
+          count="{{post.share_count || 0}}"
+          openType="share"
+          style="background-color: #fff;"
+        ></button>
     </view>
   </view>
 
   <view wx:if="{{showComment && post.comments && post.comments.length > 0}}" class="comment-preview">
-    <view wx:for="{{post.comments}}" wx:key="index" class="comment-item">
+    <view wx:for="{{post.comments}}" wx:key="id" class="comment-item">
       <text class="comment-author">{{item.nickname}}：</text>
       <text class="comment-content">{{item.content}}</text>
     </view>

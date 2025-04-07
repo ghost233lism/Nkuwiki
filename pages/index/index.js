@@ -154,7 +154,6 @@ Page({
       if (openid) {
         this.checkUnreadNotification().
             then(res=>{
-              console.log(res);
         }).catch(err => {
           console.debug('检查未读通知失败:', err);
         });
@@ -281,10 +280,10 @@ Page({
 
   // 刷新帖子状态
   async _refreshPostStatus() {
+    console.debug('开始刷新帖子状态');
     try {
-      console.debug('开始刷新帖子状态');
+      // 获取帖子列表组件
       const postList = this.selectComponent('#postList');
-      
       if (!postList) {
         console.debug('未找到post-list组件');
         return;
@@ -292,27 +291,57 @@ Page({
       
       console.debug('post-list组件已找到');
       
-      // 直接获取帖子列表
-      const posts = postList.data.post;
-      console.debug('当前帖子列表:', posts ? posts.length : 0);
+      // 获取当前帖子列表
+      const posts = postList.data.post || [];
+      console.debug('当前帖子列表:', posts.length);
       
-      if (!posts || posts.length === 0) {
-        console.debug('帖子列表为空，不发送状态请求');
+      // 如果帖子列表为空，检查是否需要加载数据
+      if (posts.length === 0) {
+        console.debug('帖子列表为空，尝试重新加载数据');
+        // 检查loading状态，如果不是正在加载，则重新加载
+        if (!postList.data.loading) {
+          // 设置post数组为响应数据中的data数组
+          setTimeout(() => {
+            postList.loadInitialData().then(() => {
+              console.debug('帖子列表重新加载完成');
+              
+              // 如果加载后的帖子列表仍为空，可能是数据问题
+              if (postList.data.post.length === 0) {
+                console.debug('重新加载后帖子列表仍为空，可能是数据或显示问题');
+                
+                // 重新设置筛选条件，尝试触发observer事件
+                postList.setData({
+                  filter: { ...postList.data.filter }
+                });
+              }
+            });
+          }, 100);
+        } else {
+          console.debug('帖子列表正在加载中，跳过重新加载');
+        }
         return;
       }
       
-      // 获取用户登录状态
-      const openid = this.getStorage('openid');
-      if (!openid) {
-        console.debug('用户未登录，不获取交互状态');
+      // 获取所有帖子ID
+      const postIds = posts.map(p => p.id).filter(Boolean);
+      if (postIds.length === 0) {
+        console.debug('没有有效的帖子ID');
         return;
       }
       
-      // 直接调用updatePostsStatus并等待结果
-      await postList.updatePostsStatus(posts);
-      console.debug('帖子状态刷新完成');
+      console.debug('获取帖子状态:', postIds);
+      
+      // 调用API获取帖子状态
+      const statusRes = await this._getPostStatus(postIds);
+      
+      if (statusRes && statusRes.code === 200 && statusRes.data) {
+        console.debug('成功获取帖子状态:', statusRes.data);
+        
+        // 更新帖子状态
+        postList.updatePostsStatus(posts);
+      }
     } catch (err) {
-      console.debug('刷新帖子状态发生错误:', err);
+      console.error('刷新帖子状态失败:', err);
     }
   },
 

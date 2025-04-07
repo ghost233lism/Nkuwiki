@@ -78,17 +78,37 @@ Page({
             item.create_time = item.update_time;
           }
           
+          // 确保有发布时间
+          if (!item.publish_time && item.create_time) {
+            item.publish_time = item.create_time;
+          }
+          
+          // 处理相关度字段 - 确保它是一个0-1之间的数值
+          if (typeof item.relevance === 'string') {
+            // 如果是百分比格式的字符串 (例如 "90%")
+            if (item.relevance.endsWith('%')) {
+              item.relevance = parseFloat(item.relevance) / 100;
+            } else {
+              // 尝试直接解析为数字
+              item.relevance = parseFloat(item.relevance);
+            }
+          }
+          // 确保相关度值在0-1之间
+          if (typeof item.relevance === 'number' && item.relevance > 1) {
+            item.relevance = item.relevance / 100;
+          }
+          
           // 确保有平台信息
           if (!item.platform) {
-            // 根据来源猜测平台
+            // 根据来源或URL猜测平台
             if (item.source_name && item.source_name.includes('公众号')) {
               item.platform = 'wechat';
-            } else if (item.url && item.url.includes('mp.weixin.qq.com')) {
+            } else if (item.original_url && item.original_url.includes('mp.weixin.qq.com')) {
               item.platform = 'wechat';
             } else if (item.type === 'post') {
               item.platform = 'website';
             } else {
-              item.platform = 'wxapp';
+              item.platform = 'website'; // 默认为网站
             }
           }
           
@@ -110,7 +130,7 @@ Page({
             page_size: this.data.pagination.page_size,
             total: pagination.total || 0,
             total_pages: pagination.total_pages || 0,
-            has_more: pagination.has_more || false
+            has_more: this.data.pagination.page < (pagination.total_pages || 1)
           },
           isSearching: false
         });

@@ -144,6 +144,11 @@ Component({
       'wechat': '/icons/wechat.png',
       'douyin': '/icons/douyin.png',
       
+      // 搜索相关平台图标
+      'app': '/icons/app.png',
+      'forum': '/icons/forum.png',
+      'blog': '/icons/blog.png',
+      
       // 头像
       'avatar1': '/icons/avatar1.png',
       'avatar2': '/icons/avatar2.png',
@@ -197,6 +202,11 @@ Component({
           // 默认大小
           updateData.sizeNumber = 20;
         }
+      }
+      
+      // 确保color属性不为null
+      if (this.properties.color === null) {
+        updateData.color = '';
       }
       
       // 处理图标名称 - 优先级：name > type > icon

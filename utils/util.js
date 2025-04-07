@@ -1,38 +1,143 @@
 /**
  * 通用工具函数集合
  */
-
-// ==================== 配置引入 ====================
-// 从全局App获取API配置，避免循环依赖
-const getAPIConfig = () => {
+const config = {
+  defaultAvatar: 'cloud://cloud1-7gu881ir0a233c29.636c-cloud1-7gu881ir0a233c29-1352978573/avatar1.png',
+  cloudEnv: 'cloud1-7gu881ir0a233c29',
+  version: '0.0.1',
+  API_CONFIG: {
+    base_url: 'https://nkuwiki.com',
+    api_prefix: '/api',
+    prefixes: {wxapp: '/wxapp', agent: '/agent'},
+    headers: {'Content-Type': 'application/json'}
+  }
+}
+async function init() {
+  storage.set('defaultAvatar', config.defaultAvatar);
+  storage.set('cloudEnv', config.cloudEnv);
+  storage.set('API_CONFIG', config.API_CONFIG);
+  if (!wx.cloud) {
+    console.debug('请使用 2.2.3 或以上的基础库以使用云能力');
+  } else {
+    wx.cloud.init({
+      env: storage.get('cloudEnv'),
+      traceUser: true
+    });
+  }
+  storage.set('API_CONFIG', storage.get('API_CONFIG'));
+  const systemInfo = getSystemInfo();
+  storage.set('systemInfo', systemInfo);
+  // 并行执行三个异步操作
+  const results = await Promise.all([
+    getAboutInfo().catch(err => {
+      console.debug('获取关于信息出错:', err);
+      return null;
+    }),
+    getUserProfile().catch(err => {
+      console.debug('获取用户信息出错:', err);
+      return null;
+    }),
+    getOpenID().catch(err => {
+      console.debug('获取OPENID出错:', err);
+      return null;
+    })
+  ]);
+  
+  const [aboutInfo, userProfile, openid] = results;
+  
+  // 处理获取到的数据
+  if (aboutInfo) {
+    storage.set('aboutInfo', aboutInfo);
+  }
+  
+  if (userProfile) {
+    storage.set('userInfo', userProfile);
+  }
+  
+  if (openid) {
+    storage.set('openid', openid);
+  }
+  
+  // 返回所有获取的信息
+  return {
+    aboutInfo,
+    userProfile,
+    openid
+  };
+}
+/**
+ * 获取关于信息
+ * @returns {Promise<Object>} 关于信息
+ */
+const getAboutInfo = async () => {
+  const aboutApi = createApiClient('/api/wxapp', {about: {method: 'GET', path: '/about'}});
   try {
-    const app = getApp();
-    return app ? app.globalData.API_CONFIG : {
-      base_url: 'https://nkuwiki.com',
-      api_prefix: '/api',
-      prefixes: {
-        wxapp: '/wxapp',
-        agent: '/agent',
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const res = await aboutApi.about();
+    if (res.code === 200) {
+      return res.data;
+    } else {
+      return null;
+    }
   } catch (err) {
-    console.debug('获取API_CONFIG失败，使用默认配置:', err);
-    return {
-      base_url: 'https://nkuwiki.com',
-      api_prefix: '/api',
-      prefixes: {
-        wxapp: '/wxapp',
-        agent: '/agent',
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    return null;
   }
 };
+
+/**
+ * 获取微信用户信息
+ * @returns {Promise<Object>} 用户信息
+ */
+const getUserProfile = () => {
+  return new Promise((resolve) => {
+    wx.getUserProfile({
+      desc: '用于完善用户资料',
+      success: res => {
+        const { userInfo } = res;
+        resolve({
+          nickname: userInfo.nickName,
+          avatar: userInfo.avatarUrl,
+          gender: userInfo.gender,
+          country: userInfo.country,
+          province: userInfo.province,
+          city: userInfo.city,
+          language: userInfo.language
+        });
+      },
+      fail: err => {
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * 获取openid
+ * @returns {Promise<String>} openid
+ */
+const getOpenID = async () => {
+  const openid = storage.get('openid');
+  if (openid) {
+    return openid; 
+  }
+  try {
+    if (!wx.cloud) {
+      return null;
+    }
+    // 添加await确保获取到结果
+    const res = await wx.cloud.callFunction({ name: 'getOpenID' });
+    if (res.result && res.result.code === 200) {
+      const openid = res.result.data?.openid;
+      if (openid) {
+        return openid;
+      }
+    } else {
+      return null;
+    }
+  } catch (err) {
+    return null;
+  }
+};
+
 
 // ==================== 日期时间处理 ====================
 
@@ -383,20 +488,13 @@ const nav = {
     
     console.debug('导航: 重启并跳转到', url);
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.debug('重启跳转超时:', url);
-        // 仍然解析为成功，避免阻塞其他操作
-        resolve({success: true, timeout: true});
-      }, 3000); // 3秒超时
-      
+      // 移除超时检测，因为跳转通常会成功，即使有延迟
       wx.reLaunch({
         url,
         success: res => {
-          clearTimeout(timeout);
           resolve(res);
         },
         fail: err => {
-          clearTimeout(timeout);
           console.error('重启跳转失败:', url, err);
           // 如果是超时错误，也解析为成功
           if (err.errMsg && err.errMsg.includes('timeout')) {
@@ -456,14 +554,14 @@ const error = {
 const get = async (url, params = {}) => {
   const openid = storage.get('openid')
   const finalUrl = url.startsWith('/') ? url : '/' + url
-  const apiUrl = finalUrl.startsWith(getAPIConfig().api_prefix) ? finalUrl : getAPIConfig().api_prefix + finalUrl
+  const apiUrl = finalUrl.startsWith(storage.get('API_CONFIG').api_prefix) ? finalUrl : storage.get('API_CONFIG').api_prefix + finalUrl
   
   const requestData = { ...params }
   if (openid && !requestData.openid) {
     requestData.openid = openid
   }
   
-  let requestUrl = `${getAPIConfig().base_url}${apiUrl}`
+  let requestUrl = `${storage.get('API_CONFIG').base_url}${apiUrl}`
   if (Object.keys(requestData).length) {
     const queryParams = Object.entries(requestData)
       .filter(([_, value]) => value !== undefined && value !== null && value !== '')
@@ -479,7 +577,7 @@ const get = async (url, params = {}) => {
       url: requestUrl,
       method: 'GET',
       header: {
-        ...getAPIConfig().headers,
+        ...storage.get('API_CONFIG').headers,
         ...(openid ? {'X-User-OpenID': openid} : {})
       },
       success(res) {
@@ -513,8 +611,8 @@ const get = async (url, params = {}) => {
 const post = async (url, data = {}) => {
   const openid = storage.get('openid')
   const finalUrl = url.startsWith('/') ? url : '/' + url
-  const apiUrl = finalUrl.startsWith(getAPIConfig().api_prefix) ? finalUrl : getAPIConfig().api_prefix + finalUrl
-  const requestUrl = `${getAPIConfig().base_url}${apiUrl}`
+  const apiUrl = finalUrl.startsWith(storage.get('API_CONFIG').api_prefix) ? finalUrl : storage.get('API_CONFIG').api_prefix + finalUrl
+  const requestUrl = `${storage.get('API_CONFIG').base_url}${apiUrl}`
   
   const requestData = { ...data }
   if (openid && !requestData.openid) {
@@ -529,7 +627,7 @@ const post = async (url, data = {}) => {
       method: 'POST',
       data: requestData,
       header: {
-        ...getAPIConfig().headers,
+        ...storage.get('API_CONFIG').headers,
         ...(openid ? {'X-User-OpenID': openid} : {})
       },
       success(res) {
@@ -863,88 +961,7 @@ const parseJsonField = (field, defaultValue = []) => {
   }
 }
 
-/**
- * 获取应用信息
- * @param {boolean} forceReload 是否强制刷新
- * @returns {Promise<Object>} 应用信息对象
- */
-const getAppInfo = async (forceReload = false) => {
-  try {
-    const app = getApp();
-    if (!app) {
-      throw new Error('无法获取应用实例');
-    }
-    
-    return await app.getAboutInfo(forceReload);
-  } catch (err) {
-    console.debug('获取应用信息失败:', err);
-    // 返回默认信息
-    return {
-      version: '0.0.1'
-    };
-  }
-};
 
-/**
- * 获取微信用户信息
- * @returns {Promise<Object>} 用户信息
- */
-const getUserProfile = () => {
-  return new Promise((resolve, reject) => {
-    wx.getUserProfile({
-      desc: '用于完善用户资料',
-      success: res => {
-        const { userInfo } = res;
-        resolve({
-          nickname: userInfo.nickName,
-          avatar: userInfo.avatarUrl,
-          gender: userInfo.gender,
-          country: userInfo.country,
-          province: userInfo.province,
-          city: userInfo.city,
-          language: userInfo.language
-        });
-      },
-      fail: err => {
-        console.debug('获取用户信息失败:', err);
-        reject(new Error('获取用户信息失败'));
-      }
-    });
-  });
-};
-
-// 获取openid
-const getOpenID = async (useCache = true) => {
-  // 优先从缓存获取
-  const cachedOpenid = storage.get('openid');
-  if (useCache && cachedOpenid) {
-    return cachedOpenid;
-  }
-  
-  try {
-    // 调用app实例的wxLogin方法获取
-    const app = getApp();
-    if (!app) {
-      throw new Error('无法获取应用实例');
-    }
-    
-    // 已经登录过，直接返回全局的openid
-    if (app.globalData.openid) {
-      return app.globalData.openid;
-    }
-    
-    // 触发登录流程获取openid
-    const res = await app.wxLogin();
-    if (res.code === 200 && res.data && res.data.openid) {
-      return res.data.openid;
-    }
-    
-    throw new Error(res.message || '获取openid失败');
-  } catch (err) {
-    console.debug('获取openid失败:', err);
-    throw err;
-  }
-}
 
 // ==================== 链接处理 ====================
 
@@ -1032,6 +1049,9 @@ const parseImageUrl = url => {
 };
 
 module.exports = {
+  // 初始化
+  init,
+
   // 日期时间
   formatTime,
   formatNumber,
@@ -1068,7 +1088,6 @@ module.exports = {
   isEmptyObject,
   isValidArray,
   parseJsonField,
-  getAppInfo,
   getUserProfile,
   getSystemInfo,
   getOpenID,

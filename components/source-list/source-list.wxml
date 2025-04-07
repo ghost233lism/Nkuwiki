@@ -1,55 +1,67 @@
 <view class="source-list">
-  <block wx:for="{{sources}}" wx:key="id">
-    <view class="source-item" bindtap="onItemTap" data-index="{{index}}">
-      <!-- 排名 -->
-      <view class="rank-container" wx:if="{{showRank}}">
-        <view class="rank {{index < 3 ? 'top-rank' : 'normal-rank'}}">{{index + 1}}</view>
-      </view>
-      
+  <block wx:if="{{processedSources && processedSources.length > 0}}">
+    <view 
+      class="source-item" 
+      wx:for="{{processedSources}}" 
+      wx:key="index" 
+      data-index="{{index}}"
+      bindtap="onItemTap"
+    >
       <!-- 内容区 -->
       <view class="content">
-        <!-- 顶部信息栏 -->
-        <view class="top-info" wx:if="{{showSource}}">
-          <!-- 左侧来源信息 -->
-          <view class="source-tag" bindtap="onSourceIconTap" data-index="{{index}}">
-            <image class="source-icon" src="{{item.icon}}" mode="aspectFit" wx:if="{{item.icon}}"></image>
-            <text class="source-name" wx:if="{{item.platform}}">{{getPlatformName(item.platform)}}</text>
-            <text class="source-name" wx:else>{{item.source_name || '南开维基'}}</text>
-            <view class="official-tag" wx:if="{{showOfficial && item.isOfficial}}">官方</view>
+        <!-- 第一行：排名、平台图标、来源和时间 -->
+        <view class="header-bar">
+          <view class="source-info" data-index="{{index}}" catchtap="onSourceIconTap">
+            <view class="rank-num {{index < 3 ? 'top-rank' : 'normal-rank'}}" wx:if="{{showRank}}">
+              {{index + 1}}
+            </view>
+            <icon name="{{item.platformIcon}}" size="32" />
+            <text class="source-name">{{item.platformName || '未知来源'}}</text>
+            <view class="official-tag" wx:if="{{item.is_official}}">官方</view>
           </view>
           
-          <!-- 右侧作者与时间 -->
           <view class="author-time">
             <text class="author" wx:if="{{item.author}}">{{item.author}}</text>
-            <text class="divider" wx:if="{{item.author && item.create_time}}">·</text>
-            <text class="create-time" wx:if="{{item.create_time}}">{{formatRelativeTime(item.create_time)}}</text>
+            <text class="divider" wx:if="{{item.author && item.displayTime}}">·</text>
+            <text class="create-time">{{item.displayTime || ''}}</text>
           </view>
         </view>
         
-        <!-- 标题 -->
-        <view class="title" bindtap="onTitleTap" data-index="{{index}}">{{item.title}}</view>
+        <!-- 第二行：标题 -->
+        <view class="title" data-index="{{index}}" catchtap="onTitleTap">{{item.title}}</view>
         
-        <!-- 内容摘要 -->
-        <view class="summary" wx:if="{{item.content}}">{{item.content}}</view>
+        <!-- 摘要(如果有) -->
+        <view class="summary" wx:if="{{item.summary}}">{{item.summary}}</view>
         
-        <!-- 统计信息 -->
-        <view class="stats" wx:if="{{showStats}}">
-          <view class="relevance" wx:if="{{item.relevance}}">相关度: {{item.relevance}}%</view>
-          <view class="views" wx:if="{{item.views}}">{{item.views}} 阅读</view>
-          <view class="likes" wx:if="{{item.likes}}">
-            <icon name="like" size="30" />
-            <text>{{item.likes}}</text>
+        <!-- 信息栏 -->
+        <view class="info-bar">
+          <!-- 左侧信息：相关度 -->
+          <view class="left-info">
+            <view class="relevance" wx:if="{{item.relevanceDisplay}}">
+              相关度: {{item.relevanceDisplay}}
+            </view>
+          </view>
+          
+          <!-- 右侧信息：统计 -->
+          <view class="right-info">
+            <!-- 统计信息 -->
+            <view class="stats" wx:if="{{item.views || item.likes}}">
+              <view class="views" wx:if="{{item.views}}">
+                <icon name="eye" size="28" /> {{item.views}}
+              </view>
+              <view class="likes" wx:if="{{item.likes}}">
+                <icon name="like" size="28" /> {{item.likes}}
+              </view>
+            </view>
           </view>
         </view>
       </view>
     </view>
   </block>
   
-  <!-- 无数据提示 -->
-  <view class="empty-tip" wx:if="{{!sources || sources.length === 0}}">
-    <view class="empty-icon">
-      <icon name="empty" size="80" />
-    </view>
-    <view class="empty-text">暂无数据</view>
+  <!-- 空数据提示 -->
+  <view class="empty-tip" wx:elif="{{!loading}}">
+    <icon name="empty" size="80" />
+    <text class="empty-text">{{emptyTip || '暂无数据'}}</text>
   </view>
 </view> 

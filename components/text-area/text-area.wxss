@@ -3,19 +3,19 @@
   position: relative;
   width: 100%;
   margin-bottom: 20rpx;
+  background: #fff;
 }
 
 /* 文本域 */
 .text-area {
   width: 100%;
-  min-height: 200rpx;
   padding: 20rpx;
+  line-height: 1.5;
   box-sizing: border-box;
   font-size: 28rpx;
-  line-height: 1.5;
-  background-color: #fff;
+  color: #333;
+  background: #fff;
   border-radius: 8rpx;
-  border: 1px solid #eee;
 }
 
 /* 禁用状态 */
@@ -50,83 +50,186 @@
 }
 
 .markdown-editor {
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .markdown-preview {
   width: 100%;
-  min-height: 200rpx;
   padding: 20rpx;
   box-sizing: border-box;
-  background-color: #f8f9fa;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+  background: #fff;
   border-radius: 8rpx;
-  border: 1px solid #eee;
-  overflow-y: auto;
 }
 
 /* 只读模式的预览区样式 */
 .markdown-preview.read-only {
-  background-color: transparent;
-  border: none;
+  padding: 0;
+}
+
+.markdown-content {
+  width: 100%;
+}
+
+.markdown-content h1 {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin: 30rpx 0 20rpx;
+  color: #333;
+}
+
+.markdown-content h2 {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin: 26rpx 0 18rpx;
+  color: #333;
+}
+
+.markdown-content h3 {
+  font-size: 30rpx;
+  font-weight: bold;
+  margin: 22rpx 0 16rpx;
+  color: #333;
+}
+
+.markdown-content p {
+  margin: 16rpx 0;
+  line-height: 1.6;
+}
+
+.markdown-content a {
+  color: #07c160;
+  text-decoration: none;
+}
+
+.markdown-content img {
+  max-width: 100%;
+  margin: 10rpx 0;
+}
+
+.markdown-content code {
+  font-family: monospace;
+  background: #f5f5f5;
+  padding: 4rpx 8rpx;
+  border-radius: 4rpx;
+  font-size: 26rpx;
+  color: #e83e8c;
+}
+
+.markdown-content pre {
+  background: #f5f5f5;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  overflow-x: auto;
+  margin: 20rpx 0;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  color: #333;
+}
+
+.text-preview {
+  width: 100%;
+  padding: 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+  background: #fff;
+  border-radius: 8rpx;
+}
+
+.text-preview.read-only {
   padding: 0;
 }
 
 .empty-preview {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: #999;
   font-size: 28rpx;
+  background: #f9f9f9;
+  border-radius: 8rpx;
 }
 
 .counter {
   position: absolute;
+  bottom: 20rpx;
   right: 20rpx;
-  bottom: 10rpx;
   font-size: 24rpx;
   color: #999;
-  z-index: 1;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  height: 80rpx;
-  margin-top: 10rpx;
-  padding: 0 20rpx;
-  background-color: #f5f5f5;
-  border-radius: 8rpx;
+  padding: 10rpx 20rpx;
+  background: #f9f9f9;
+  border-top: 1rpx solid #eee;
 }
 
 .tool-item {
+  flex: 0 0 auto;
+  padding: 10rpx 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60rpx;
-  height: 60rpx;
-  margin-right: 20rpx;
-  border-radius: 50%;
-  background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-}
-
-/* 只有预览按钮时的样式 */
-.tool-item.preview-only {
-  margin-left: auto;
-  margin-right: 0;
-}
-
-.tool-icon {
-  font-size: 28rpx;
-  color: #333;
 }
 
 .tool-item.active {
-  background-color: #0078ff;
+  color: #07c160;
 }
 
-.tool-item.active .tool-icon {
-  color: #fff;
+.tool-item.preview-only {
+  margin-left: auto;
+}
+
+.tool-icon {
+  font-size: 32rpx;
+}
+
+/* 加载状态 */
+.loading-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9f9f9;
+  border-radius: 8rpx;
+}
+
+.loading-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(0, 0, 0, 0.1);
+  border-top-color: #07c160;
+  animation: spin 1s infinite linear;
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: #999;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 调试信息 */
+.debug-info {
+  padding: 4rpx 10rpx;
+  background: #f5f5f5;
+  font-size: 24rpx;
+  color: #999;
+  border-top: 1rpx solid #eee;
 } 

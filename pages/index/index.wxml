@@ -8,15 +8,17 @@
       showAvatar="{{true}}"
       showNotification="{{true}}"
   ></nav-bar>
-
-  <!-- 搜索框 - 使用简单的input避免重复 -->
-  <view class="search-box">
-    <view class="search-input-wrapper">
-      <icon name="search" size="32" color="#999999"></icon>
-      <input class="search-input" placeholder="搜索话题" confirm-type="search" bindinput="onSearchInput" bindconfirm="handleSearch" value="{{searchValue}}"/>
-    </view>
-  </view>
-
+  <search-bar
+			value="{{searchValue}}"
+			placeholder="搜索校园知识"
+			focus="{{false}}"
+			show-action="{{true}}"
+			action-text="搜索"
+			bindinput="onSearchInput"
+			bindclear="clearSearch"
+			bindconfirm="search"
+			bindaction="search"
+		/>
   <!-- 自定义水平布局分类导航 -->
   <view class="category-scroll">
     <view class="category-list">

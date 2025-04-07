@@ -1,40 +1,19 @@
 <view class="container">
-  <!-- 使用loading组件 -->
-  <loading 
-    show="{{loading}}" 
-    text="{{loadingText}}" 
-    type="dots" 
-    size="large"
-    class="loading-component"
-  />
-  
-  <!-- 使用error组件 -->
-  <error 
-    show="{{error}}" 
-    text="{{errorText}}"
-    bind:retry="refreshPage"
-    bind:close="hideError"
-  />
-  
-  <!-- 主内容 -->
-  <view class="main-content" wx:if="{{!loading && !error}}">
+  <view class="main-content">
     <!-- Logo区域 -->
-    <logo-section 
-      app-name="{{appInfo.appName}}" 
+      <logo-section 
+        app-name="{{appInfo.appName}}" 
       version="{{appInfo.version}}" 
       subtitle="{{appInfo.subtitle}}">
     </logo-section>
-
     <!-- 登录卡片 -->
     <login-card 
-      loading="{{isLogging}}"
       bind:login="handleLogin"
       bind:agreement="onAgreementTap"
     ></login-card>
-  </view>
-  
-  <!-- 底部版权信息 - 移到container的直接子元素 -->
-  <view class="footer">
-    <text class="copyright">© nkuwiki 2025</text>
+    <!-- 底部版权信息 --->
+    <view class="footer">
+      <text class="copyright">© nkuwiki 2025</text>
+    </view>
   </view>
 </view>

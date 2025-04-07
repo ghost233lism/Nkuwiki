@@ -4,7 +4,7 @@
   "backgroundTextStyle": "dark",
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "mp-searchbar": "/components/search-bar/search-bar",
+    "search-bar": "/components/search-bar/search-bar",
     "nav-bar": "/components/nav-bar/nav-bar",
     "post-list": "/components/post-list/post-list"
   }
