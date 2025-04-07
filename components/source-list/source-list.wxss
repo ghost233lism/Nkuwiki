@@ -1,0 +1,193 @@
+/* source-list组件样式 */
+.source-list {
+  padding: 0;
+  background-color: #ffffff;
+}
+
+.source-item {
+  display: flex;
+  padding: 24rpx 30rpx;
+  border-bottom: 1px solid #f5f5f5;
+  position: relative;
+}
+
+.source-item:last-child {
+  border-bottom: none;
+}
+
+.source-item:active {
+  background-color: #f9f9f9;
+}
+
+/* 排名样式 */
+.rank-container {
+  margin-right: 20rpx;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 6rpx;
+}
+
+.rank {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  border-radius: 50%;
+  color: #999;
+}
+
+.top-rank {
+  background-color: #1aad19;
+  color: white;
+}
+
+.normal-rank {
+  background-color: #f2f2f2;
+  color: #666;
+}
+
+/* 内容区样式 */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部信息栏样式 */
+.top-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 26rpx;
+  color: #888;
+  margin-bottom: 12rpx;
+}
+
+/* 左侧来源标签 */
+.source-tag {
+  display: flex;
+  align-items: center;
+  max-width: 60%;
+}
+
+.source-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 8rpx;
+  border-radius: 50%;
+}
+
+.source-name {
+  font-size: 26rpx;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200rpx;
+}
+
+.official-tag {
+  margin-left: 12rpx;
+  padding: 4rpx 10rpx;
+  background-color: #ff6b6b;
+  color: white;
+  font-size: 22rpx;
+  border-radius: 4rpx;
+}
+
+/* 右侧作者与时间 */
+.author-time {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: #999;
+  max-width: 40%;
+  text-align: right;
+}
+
+.author {
+  color: #666;
+  font-size: 24rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120rpx;
+}
+
+.divider {
+  margin: 0 6rpx;
+  color: #ccc;
+}
+
+.create-time {
+  font-size: 24rpx;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* 标题样式 */
+.title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+
+/* 摘要样式 */
+.summary {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* 统计信息样式 */
+.stats {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.relevance {
+  margin-right: 20rpx;
+}
+
+.views {
+  margin-right: 20rpx;
+}
+
+.likes {
+  display: flex;
+  align-items: center;
+}
+
+.likes text {
+  margin-left: 4rpx;
+}
+
+/* 空数据提示 */
+.empty-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+}
+
+.empty-icon {
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+} 

@@ -20,13 +20,13 @@ module.exports = Behavior({
      * @param {object} [options={}] - 可选参数
      * @param {string} [options.parentId] - 父评论ID，获取回复列表时使用
      * @param {number} [options.page=1] - 页码
-     * @param {number} [options.limit=10] - 每页数量
-     * @returns {Promise<{list: Array, total: number}|null>} 评论列表和总数
+     * @param {number} [options.page_size=20] - 每页数量
+     * @returns {Promise<Object|null>} 评论列表和分页信息
      */
     async _getCommentList(postId, options = {}) {
       if (!postId) return null;
       
-      const { parentId, page = 1, limit = 10 } = options;
+      const { parentId, page = 1, page_size = 20, limit } = options;
       console.debug(`获取评论: postId=${postId}` + (parentId ? ` parentId=${parentId}` : ''));
 
       const openid = storage.get('openid');
@@ -34,7 +34,7 @@ module.exports = Behavior({
         post_id: postId, 
         parent_id: parentId, 
         page, 
-        limit, 
+        page_size: page_size || limit || 20,  // 优先使用page_size，兼容旧的limit参数
         openid 
       };
 
@@ -42,18 +42,41 @@ module.exports = Behavior({
         const res = await commentApi.list(params);
         if (res.code !== 200) throw new Error(res.message || '获取评论列表失败');
         
+        // 标准API响应格式
+        if (res.data && res.pagination) {
+          return {
+            data: res.data,
+            pagination: res.pagination
+          };
+        }
+        
         // 处理新的响应格式：直接使用data数组作为评论列表
         if (Array.isArray(res.data)) {
+          const total = res.pagination?.total || res.total || res.data.length;
           return {
-            list: res.data, 
-            total: res.pagination?.total || res.data.length
+            data: res.data,
+            pagination: {
+              total: total,
+              page: page,
+              page_size: params.page_size,
+              total_pages: Math.ceil(total / params.page_size),
+              has_more: (page * params.page_size) < total
+            }
           };
         }
         
         // 兼容旧格式
+        const list = res.data?.list || [];
+        const total = res.pagination?.total || res.data?.total || list.length;
         return { 
-          list: res.data?.list || [], 
-          total: res.pagination?.total || res.data?.total || 0 
+          data: list,
+          pagination: {
+            total: total,
+            page: page,
+            page_size: params.page_size,
+            total_pages: Math.ceil(total / params.page_size),
+            has_more: (page * params.page_size) < total
+          }
         };
       } catch (err) {
         console.debug('获取评论失败:', err);

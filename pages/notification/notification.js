@@ -46,7 +46,7 @@ Page({
     ],
     notifications: [],
     page: 1,
-    limit: 15,
+    page_size: 15,
     hasMore: true,
     loading: false,
     error: null,
@@ -95,7 +95,7 @@ Page({
   },
 
   async loadList(refresh = false) {
-    const { activeTab, tabs, page, limit } = this.data;
+    const { activeTab, tabs, page, page_size } = this.data;
     const type = tabs[activeTab].type;
 
     this.showLoading('加载中...');
@@ -104,8 +104,8 @@ Page({
     try {
       const params = {
         is_read: type === 'read' ? 1 : 0,
-        limit,
-        offset: (refresh ? 0 : page - 1) * limit
+        page: refresh ? 1 : page,
+        page_size
       };
       
       // 使用behavior获取通知列表
@@ -116,7 +116,10 @@ Page({
       }
       
       // 格式化通知显示
-      const formattedList = result.list.map(item => ({
+      const notificationList = Array.isArray(result.data) ? result.data : [];
+      const pagination = result.pagination || {};
+      
+      const formattedList = notificationList.map(item => ({
         ...item,
         relative_time: formatRelativeTime(item.create_time),
         config: NotificationConfig[item.type] || {}
@@ -125,8 +128,9 @@ Page({
       // 更新UI
       this.setData({
         notifications: refresh ? formattedList : [...this.data.notifications, ...formattedList],
-        page: (refresh ? 1 : page) + 1,
-        hasMore: formattedList.length === limit && result.pagination?.has_more
+        page: refresh ? 2 : page + 1,
+        hasMore: pagination.has_more !== undefined ? pagination.has_more : 
+          (formattedList.length === page_size)
       });
     } catch (err) {
       this.handleError(err, '加载通知失败');

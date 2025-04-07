@@ -27,7 +27,9 @@ Component({
     
     // 分页状态
     page: 1,
-    pageSize: 10,
+    page_size: 10,
+    total: 0,
+    total_pages: 0,
     hasMore: true,
     loadingMore: false,
     
@@ -74,7 +76,9 @@ Component({
     resetPagination() {
       this.setData({
         page: 1,
-        hasMore: true
+        hasMore: true,
+        total: 0,
+        total_pages: 0
       });
     },
     
@@ -148,15 +152,18 @@ Component({
         this.resetPagination();
         
         // 调用API获取帖子列表
-        const res = await this._getPostList(this.data.filter || {}, 1, this.data.pageSize);
+        const result = await this._getPostList(this.data.filter || {}, 1, this.data.page_size);
         
-        if (res && res.code === 200) {
-          const posts = res.data || [];
+        if (result && result.data) {
+          const posts = result.data || [];
+          const pagination = result.pagination || {};
           
           // 更新数据
           this.setData({
             post: posts,
-            hasMore: posts.length >= this.data.pageSize,
+            hasMore: pagination.has_more !== undefined ? pagination.has_more : (posts.length >= this.data.page_size),
+            total: pagination.total || 0,
+            total_pages: pagination.total_pages || 0,
             empty: posts.length === 0
           });
           
@@ -167,7 +174,7 @@ Component({
             }
           }, 0);
         } else {
-          throw new Error(res?.message || '获取数据失败');
+          throw new Error(result?.message || '获取数据失败');
         }
         
         this.hideLoading();
@@ -256,10 +263,11 @@ Component({
         const nextPage = this.data.page + 1;
         
         // 调用API加载更多
-        const res = await this._getPostList(this.data.filter || {}, nextPage, this.data.pageSize);
+        const result = await this._getPostList(this.data.filter || {}, nextPage, this.data.page_size);
         
-        if (res && res.code === 200) {
-          const newPosts = res.data || [];
+        if (result && result.data) {
+          const newPosts = result.data || [];
+          const pagination = result.pagination || {};
           
           if (newPosts.length > 0) {
             // 合并数据
@@ -270,7 +278,9 @@ Component({
             this.setData({
               post: updatedPosts,
               page: nextPage,
-              hasMore: newPosts.length >= this.data.pageSize
+              hasMore: pagination.has_more !== undefined ? pagination.has_more : (newPosts.length >= this.data.page_size),
+              total: pagination.total || 0,
+              total_pages: pagination.total_pages || 0
             });
             
             // 异步更新新加载帖子的状态
@@ -280,7 +290,7 @@ Component({
             this.setData({ hasMore: false });
           }
         } else {
-          throw new Error(res?.message || '加载更多内容失败');
+          throw new Error(result?.message || '加载更多内容失败');
         }
         
         this.hideLoadingMore();

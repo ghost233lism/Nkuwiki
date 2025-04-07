@@ -1,75 +1,107 @@
 <!-- 美化的搜索页面 -->
 <view class="container">
-	<!-- 导航和标签栏 -->
-	<nav-tab-bar
-		title="搜索"
-		showBack="{{true}}"
-		tabTitles="{{categories}}"
-		activeTab="{{currentCategory}}"
-		bind:tabChange="onCategoryChange"
-	/>
-
-	<!-- 内容区域 -->
-	<view class="content-area">
-		<!-- 搜索栏 -->
-		<mp-searchbar 
+	<!-- 导航栏和搜索框 -->
+	<view class="header">
+		<nav-bar 
+			title=""
+			showBack="{{true}}"
+		/>
+		<search-bar
 			value="{{searchValue}}"
 			placeholder="搜索校园知识"
-			search="{{search}}"
-			cancel="{{cancel}}"
+			focus="{{false}}"
+			show-action="{{true}}"
+			action-text="搜索"
+			bindinput="onSearchInput"
+			bindclear="clearSearch"
+			bindconfirm="search"
+			bindaction="search"
 		/>
+	</view>
 
-		<cell-status 
-			loading="{{loading}}" 
-			error="{{error}}" 
-			errorMsg="{{errorMsg}}"
-			bindretry="onRetry">
-			
-			<!-- 搜索历史 -->
-			<view wx:if="{{!searchValue && searchHistory.length > 0}}" class="history-container">
-				<view class="history-title">搜索历史</view>
-				<view class="history-list">
-					<view 
-						class="history-item" 
-						wx:for="{{searchHistory}}" 
-						wx:key="index"
-						bindtap="onHistoryItemTap"
-						data-query="{{item}}"
-					>
-						{{item}}
-					</view>
-					<view class="clear-history" bindtap="onClearHistory" wx:if="{{searchHistory.length > 0}}">
-						清除历史记录
-					</view>
+	<!-- 内容区域 -->
+	<view class="content">
+		<!-- 搜索建议 -->
+		<view class="search-suggestions" wx:if="{{suggestions.length > 0 && searchValue && !isSearching}}">
+			<view 
+				class="suggestion-item" 
+				wx:for="{{suggestions}}" 
+				wx:key="index"
+				bindtap="onSuggestionTap"
+				data-keyword="{{item}}"
+			>
+				<view class="suggestion-icon">
+					<icon name="search" size="32" />
+				</view>
+				<view class="suggestion-text">{{item}}</view>
+			</view>
+		</view>
+
+		<!-- 热门搜索 -->
+		<view class="hot-searches" wx:if="{{!isSearching && !searchValue && hotSearches.length > 0}}">
+			<view class="hot-title">热门搜索</view>
+			<view class="hot-list">
+				<view 
+					class="hot-item" 
+					wx:for="{{hotSearches}}" 
+					wx:key="index"
+					bindtap="onHotSearchTap"
+					data-keyword="{{item.keyword || item}}"
+				>
+					<view class="hot-rank" wx:if="{{index < 3}}">{{index + 1}}</view>
+					<view class="hot-rank normal" wx:else>{{index + 1}}</view>
+					<view class="hot-text">{{item.keyword || item}}</view>
+					<view class="hot-count" wx:if="{{item.count}}">{{item.count}}</view>
 				</view>
 			</view>
+		</view>
 
-			<!-- 搜索结果 -->
-			<view wx:elif="{{searchValue && !loading && !error && searchResults.length > 0}}" class="search-results">
-				<post-list 
-					posts="{{searchResults}}"
-					loading="{{resultsLoading}}"
-					error="{{resultsError}}"
-					errorMsg="{{resultsErrorMsg}}"
-					empty="{{!resultsLoading && !resultsError && searchResults.length === 0}}"
-					emptyText="没有找到匹配的内容"
-					hasMore="{{pagination.hasMore}}"
-					bind:loadMore="loadMore"
-					bind:retry="onResultsRetry"
-				/>
+		<!-- 搜索历史 -->
+		<view class="search-history" wx:if="{{!isSearching && !searchValue && searchHistory.length > 0 && !searchResults.length}}">
+			<view class="history-title">
+				<text>搜索历史</text>
+				<text class="clear-history" bindtap="clearSearchHistory">清空</text>
+			</view>
+			<view class="history-list">
+				<view 
+					class="history-item" 
+					wx:for="{{searchHistory}}" 
+					wx:key="index"
+					bindtap="onHistoryItemTap"
+					data-keyword="{{item}}"
+				>{{item}}</view>
+			</view>
+		</view>
+
+		<!-- 搜索结果 -->
+		<view class="search-results" wx:if="{{searchResults.length > 0}}">
+			<view class="result-count">找到 {{pagination.total || searchResults.length}} 条结果</view>
+			<source-list 
+				sources="{{searchResults}}" 
+				binditemtap="onResultTap"
+				show-rank="{{false}}"
+			/>
+			
+			<!-- 加载更多 -->
+			<view class="load-more" wx:if="{{pagination.has_more}}">
+				<view class="load-more-btn" bindtap="loadMore">加载更多</view>
 			</view>
 			
-			<!-- WEUI组件 -->
-			<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
-			
-			<mp-dialog 
-				title="{{dialogTitle}}" 
-				show="{{dialogShow}}" 
-				buttons="{{dialogButtons}}" 
-				bindbuttontap="tapDialogButton"
-			>
-				<view>{{dialogContent}}</view>
-			</mp-dialog>
-		</cell-status>
+			<!-- 没有更多了 -->
+			<view class="no-more" wx:if="{{!pagination.has_more && searchResults.length > 0}}">
+				<text>没有更多结果了</text>
+			</view>
+		</view>
+
+		<!-- 加载中 -->
+		<view class="loading" wx:if="{{isSearching}}">
+			<view class="loading-icon"></view>
+			<view class="loading-text">搜索中...</view>
+		</view>
+
+		<!-- 无结果 -->
+		<view class="no-result" wx:if="{{!isSearching && searchValue && !searchResults.length}}">
+			<view class="no-result-text">暂无搜索结果</view>
+		</view>
 	</view>
 </view>

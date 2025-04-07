@@ -21,12 +21,12 @@ module.exports = Behavior({
      * 获取帖子列表
      * @param {number|object} filter 分类ID或筛选条件对象
      * @param {number} page 页码
-     * @param {number} limit 每页数量
+     * @param {number} page_size 每页数量
      * @returns {Promise<Object>} API响应
      */
-    async _getPostList(filter = {}, page = 1, limit = 10) {
+    async _getPostList(filter = {}, page = 1, page_size = 10) {
       // 构建查询参数
-      const params = { page, limit };
+      const params = { page, page_size };
       
       // 支持直接传入分类ID的简写方式，兼容旧代码
       if (typeof filter === 'number') {
@@ -68,7 +68,21 @@ module.exports = Behavior({
         if (res.code !== 200) {
           throw new Error(res.message || '获取帖子列表失败');
         }
-        return res;
+        
+        // 处理分页数据，确保返回标准格式
+        const result = {
+          data: res.data || [],
+          pagination: res.pagination || {
+            total: res.total || 0,
+            page: page,
+            page_size: page_size,
+            total_pages: Math.ceil((res.total || 0) / page_size) || 0,
+            has_more: res.has_more !== undefined ? res.has_more : 
+              ((page * page_size) < (res.total || 0))
+          }
+        };
+        
+        return result;
       } catch (err) {
          console.debug('postBehavior _getPostList failed:', err);
          throw err;

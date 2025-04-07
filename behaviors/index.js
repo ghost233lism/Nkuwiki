@@ -10,6 +10,8 @@ const postBehavior = require('./postBehavior');
 const commentBehavior = require('./commentBehavior');
 const notificationBehavior = require('./notificationBehavior');
 const weuiBehavior = require('./weuiBehavior');
+const agentBehavior = require('./agentBehavior');
+const knowledgeBehavior = require('./knowledgeBehavior');
 
 // 直接导出原始的behavior对象
 module.exports = {
@@ -19,5 +21,7 @@ module.exports = {
   postBehavior,
   commentBehavior,
   notificationBehavior,
-  weuiBehavior
+  weuiBehavior,
+  agentBehavior,
+  knowledgeBehavior
 };

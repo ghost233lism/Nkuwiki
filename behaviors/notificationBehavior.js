@@ -46,45 +46,67 @@ module.exports = Behavior({
     /**
      * 获取通知列表
      * @param {Object} params - 查询参数
-     * @returns {Promise<{list: Array, total: number}|null>} 通知列表和总数，或null
+     * @returns {Promise<Object|null>} 通知数据和分页信息，或null
      */
     async _getNotificationList(params = {}) {
       const openid = storage.get('openid');
       if (!openid) return null;
 
+      // 确保使用标准参数名
+      const apiParams = { 
+        openid, 
+        page: params.page || 1,
+        page_size: params.page_size || params.limit || 20
+      };
+      
+      // 复制其他参数
+      if (params.type) apiParams.type = params.type;
+      if (params.is_read !== undefined) apiParams.is_read = params.is_read;
+
       try {
-        const res = await notificationApi.getList({ openid, ...params });
+        const res = await notificationApi.getList(apiParams);
         
         if (res.code !== 200) {
           console.debug('获取通知列表API响应异常:', res);
           return null;
         }
         
-        // 处理API返回的不同格式
+        // 标准API返回格式处理
+        if (res.data && res.pagination) {
+          return {
+            data: res.data,
+            pagination: res.pagination
+          };
+        }
+        
+        // 其他格式兼容处理 
         let list = [];
         let total = 0;
         
         if (Array.isArray(res.data)) {
           // 直接是数组的情况
           list = res.data;
-          total = res.pagination?.total || list.length;
+          total = res.total || list.length;
         } else if (res.data && res.data.list && Array.isArray(res.data.list)) {
           // data.list格式的情况
           list = res.data.list;
-          total = res.pagination?.total || res.data.unread_count || list.length;
+          total = res.data.total || list.length;
         } else if (typeof res.data === 'object') {
           // 其他对象格式
           console.debug('通知API返回了非预期格式:', res.data);
-          list = res.data.list || [];
-          total = res.data.total || list.length;
+          list = [];
+          total = 0;
         }
         
+        // 构造标准格式返回
         return {
-          list,
-          total,
-          pagination: res.pagination || { 
-            total, 
-            has_more: list.length < total
+          data: list,
+          pagination: {
+            total: total,
+            page: apiParams.page,
+            page_size: apiParams.page_size,
+            total_pages: Math.ceil(total / apiParams.page_size),
+            has_more: (apiParams.page * apiParams.page_size) < total
           }
         };
       } catch (err) {

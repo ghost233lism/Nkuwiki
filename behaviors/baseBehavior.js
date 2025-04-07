@@ -168,8 +168,9 @@ module.exports = Behavior({
 
     // 分页状态
     page: 1,
-    pageSize: 20,
+    page_size: 20,
     total: 0,
+    total_pages: 0,
     hasMore: true,
     loadingMore: false,
 
@@ -281,29 +282,57 @@ module.exports = Behavior({
 
     // 重置分页数据
     resetPagination() {
-      this.updateState({ page: 1, total: 0, hasMore: true, loadingMore: false });
+      this.updateState({ 
+        page: 1, 
+        page_size: 20, 
+        total: 0, 
+        total_pages: 0, 
+        hasMore: true, 
+        loadingMore: false 
+      });
     },
 
     /**
      * 更新分页数据和列表状态
      * @param {Array} newList 新加载的数据列表
-     * @param {Number} total 数据总数
+     * @param {Object|Number} pagination 后端返回的分页信息对象或总数
      * @param {String} listKey 页面/组件中列表数据的键名
      */
-    updatePagination(newList = [], total = 0, listKey = 'listData') {
+    updatePagination(newList = [], pagination = {}, listKey = 'listData') {
       const oldList = this.data[listKey] || [];
       const currentPage = this.data.page;
       const isFirstPage = currentPage === 1;
-
       const updatedList = isFirstPage ? newList : oldList.concat(newList);
-      const hasMore = updatedList.length < total;
+      
+      // 处理不同类型的分页参数
+      let total = 0;
+      let total_pages = 0;
+      let hasMore = false;
+      let nextPage = currentPage;
+      
+      // 如果是后端标准分页对象
+      if (pagination && typeof pagination === 'object') {
+        total = pagination.total || 0;
+        total_pages = pagination.total_pages || Math.ceil(total / this.data.page_size);
+        hasMore = pagination.has_more !== undefined ? pagination.has_more : (currentPage < total_pages);
+        nextPage = hasMore ? currentPage + 1 : currentPage;
+      } 
+      // 兼容旧版（直接传递total数字）
+      else if (typeof pagination === 'number') {
+        total = pagination;
+        total_pages = Math.ceil(total / this.data.page_size);
+        hasMore = updatedList.length < total;
+        nextPage = hasMore ? currentPage + 1 : currentPage;
+      }
+      
       const isEmpty = isFirstPage && updatedList.length === 0;
 
       const updateData = {
         [listKey]: updatedList,
         total: total,
+        total_pages: total_pages,
         hasMore: hasMore,
-        page: hasMore ? currentPage + 1 : currentPage,
+        page: nextPage,
         loading: false,
         loadingMore: false,
         empty: isEmpty,
@@ -315,9 +344,10 @@ module.exports = Behavior({
 
     /**
      * 获取初始数据 (需要页面/组件实现 _fetchData 方法)
+     * @param {Function} getData 获取数据的回调函数
      * @param {String} listKey 页面/组件中列表数据的键名
      */
-    async getInitial(getData = null) {
+    async getInitial(getData = null, listKey = 'listData') {
         this.resetPagination();
         this.showLoading('加载中...', 'page');
         this.hideEmpty();
@@ -325,10 +355,23 @@ module.exports = Behavior({
 
         try {
             if (typeof getData !== 'function') {
-              throw new Error('Page/Component must implement _getData(page, pageSize)');
+              throw new Error('Page/Component must implement _getData(page, page_size)');
             }
-            const { list, total } = await getData(this.data.page, this.data.pageSize);
-            this.updatePagination(list, total, listKey);
+            const result = await getData(this.data.page, this.data.page_size);
+            
+            // 处理不同的返回格式
+            if (result && result.data && result.pagination) {
+              // 标准API返回格式
+              this.updatePagination(result.data, result.pagination, listKey);
+            } else if (result && result.list && (result.total !== undefined)) {
+              // 兼容旧格式
+              this.updatePagination(result.list, result.total, listKey);
+            } else {
+              // 兜底处理
+              const list = Array.isArray(result) ? result : (result?.data || result?.list || []);
+              const total = result?.total || result?.pagination?.total || list.length;
+              this.updatePagination(list, total, listKey);
+            }
         } catch (err) {
             this.handleError(err, '加载数据失败', { [listKey]: [] });
         } finally {
@@ -338,19 +381,34 @@ module.exports = Behavior({
 
     /**
      * 获取更多数据 (需要页面/组件实现 _fetchData 方法)
+     * @param {Function} getData 获取数据的回调函数
      * @param {String} listKey 页面/组件中列表数据的键名
      */
-    async getMore(listKey = 'listData') {
+    async getMore(getData = null, listKey = 'listData') {
       if (!this.data.hasMore || this.data.loading || this.data.loadingMore) return;
 
       this.showLoadingMore();
 
       try {
-        if (typeof this._fetchData !== 'function') {
-          throw new Error('Page/Component must implement _fetchData(page, pageSize)');
+        if (typeof getData !== 'function') {
+          throw new Error('Page/Component must provide getData function');
         }
-        const { list, total } = await this._fetchData(this.data.page, this.data.pageSize);
-        this.updatePagination(list, total, listKey);
+        
+        const result = await getData(this.data.page, this.data.page_size);
+        
+        // 处理不同的返回格式
+        if (result && result.data && result.pagination) {
+          // 标准API返回格式
+          this.updatePagination(result.data, result.pagination, listKey);
+        } else if (result && result.list && (result.total !== undefined)) {
+          // 兼容旧格式
+          this.updatePagination(result.list, result.total, listKey);
+        } else {
+          // 兜底处理
+          const list = Array.isArray(result) ? result : (result?.data || result?.list || []);
+          const total = result?.total || result?.pagination?.total || list.length;
+          this.updatePagination(list, total, listKey);
+        }
       } catch (err) {
         this.hideLoadingMore();
         this.handleError(err, '加载更多失败');
