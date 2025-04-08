@@ -129,6 +129,8 @@ Component({
         post_count: stats?.posts || user.post_count || 0,
         like_count: stats?.likes || user.like_count || 0,
         favorite_count: stats?.favorites || user.favorite_count || 0,
+        following_count:  stats?.following_count || user.following_count || 0,
+        follower_count: stats?.follower_count || user.follower_count || 0,
         token: user.token || 0
       };
     },
@@ -276,6 +278,28 @@ Component({
       const tabIndex = e.currentTarget.dataset.tab;
       wx.navigateTo({
         url: `/pages/profile/myContent/myContent?tab=${tabIndex}`
+      });
+    },
+    
+    // 点击关注跳转到关注列表页面
+    onTapFollowing() {
+      if (!this.data.isCurrentUser) {
+        return;
+      }
+      
+      wx.navigateTo({
+        url: `/pages/profile/myContent/myContent?tab=3`
+      });
+    },
+    
+    // 点击粉丝跳转到粉丝列表页面
+    onTapFollowers() {
+      if (!this.data.isCurrentUser) {
+        return;
+      }
+      
+      wx.navigateTo({
+        url: `/pages/profile/myContent/myContent?tab=4`
       });
     },
     

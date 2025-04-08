@@ -1,6 +1,6 @@
 {
   "component": true,
   "usingComponents": {
-    "icon": "../icon/icon"
+    "icon": "/components/icon/icon"
   }
 } 

@@ -10,20 +10,29 @@
     
     <view class="actions">
       <!-- 回复按钮 -->
-      <view class="action-btn" bindtap="onTapReply">
-        <icon name="comment" size="28"></icon>
-      </view>
+      <button 
+        class="action-button"
+        icon="{{ {name: 'comment', size: 28, color: '#999'} }}"
+        bind:tap="onTapReply"
+      ></button>
       
       <!-- 点赞按钮 -->
-      <view class="action-btn {{formattedComment.isLiked ? 'liked' : ''}}" bindtap="onTapLike">
-        <icon name="{{formattedComment.isLiked ? 'like-active' : 'like'}}" size="28" color="{{formattedComment.isLiked ? '#07c160' : ''}}"></icon>
-        <text wx:if="{{formattedComment.like_count > 0}}">{{formattedComment.like_count}}</text>
-      </view>
+      <button
+        class="action-button"
+        icon="{{ {name: formattedComment.isLiked ? 'like-active' : 'like', size: 28, color: formattedComment.isLiked ? '#ff6b6b' : '#999'} }}"
+        showCount="{{true}}"
+        count="{{formattedComment.like_count || 0}}"
+        hideZero="{{true}}"
+        bind:tap="onTapLike"
+      ></button>
       
       <!-- 删除按钮，仅评论作者可见 -->
-      <view class="action-btn delete" bindtap="onTapDelete" wx:if="{{formattedComment.isOwner}}">
-        <icon name="delete" size="28"></icon>
-      </view>
+      <button
+        wx:if="{{formattedComment.isOwner}}"
+        class="action-button delete-button"
+        icon="{{ {name: 'delete', size: 28, color: '#ff4d4f'} }}"
+        bind:tap="onTapDelete"
+      ></button>
     </view>
   </view>
   

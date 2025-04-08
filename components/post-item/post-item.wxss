@@ -8,6 +8,7 @@
   box-sizing: border-box;
 }
 
+/* 头部样式 */
 .post-header {
   display: flex;
   align-items: center;
@@ -24,7 +25,6 @@
 .header-right {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
 }
 
 .author-avatar {
@@ -51,40 +51,22 @@
 .author-bio {
   font-size: 24rpx;
   color: #666;
-  margin-bottom: 6rpx;
   max-width: 400rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.post-time {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.post-time-container {
-  font-size: 24rpx;
-  color: #999;
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-right: 16rpx;
-}
-
-.follow-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 10rpx;
-}
-
+/* 内容区域固定高度 */
 .post-content-wrapper {
-  margin-bottom: 0;
-  min-height: 0;
+  min-height: 80rpx;
+  max-height: 800rpx;
+  overflow: hidden;
+  position: relative;
 }
 
+/* 内容样式 */
 .post-title {
-  display: block;
   font-size: 32rpx;
   font-weight: bold;
   margin-bottom: 2rpx;
@@ -93,88 +75,93 @@
 }
 
 .post-content {
-  padding: 0;
-  margin-bottom: 0rpx;
+  position: relative;
+  overflow: hidden;
 }
 
+/* 非详情页固定高度 */
 .post-text {
-  margin-bottom: 0rpx;
+  position: relative;
+  overflow: hidden;
 }
 
 .post-body {
   font-size: 28rpx;
-  color: #333;
   line-height: 1.6;
-  display: block;
+  color: #333;
+  word-break: break-all;
 }
 
 .post-body.collapsed {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
+  max-height: 200rpx; /* 4行文字的高度 */
   overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 8; /* 默认最多显示4行 */
+  -webkit-box-orient: vertical;
+  position: relative;
 }
 
-/* Markdown 渲染相关样式 */
-.markdown-wrapper {
-  position: relative;
+.post-body.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
   width: 100%;
+  height: 100rpx;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+  pointer-events: none;
+}
+
+/* Markdown样式 */
+.markdown-wrapper {
+  font-size: 28rpx;
+  line-height: 1.6;
   overflow: hidden;
-  transition: max-height 0.3s ease;
 }
 
 .markdown-wrapper.collapsed {
-  max-height: 180rpx;
+  max-height: 400rpx; /* 限制折叠状态下的高度 */
+  overflow: hidden;
+  position: relative;
 }
 
-/* 增加展开状态的Markdown容器高度 */
-.markdown-wrapper:not(.collapsed) {
-  max-height: none;
+.markdown-wrapper.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 40rpx;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+  pointer-events: none;
 }
 
-.markdown-wrapper .text-area-container {
-  margin-bottom: 0;
-  margin-top: 0;
-  padding: 0;
-}
-
-/* 确保text-area组件中的预览区域在post-item中显示正常 */
-.markdown-wrapper .markdown-preview {
-  background-color: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* 移除text-area中工具栏的边距，确保与post-item样式一致 */
-.markdown-wrapper .toolbar {
-  margin-top: 0;
-  margin-bottom: 0;
-  background-color: transparent;
-  padding: 0;
-}
-
-
-.read-more {
-  color: #576b95;
-  font-size: 24rpx;
-  margin-top: 0;
-  display: inline-flex;
-  align-items: center;
-}
-
+/* 展开按钮 */
 .read-more-wrapper {
   width: 100%;
-  margin-top: 0;
-  margin-bottom: 0;
-  text-align: right;
-  padding: 2rpx 0;
+  text-align: center;
+  margin-top: 12rpx;
+  padding-top: 8rpx;
+}
+
+.read-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #07c160;
+  padding: 4rpx 24rpx;
+  background-color: #f7f7f7;
+  border-radius: 30rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 }
 
 .expand-icon {
-  margin-left: 4rpx;
+  margin-left: 6rpx;
 }
 
+/* 图片样式 */
 .post-images {
   display: flex;
   flex-wrap: wrap;
@@ -197,36 +184,18 @@
   object-fit: cover;
 }
 
-.image-count {
-  position: absolute;
-  right: 10rpx;
-  top: 10rpx;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-size: 24rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 20rpx;
-}
-
+/* 底部样式 */
 .post-footer {
-  margin-top: 1rpx;
-  padding-top: 10rpx;
-  border-top: 1rpx solid #f5f5f5;
+  padding: 8rpx 0;
+  margin-top: 10rpx;
+  border-top: 1rpx solid #f0f0f0;
 }
 
-.post-footer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 30rpx;
-}
-
-/* 标签相关样式 */
+/* 标签样式 */
 .tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8rpx;
-  padding: 0;
   margin: 4rpx 0 2rpx 0;
 }
 
@@ -241,15 +210,13 @@
   align-items: center;
 }
 
-
-/* 评论预览区域 */
+/* 评论预览 */
 .comment-preview {
   margin-top: 10rpx;
-  padding-top: 10rpx;
+  padding: 10rpx;
   border-top: 1rpx solid #f0f0f0;
   background-color: #f8f8fa;
   border-radius: 8rpx;
-  padding: 10rpx;
 }
 
 .comment-item {
@@ -263,10 +230,6 @@
   font-weight: 500;
 }
 
-.comment-content {
-  color: #333;
-}
-
 .view-more {
   color: #576b95;
   font-size: 24rpx;
@@ -274,12 +237,7 @@
   text-align: center;
 }
 
-/* 适配卡片模式 */
-.post-item.card {
-  margin: 20rpx;
-  width: calc(100% - 40rpx);
-}
-
+/* 关注按钮 */
 .follow-button {
   min-width: 160rpx !important;
   height: 56rpx !important;
@@ -287,31 +245,24 @@
   border-radius: 30rpx !important;
   padding: 0 40rpx !important;
   text-align: center !important;
-  font-weight: 400 !important;
   font-size: 28rpx !important;
-  box-sizing: border-box !important;
-  display: inline-block !important;
-  border: none !important;
-  margin: 0 !important;
-  background-color: transparent !important;
   background: transparent !important;
-  box-shadow: none !important;
-  overflow: visible !important;
-}
-
-.follow-button.followed {
-  background-color: #f2f2f2 !important;
-  color: #999 !important;
-}
-
-.follow-button::after {
-  display: none !important;
   border: none !important;
 }
 
-.follow-button .btn-text {
-  width: 100% !important;
-  display: inline-block !important;
-  text-align: center !important;
-  overflow: visible !important;
+/* 空内容提示 */
+.empty-content-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  min-height: 60rpx;
+}
+
+.empty-content-notice text {
+  font-size: 28rpx;
+  color: #999;
 } 

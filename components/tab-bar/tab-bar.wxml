@@ -1,0 +1,75 @@
+<!-- 纯标签栏组件 -->
+<view class="tab-container {{fixed ? 'fixed' : ''}}" style="{{fixed && navBarHeight ? 'top:' + navBarHeight + 'px;' : ''}}">
+  <scroll-view 
+    scroll-x="{{scrollable}}" 
+    class="tab-scroll-view" 
+    enhanced="{{scrollable}}" 
+    show-scrollbar="{{false}}"
+    style="background-color: {{bgColor}};">
+    
+    <!-- 标准标签栏 -->
+    <view class="tab-bar {{equalWidth ? 'equal-width' : ''}}">
+      <!-- 使用自定义标签 -->
+      <block wx:if="{{useCustomTabs}}">
+        <view 
+          wx:for="{{customTabs}}"
+          wx:key="index"
+          class="tab-item {{activeTab === index ? 'active' : ''}} {{item.class || ''}}"
+          bind:tap="onTabChange"
+          data-index="{{index}}"
+          style="color: {{activeTab === index ? (item.activeColor || activeColor) : (item.color || textColor)}}; {{item.style || ''}}"
+        >
+          <!-- 内容插槽（图标+文本） -->
+          <view class="tab-content">
+            <image wx:if="{{item.icon}}" 
+                  class="tab-icon" 
+                  src="{{activeTab === index && item.activeIcon ? item.activeIcon : item.icon}}" 
+                  mode="aspectFit">
+            </image>
+            <text>{{item.title || item.text || item}}</text>
+            
+            <!-- 自定义角标内容 -->
+            <view wx:if="{{item.badge}}" class="tab-badge">{{item.badge}}</view>
+            <view wx:elif="{{item.dot}}" class="tab-dot"></view>
+          </view>
+          
+          <!-- 底部线条 -->
+          <view 
+            class="tab-line" 
+            wx:if="{{showLine && activeTab === index}}"
+            style="background-color: {{item.activeColor || activeColor}};"
+          ></view>
+          
+          <!-- 自定义事件按钮 -->
+          <view 
+            wx:if="{{item.action}}" 
+            class="tab-action" 
+            catch:tap="onTabEvent" 
+            data-index="{{index}}" 
+            data-event="{{item.action.event}}">
+            <text>{{item.action.text}}</text>
+          </view>
+        </view>
+      </block>
+      
+      <!-- 标准标签 -->
+      <block wx:else>
+        <view 
+          wx:for="{{tabs}}"
+          wx:key="index"
+          class="tab-item {{activeTab === index ? 'active' : ''}}"
+          bind:tap="onTabChange"
+          data-index="{{index}}"
+          style="color: {{activeTab === index ? activeColor : textColor}};"
+        >
+          <text>{{item}}</text>
+          <view 
+            class="tab-line" 
+            wx:if="{{showLine && activeTab === index}}"
+            style="background-color: {{activeColor}};"
+          ></view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view> 

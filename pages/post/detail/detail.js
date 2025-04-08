@@ -16,16 +16,7 @@ Page({
     loadError: '',
     postDetail: null,
     postId: '',
-    
-    // 导航按钮配置
-    navButtons: [
-      {type: "back", icon: "back", show: true, delta: 1},
-      {type: "home", show: false},
-      {type: "logo", show: false},
-      {type: "notification", show: false},
-      {type: "avatar", show: false}
-    ],
-    
+  
     // 顶部提示
     toptips: {
       show: false,
@@ -67,6 +58,35 @@ Page({
   onReady() {
     // 初始化用户信息
     // this._syncUserInfo();
+  },
+  
+  onShow() {
+    // 每次页面显示时，刷新帖子状态
+    if (this.data.postDetail && this.data.postDetail.id) {
+      // 刷新帖子状态
+      this._getPostStatus(this.data.postDetail.id)
+        .then(res => {
+          if (res && res.code === 200 && res.data) {
+            const statusData = res.data[this.data.postDetail.id] || {};
+            
+            // 更新帖子状态数据
+            const postDetail = {...this.data.postDetail};
+            postDetail.is_liked = statusData.is_liked ? 1 : 0;
+            postDetail.like_count = statusData.like_count || postDetail.like_count || 0;
+            postDetail.is_favorited = statusData.is_favorited ? 1 : 0;
+            postDetail.favorite_count = statusData.favorite_count || postDetail.favorite_count || 0;
+            postDetail.is_followed = statusData.is_followed ? 1 : 0;
+            
+            this.setData({ postDetail });
+            
+            // 刷新帖子组件
+            this.refreshPostItem();
+          }
+        })
+        .catch(err => {
+          console.debug('刷新帖子状态失败:', err);
+        });
+    }
   },
 
   // 加载帖子详情
@@ -115,7 +135,14 @@ Page({
   refreshPostItem() {
     const postItem = this.selectComponent('.post-detail');
     if (postItem) {
+      // 初始化组件
       postItem.init();
+      
+      // 明确调用状态更新方法，确保状态刷新
+      if (typeof postItem._updateFromServer === 'function') {
+        console.debug('明确调用帖子组件状态更新方法');
+        postItem._updateFromServer();
+      }
     }
   },
   

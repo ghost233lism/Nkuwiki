@@ -26,30 +26,32 @@
       <text class="loading-text">加载中...</text>
     </view>
     
-    <!-- Markdown预览区域 - 先尝试使用markdownHTML -->
-    <scroll-view wx:elif="{{markdownHTML && markdownMode}}" scroll-y class="markdown-preview {{readOnly ? 'read-only' : ''}}" style="height: {{_height}}rpx;">
-      <view class="markdown-content">
-        <rich-text nodes="{{markdownHTML}}"></rich-text>
-      </view>
-    </scroll-view>
-    
+
     <!-- 使用towxml作为备选 -->
-    <scroll-view wx:elif="{{markdownNodes}}" scroll-y class="markdown-preview {{readOnly ? 'read-only' : ''}}" style="height: {{_height}}rpx;">
-      <view>
+    <scroll-view 
+      wx:elif="{{markdownNodes && value && value.trim() !== ''}}" 
+      scroll-y="{{!fixedHeight && scroll !== false}}" 
+      class="markdown-preview {{readOnly ? 'read-only' : ''}} {{fixedHeight || scroll === false ? 'no-scroll' : ''}}" 
+      style="height: {{fixedHeight ? _height + 'rpx' : 'auto'}}; max-height: {{_height}}rpx;">
+      <view class="{{fixedHeight || scroll === false ? 'no-scroll-view' : ''}}">
         <towxml nodes="{{markdownNodes}}"/>
       </view>
     </scroll-view>
     
     <!-- 纯文本显示 -->
-    <scroll-view wx:elif="{{!markdownMode && value}}" scroll-y class="text-preview {{readOnly ? 'read-only' : ''}}" style="height: {{_height}}rpx;">
-      <view class="text-content">
+    <scroll-view 
+      wx:elif="{{!markdownMode && value && value.trim() !== ''}}" 
+      scroll-y="{{!fixedHeight && scroll !== false}}" 
+      class="text-preview {{readOnly ? 'read-only' : ''}} {{fixedHeight || scroll === false ? 'no-scroll' : ''}}" 
+      style="height: {{fixedHeight ? _height + 'rpx' : 'auto'}}; max-height: {{_height}}rpx;">
+      <view class="{{fixedHeight || scroll === false ? 'no-scroll-view' : ''}}">
         <text>{{value}}</text>
       </view>
     </scroll-view>
     
     <!-- 无内容显示 -->
-    <view wx:else class="empty-preview" style="height: {{_height}}rpx;">
-      <text>暂无内容</text>
+    <view wx:else class="empty-preview" style="height: {{readOnly ? 'auto' : (_height > 100 ? '100rpx' : _height+'rpx')}}">
+      <text>{{readOnly ? '暂无内容' : ''}}</text>
     </view>
   </block>
 

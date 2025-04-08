@@ -58,6 +58,23 @@
   color: #1890ff;
 }
 
+/* 自定义按钮样式 */
+.action-button {
+  margin-left: 20rpx !important;
+  padding: 0 !important;
+  background: transparent !important;
+  min-height: unset !important;
+  height: auto !important;
+  line-height: normal !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.delete-button {
+  color: #ff4d4f !important;
+}
+
 .action-btn.delete {
   color: #ff4d4f;
 }

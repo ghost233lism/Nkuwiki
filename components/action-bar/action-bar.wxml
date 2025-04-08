@@ -1,37 +1,26 @@
-<view 
-  class="action-bar {{fixed ? 'fixed' : ''}} {{safeAreaInsetBottom ? 'safe-area' : ''}} {{showBorder ? 'with-border' : ''}}"
-  style="background-color: {{background}};"
->
-  <!-- 操作按钮区域 -->
-  <view class="action-bar-main">
-    <view 
-      wx:for="{{actions}}"
-      wx:key="id"
-      class="action-item {{item.active ? 'active' : ''}} {{item.disabled ? 'disabled' : ''}} {{buttonType}}"
-      bindtap="handleAction"
-      data-index="{{index}}"
-    >
-      <!-- 只有在icon-text或icon-only模式下才显示图标 -->
-      <block wx:if="{{buttonType === 'icon-text' || buttonType === 'icon-only'}}">
-        <icon 
-          name="{{item.active && item.activeIcon ? item.activeIcon : item.icon}}"
-          size="{{getIconSize()}}"
-          color="{{item.active ? '#07C160' : ''}}"
-        />
-      </block>
-      
-      <!-- 只有在icon-text或text-only模式下才显示文字 -->
-      <block wx:if="{{buttonType === 'icon-text' || buttonType === 'text-only'}}">
-        <view class="action-text">
-          {{item.text}}
-          <text wx:if="{{item.count !== undefined}}" class="action-count">{{item.count}}</text>
-        </view>
-      </block>
-    </view>
+<!-- 移除嵌套容器，简化布局 -->
+<view style="display:inline-flex; align-items:center; justify-content:flex-end; min-width:240rpx;">
+  <!-- 点赞 -->
+  <view style="display:flex; align-items:center; padding:0 2rpx;" bindtap="onLikeTap">
+    <icon wx:key="like_{{is_liked}}" name="{{like}}" size="{{size}}" color="{{currentLikeColor}}" style="color:{{currentLikeColor}};"/>
+    <text style="font-size:22rpx; color:#999; margin-left:2rpx;" wx:if="{{!hideZero || likeCount > 0}}">{{likeCount}}</text>
   </view>
   
-  <!-- 额外内容区域（可选） -->
-  <view wx:if="{{showExtra}}" class="action-bar-extra">
-    <slot name="extra"></slot>
+  <!-- 评论 -->
+  <view style="display:flex; align-items:center; padding:0 2rpx; margin-left:4rpx;" bindtap="onCommentTap">
+    <icon name="{{comment}}" size="{{size}}" color="{{baseColor}}"/>
+    <text style="font-size:22rpx; color:'#999'; margin-left:2rpx;" wx:if="{{!hideZero || commentCount > 0}}">{{commentCount}}</text>
   </view>
+  
+  <!-- 收藏 -->
+  <view style="display:flex; align-items:center; padding:0 2rpx; margin-left:4rpx;" bindtap="onFavoriteTap">
+    <icon wx:key="favorite_{{is_favorited}}" name="{{favorite}}" size="{{size}}" color="{{currentFavoriteColor}}" style="color:{{currentFavoriteColor}};"/>
+    <text style="font-size:22rpx; color:#999; margin-left:2rpx;" wx:if="{{!hideZero || favoriteCount > 0}}">{{favoriteCount}}</text>
+  </view>
+  
+  <!-- 分享 -->
+  <button open-type="share" bindtap="onShareTap" style="background:none; border:none; padding:0 2rpx; margin:0 0 0 4rpx; display:flex; align-items:center; line-height:normal; font-size:unset; box-sizing:border-box;">
+    <icon name="{{share}}" size="{{size}}" color="{{baseColor}}"/>
+    <text style="font-size:22rpx; color:#999; margin-left:2rpx;" wx:if="{{!hideZero || shareCount > 0}}">{{shareCount}}</text>
+  </button>
 </view> 

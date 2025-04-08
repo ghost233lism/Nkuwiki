@@ -7,19 +7,25 @@
   background-color: #fff;
 }
 
+.tab-scroll-view {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .tab-bar {
   display: flex;
-  justify-content: space-around;
   border-bottom: 1rpx solid #eee;
+  min-width: 100%;
 }
 
 .tab-item {
-  flex: 1;
+  flex: 0 0 auto;
   text-align: center;
-  padding: 24rpx 0;
+  padding: 24rpx 20rpx;
   font-size: 28rpx;
   color: #666;
   position: relative;
+  display: inline-block;
 }
 
 .tab-item.active {

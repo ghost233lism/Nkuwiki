@@ -2,10 +2,10 @@
 <view class="post-item" style="{{customStyle}}">
   <view class="post-header">
     <view class="post-header-left">
-      <image class="author-avatar" src="{{post.avatar || defaultAvatar}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
+      <image class="author-avatar" src="{{post.user.avatar || post.avatar || defaultAvatar}}" bindtap="_onAvatarTap" mode="aspectFill"></image>
       <view class="post-info">
-        <view class="author-name" bindtap="_onAuthorTap">{{post.nickname || '未知用户'}}</view>
-        <view wx:if="{{post.bio}}" class="author-bio">{{post.bio}}</view>
+        <view class="author-name" bindtap="_onAuthorTap">{{post.user.nickname || post.nickname || '未知用户'}}</view>
+        <view wx:if="{{post.user.bio || post.bio}}" class="author-bio">{{post.user.bio || post.bio}}</view>
       </view> 
     </view>
     <view class="header-right">
@@ -35,8 +35,10 @@
             readOnly="{{true}}"
             markdownMode="{{true}}"
             title="{{post.title}}"
-            height="{{contentExpanded ? 600 : 140}}"
+            height="{{post.content && post.content.trim() !== '' ? (contentExpanded ? 600 : 140) : 60}}"
             showToolbar="{{false}}"
+            scroll="{{!detailPage}}"
+            fixedHeight="{{!detailPage}}"
           ></text-area>
           
           <!-- 展开全文按钮 - Markdown模式 -->
@@ -63,6 +65,10 @@
         </view>
       </block>
     </view>
+    <!-- 当内容为空时，添加占位提示 -->
+    <view wx:elif="{{detailPage}}" class="empty-content-notice">
+      <text>暂无内容</text>
+    </view>
     
     <view wx:if="{{post.images && post.images.length > 0}}" 
           class="post-images {{post.images.length === 1 ? 'single-image' : (post.images.length === 2 ? 'double-image' : 'multi-image')}}">
@@ -85,48 +91,24 @@
     </view>
   </view>
 
-  <view class="post-footer">
-    <view class="post-footer-row">
-      <text class="post-time-container">{{formattedTime}}</text>
-        <!-- 点赞按钮 -->
-        <button 
-          icon="{{likeIcon}}"
-          showCount="{{true}}"
-          count="{{post.like_count || 0}}"
-          bind:tap="_onLikeTap"
-          hideZero="{{false}}"
-          style="background-color: #fff; display: block;"
-        ></button>
-        
-        <!-- 评论按钮 -->
-        <button 
-          icon="{{commentIcon}}" 
-          showCount="{{true}}"
-          count="{{post.comment_count || 0}}"
-          bind:tap="_onCommentTap"
-          hideZero="{{false}}"
-          style="background-color: #fff; display: block;"
-        ></button>
-
-        <!-- 收藏按钮 -->
-        <button 
-          icon="{{favoriteIcon}}" 
-          showCount="{{true}}"
-          count="{{post.favorite_count || 0}}"
-          bind:tap="_onFavoriteTap"
-          hideZero="{{false}}"
-          style="background-color: #fff; display: block;"
-        ></button>
-        
-        <!-- 分享按钮 -->
-        <button 
-          icon="{{shareIcon}}" 
-          showCount="{{true}}"
-          count="{{post.share_count || 0}}"
-          openType="share"
-          hideZero="{{false}}"
-          style="background-color: #fff; display: block;"
-        ></button>
+  <!-- 底部区域 - 使用固定宽度方式 -->
+  <view style="display:flex; align-items:center; width:100%; padding:8rpx 0; margin-top:10rpx; border-top:1rpx solid #f0f0f0;">
+    <text style="font-size:24rpx; color:#999; white-space:nowrap; flex-grow:1; max-width:50%;">{{formattedTime}}</text>
+    <view style="width:240rpx;">
+      <action-bar
+        class="action-bar"
+        likeCount="{{post.like_count || 0}}"
+        is_liked="{{is_liked}}"
+        commentCount="{{post.comment_count || 0}}"
+        favoriteCount="{{post.favorite_count || 0}}"
+        is_favorited="{{is_favorited}}"
+        shareCount="{{post.share_count || 0}}"
+        size="24"
+        bind:like="_onLikeTap"
+        bind:comment="_onCommentTap"
+        bind:favorite="_onFavoriteTap"
+        bind:share="_onShareTap"
+      />
     </view>
   </view>
 

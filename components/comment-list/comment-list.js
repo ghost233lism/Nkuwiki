@@ -13,54 +13,13 @@ Component({
   properties: {
     // 帖子ID
     postId: {
-      type: String,
-      value: '',
+      type: null,
+      value: 0,
       observer: function(newVal) {
         if (newVal) {
           this.loadComments();
         }
       }
-    },
-    // 评论数据数组
-    comments: {
-      type: Array,
-      value: [],
-      observer: function(newVal) {
-        console.debug(`评论列表组件接收到新的评论数据: ${newVal ? newVal.length : 0}条`);
-      }
-    },
-    // 评论总数
-    total: {
-      type: Number,
-      value: 0,
-      observer: function(newVal) {
-        console.debug(`评论列表组件接收到新的评论总数: ${newVal}`);
-      }
-    },
-    // 是否正在加载
-    loading: {
-      type: Boolean,
-      value: false
-    },
-    // 是否加载出错
-    error: {
-      type: Boolean,
-      value: false
-    },
-    // 错误信息
-    errorMsg: {
-      type: String,
-      value: '加载失败'
-    },
-    // 是否有更多评论
-    hasMore: {
-      type: Boolean,
-      value: false
-    },
-    // 当前用户ID
-    currentOpenid: {
-      type: String,
-      value: ''
     },
     // 是否允许回复
     allowReply: {
@@ -73,16 +32,28 @@ Component({
    * 组件的初始数据
    */
   data: {
-    debug: {
-      commentsLength: 0
-    },
+    // 评论数据
+    comments: [],
+    
+    // 基础状态
+    loading: false,
+    error: false,
+    errorMsg: '加载评论失败',
+    
+    // 分页状态
     page: 1,
-    limit: 10,
+    pageSize: 10,
+    total: 0,
+    hasMore: false,
+    
     // 评论输入相关
     commentText: '',
     commentFocus: false,
     replyTo: null,
-    isSubmitting: false
+    isSubmitting: false,
+    
+    // 当前用户信息
+    currentUserOpenid: ''
   },
 
   lifetimes: {
@@ -90,24 +61,22 @@ Component({
       console.debug('评论列表组件已挂载');
       
       // 自动获取当前用户openid
-      if (!this.properties.currentOpenid) {
-        const openid = this.getStorage('openid');
-        if (openid) {
-          this.setData({ currentOpenid: openid });
-        }
+      const openid = this.getStorage('openid');
+      console.debug('当前用户openid:', openid);
+      
+      if (openid) {
+        this.setData({ currentUserOpenid: openid });
       }
-    },
-    ready() {
-      console.debug('评论列表组件已准备好，评论数:', this.properties.comments.length);
-      // 更新调试信息
-      this.setData({
-        'debug.commentsLength': this.properties.comments.length
-      });
       
       // 如果提供了postId，自动加载评论
       if (this.properties.postId) {
         this.loadComments();
       }
+      
+      // 确保行为方法正确混入
+      console.debug('检查_deleteComment方法:', typeof this._deleteComment === 'function');
+      console.debug('检查_toggleCommentLike方法:', typeof this._toggleCommentLike === 'function');
+      console.debug('检查_createComment方法:', typeof this._createComment === 'function');
     }
   },
 
@@ -117,8 +86,8 @@ Component({
   methods: {
     // 加载评论
     loadComments() {
-      const { postId } = this.properties;
-      const { page, limit } = this.data;
+      const postId = Number(this.properties.postId);
+      const { page, pageSize } = this.data;
       
       if (!postId) {
         console.debug('未提供帖子ID，不加载评论');
@@ -127,18 +96,18 @@ Component({
       
       this.setData({ loading: true, error: false, errorMsg: '' });
       
-      return this._getCommentList(postId, { page, limit })
+      return this._getCommentList(postId, { page, limit: pageSize })
         .then(result => {
           if (result) {
-            const { list: comments, total } = result;
+            const { list: comments, total, has_more } = result;
             
             // 格式化评论数据
             const formattedComments = comments && comments.length ? comments.map(comment => this._formatCommentData(comment)) : [];
             
             // 更新评论列表和分页信息
             this.setData({
-              comments: this.data.page === 1 ? formattedComments : [...this.properties.comments, ...formattedComments],
-              hasMore: (this.data.page * this.data.limit) < total,
+              comments: this.data.page === 1 ? formattedComments : [...this.data.comments, ...formattedComments],
+              hasMore: has_more,
               total: total || 0
             });
           } else {
@@ -154,9 +123,19 @@ Component({
         });
     },
     
+    // 重置分页
+    resetPagination() {
+      this.setData({
+        page: 1,
+        hasMore: true,
+        total: 0
+      });
+    },
+    
     // 刷新评论列表
     refresh() {
-      this.setData({ page: 1, comments: [] }, () => {
+      this.resetPagination();
+      this.setData({ comments: [] }, () => {
         this.loadComments();
       });
     },
@@ -171,7 +150,7 @@ Component({
     // 加载更多评论
     loadMore() {
       console.debug('加载更多评论');
-      if (this.properties.loading || !this.properties.hasMore) return;
+      if (this.data.loading || !this.data.hasMore) return;
       
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadComments();
@@ -183,7 +162,7 @@ Component({
     // 点赞评论
     handleLike(e) {
       const { id, index } = e.currentTarget.dataset;
-      const comment = this.properties.comments[index];
+      const comment = this.data.comments[index];
       
       if (!comment) return;
       
@@ -195,7 +174,7 @@ Component({
           if (!result) throw new Error('操作失败');
           
           // 更新评论点赞状态
-          const comments = [...this.properties.comments];
+          const comments = [...this.data.comments];
           comments[index] = {
             ...comment,
             isLiked: result.status === 'liked',
@@ -238,11 +217,31 @@ Component({
         relativeTime = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
       }
       
+      // 处理图片字段 - 将字符串转换为数组
+      let imageArray = [];
+      if (comment.image) {
+        try {
+          // 如果是字符串，尝试解析为JSON
+          if (typeof comment.image === 'string') {
+            const parsed = JSON.parse(comment.image);
+            imageArray = Array.isArray(parsed) ? parsed : [];
+          } 
+          // 如果已经是数组，直接使用
+          else if (Array.isArray(comment.image)) {
+            imageArray = comment.image;
+          }
+        } catch (e) {
+          console.debug('解析评论图片失败:', e);
+          imageArray = [];
+        }
+      }
+      
       return {
         ...comment,
+        image: imageArray,
         relativeTime,
         // 检查是否是当前用户的评论
-        isOwner: this.properties.currentOpenid && comment.openid === this.properties.currentOpenid
+        isOwner: this.data.currentUserOpenid && comment.openid === this.data.currentUserOpenid
       };
     },
     
@@ -253,7 +252,7 @@ Component({
       
       const { id, index } = e.currentTarget.dataset;
       // 获取完整的评论对象
-      const comment = this.properties.comments[index];
+      const comment = this.data.comments[index];
       if (!comment) return;
       
       const replyPrefix = comment.nickname ? `回复 @${comment.nickname}: ` : '';
@@ -270,43 +269,54 @@ Component({
     },
     
     // 删除评论
-    deleteComment(e) {
+    handleDelete(e) {
       const { id, index } = e.currentTarget.dataset;
       
-      this.showModal({
-        title: '确认删除',
-        content: '确定要删除这条评论吗？',
-        success: res => {
-          if (res.confirm) {
-            // 调用评论行为中的删除评论方法
-            this._deleteComment(id)
-              .then(success => {
-                if (!success) throw new Error('删除失败');
-                
-                // 更新评论列表
-                const comments = [...this.properties.comments];
-                comments.splice(index, 1);
-                
-                this.setData({ 
-                  comments,
-                  total: Math.max(0, this.properties.total - 1)
-                });
-                
-                this.showToast('删除成功', 'success');
-                
-                // 通知父组件更新评论计数
-                this.triggerEvent('delete', { 
-                  id, 
-                  index,
-                  postId: this.properties.postId
-                });
-              })
-              .catch(error => {
-                this.showToast('删除失败: ' + (error.message || '未知错误'), 'error');
-              });
-          }
-        }
-      });
+      // 调试日志，确认事件触发
+      console.debug('handleDelete 被调用:', id, index);
+      
+      try {
+        // 直接调用删除逻辑，不使用 showModal
+        console.debug('开始删除评论:', id);
+        console.debug('评论ID类型:', typeof id);
+        
+        // 检查openid是否存在
+        const openid = this.getStorage('openid');
+        console.debug('当前用户openid:', openid);
+        
+        // 调用评论行为中的删除评论方法
+        this._deleteComment(id)
+          .then(success => {
+            console.debug('删除评论结果:', success);
+            
+            if (!success) throw new Error('删除失败');
+            
+            // 更新评论列表
+            const comments = [...this.data.comments];
+            comments.splice(index, 1);
+            
+            this.setData({ 
+              comments,
+              total: Math.max(0, this.data.total - 1)
+            });
+            
+            this.showToast('删除成功', 'success');
+            
+            // 通知父组件更新评论计数
+            this.triggerEvent('delete', { 
+              id, 
+              index,
+              postId: Number(this.properties.postId)
+            });
+          })
+          .catch(error => {
+            console.error('删除评论失败:', error);
+            this.showToast('删除失败: ' + (error.message || '未知错误'), 'error');
+          });
+      } catch (error) {
+        console.error('删除评论处理过程出错:', error);
+        this.showToast('操作失败，请稍后再试', 'error');
+      }
     },
     
     // 查看更多回复
@@ -330,10 +340,17 @@ Component({
       });
     },
     
-    // 图片加载出错处理
+    // 处理图片加载错误
     handleImageError(e) {
-      console.error('评论图片加载出错:', e);
-      // 可以在这里设置默认图片
+      const { urls, current } = e.currentTarget.dataset;
+      console.debug('评论图片加载出错:', e);
+      
+      // 可以在这里设置默认图片或者其他处理逻辑
+      // 例如替换为默认图片
+      if (e.type === 'error') {
+        // 可以在这里更新数据中的图片URL为默认图片
+        // 但是要注意不要频繁更新，避免死循环
+      }
     },
     
     // 阻止冒泡
@@ -374,7 +391,7 @@ Component({
     // 提交评论
     submitComment() {
       const { commentText, replyTo } = this.data;
-      const { postId } = this.properties;
+      const postId = Number(this.properties.postId);
       
       // 验证评论内容
       if (!commentText.trim()) {
@@ -425,7 +442,7 @@ Component({
           
           // 通知父组件更新评论计数
           this.triggerEvent('commentAdded', {
-            postId: this.properties.postId,
+            postId,
             comment: result
           });
         })

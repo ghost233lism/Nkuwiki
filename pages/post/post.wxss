@@ -387,7 +387,7 @@
 .post-settings {
   background-color: #fff;
   padding: 20rpx;
-  border-radius: 8rpx;
+  border-radius: 10rpx;
   margin-bottom: 100rpx;
 }
 
@@ -406,31 +406,19 @@
 
 .setting-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 12rpx 16rpx;
-  border-radius: 8rpx;
-  background-color: #f8f8f8;
-  width: 30%;
-  box-sizing: border-box;
-  transition: all 0.3s;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
-.setting-text {
-  margin-left: 8rpx;
-  font-size: 13px;
-  color: #666;
+.setting-item:last-child {
+  border-bottom: none;
 }
 
-.setting-item.active {
-  background-color: #5853e2;
-}
-
-.setting-item.active icon {
-  color: #fff;
-}
-
-.setting-item.active .setting-text {
-  color: #fff;
+.setting-item text {
+  font-size: 28rpx;
+  color: #333;
 }
 
 /* Wiki小知识开关样式 */
@@ -504,31 +492,6 @@
   font-size: 28rpx;
   margin-bottom: 20rpx;
 }
-
-/* 发布设置 - 已移动到 setting-item 组件 */
-/* .post-setting {
-  margin: 30rpx 0;
-  background: #fff;
-  border-radius: 8rpx;
-  overflow: hidden;
-}
-
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-}
-
-.setting-item text {
-  font-size: 28rpx;
-  color: #333;
-} */
 
 .loading {
   position: absolute;
@@ -746,8 +709,39 @@ page {
   flex-wrap: wrap;
 }
 
-/* 覆盖 nav-bar 组件的样式 */
-.nav-bar .title-area {
-  z-index: 99;
-  pointer-events: auto !important;
+/* 底部固定发布按钮 */
+.bottom-fixed-button {
+  display: flex;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100vhrpx;
+  background-color: #ffffff;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 0 30rpx;
+}
+
+.publish-button {
+  width: 90% !important;
+  height: 80rpx !important;
+  border-radius: 40rpx !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.publish-button.active {
+  background-color: #4a67d6 !important;
+  color: #ffffff;
+}
+
+.publish-button.disabled {
+  background-color: #cccccc !important;
+  color: #ffffff;
+  opacity: 0.7;
 }

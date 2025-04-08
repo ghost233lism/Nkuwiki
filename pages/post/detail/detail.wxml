@@ -1,40 +1,25 @@
-<!-- 安全区域占位 -->
-<view class="safe-area-top" style="height: {{statusBarHeight}}px;"></view>
-
-<!-- 使用nav-bar组件 -->
-<nav-bar 
-  nav-title="{{postData.post.title || '帖子详情'}}"
-  allow-back="{{true}}"
-  nav-buttons="{{navButtons}}"
-></nav-bar>
-
 <!-- 帖子详情页 -->
-<view class="container">
-  <!-- 使用cell-status组件 -->
-  <cell-status
-    loading="{{isPostLoading}}"
-    error="{{!!loadError}}"
-    errorMsg="{{loadError}}"
-    bindretry="handleRetry">
+<nav-bar 
+  title="{{postData.post.title || '帖子详情'}}"
+  showBack="{{true}}"
+/>
+<view class="post-container">
 
-    <!-- 内容区域 -->
-    <block wx:if="{{postDetail && !isPostLoading && !loadError}}">
-      <!-- 帖子详情 -->
-      <post-item 
-        post="{{postDetail}}" 
-        class="post-detail"
-        detail-page="{{true}}"
-        show-action="{{true}}"
-        bind:postDeleted="onPostDeleted">
-      </post-item>
+<!-- 帖子详情 -->
+<post-item 
+  post="{{postDetail}}" 
+  class="post-detail"
+  detail-page="{{true}}"
+  show-action="{{true}}"
+  bind:postDeleted="onPostDeleted">
+</post-item>
 
-      <!-- 评论区域 -->
-      <comment-list 
-        id="commentList"
-        post-id="{{postDetail.id}}">
-      </comment-list>
-    </block>
-  </cell-status>
+<!-- 评论区域 -->
+<comment-list 
+  id="commentList"
+  class="comment-list-container"
+  post-id="{{postDetail.id}}">
+</comment-list>
 
   <!-- 底部安全区域，为输入框腾出空间 -->
   <view class="bottom-safe-area" style="height: 70px;"></view>

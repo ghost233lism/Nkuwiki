@@ -170,10 +170,28 @@ Component({
   },
   
   observers: {
-    'name,size,icon,type': function(name, size, icon, type) {
+    // 'name,size,icon,type': function(name, size, icon, type) {
+    //   if (this.data.updating) return;
+    //   this.initializeIcon();
+    // },
+    'name': function(name) {
+      // 对name属性单独监听，确保当name变化时立即刷新
       if (this.data.updating) return;
-      this.initializeIcon();
+      if (name && this.data.iconMap[name]) {
+        this.setData({
+          useImage: true,
+          imageSrc: this.data.iconMap[name],
+          type: '',
+          icon: ''
+        });
+      }
     }
+    // 'color': function(color) {
+    //   // 对颜色单独监听
+    //   this.setData({
+    //     color: color
+    //   });
+    // }
   },
   
   methods: {

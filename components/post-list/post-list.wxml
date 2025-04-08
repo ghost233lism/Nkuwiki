@@ -20,6 +20,9 @@
     <!-- 帖子列表 -->
     <block wx:for="{{post}}" wx:key="id">
       <post-item 
+        id="post_item_{{item.id}}"
+        class="post-item-component"
+        data-post-id="{{item.id}}"
         post="{{item}}" 
         showAction="{{true}}"
         showComment="{{true}}"

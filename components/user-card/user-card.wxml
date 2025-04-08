@@ -46,13 +46,21 @@
         <view class="stat-value">{{formattedUser.post_count || 0}}</view>
         <view class="stat-label">帖子</view>
       </view>
-      <view class="stat-item" bindtap="onTapPosts" data-tab="1">
-        <view class="stat-value">{{formattedUser.like_count || 0}}</view>
-        <view class="stat-label">获赞</view>
-      </view>
       <view class="stat-item" bindtap="onTapPosts" data-tab="2">
         <view class="stat-value">{{formattedUser.favorite_count || 0}}</view>
         <view class="stat-label">收藏</view>
+      </view>
+      <view class="stat-item" bindtap="onTapFollowing">
+        <view class="stat-value">{{formattedUser.following_count || 0}}</view>
+        <view class="stat-label">关注</view>
+      </view>
+      <view class="stat-item" bindtap="onTapFollowers">
+        <view class="stat-value">{{formattedUser.follower_count || 0}}</view>
+        <view class="stat-label">粉丝</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-value">{{formattedUser.like_count || 0}}</view>
+        <view class="stat-label">获赞</view>
       </view>
       <view class="stat-item" bindtap="onTapPoints">
         <view class="stat-value">{{formattedUser.token || 0}}</view>

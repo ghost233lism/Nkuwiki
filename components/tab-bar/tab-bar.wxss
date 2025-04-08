@@ -1,0 +1,117 @@
+/* 标签栏容器 */
+.tab-container {
+  width: 100%;
+  z-index: 100;
+  border-bottom: 1rpx solid #eee;
+  padding-bottom: 8rpx;
+  background-color: #fff;
+}
+
+/* 固定在顶部 */
+.tab-container.fixed {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* 默认定位在顶部，也可以通过navBarHeight属性调整 */
+  top: 0;
+}
+
+/* 滚动视图 */
+.tab-scroll-view {
+  width: 100%;
+  white-space: nowrap;
+}
+
+/* 标签栏 */
+.tab-bar {
+  display: flex;
+  min-width: 100%;
+  padding: 0 4rpx;
+}
+
+/* 等宽标签栏 */
+.tab-bar.equal-width {
+  width: 100%;
+}
+
+.tab-bar.equal-width .tab-item {
+  flex: 1;
+  width: 0;
+}
+
+/* 标签项 */
+.tab-item {
+  display: inline-block;
+  text-align: center;
+  padding: 24rpx 30rpx;
+  font-size: 28rpx;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.tab-item.active {
+  font-weight: 500;
+}
+
+/* 标签内容 */
+.tab-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* 图标 */
+.tab-icon {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 8rpx;
+}
+
+/* 角标 */
+.tab-badge {
+  position: absolute;
+  top: -16rpx;
+  right: -16rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  border-radius: 16rpx;
+  background-color: #ff4d4f;
+  color: #fff;
+  text-align: center;
+  z-index: 1;
+}
+
+/* 红点 */
+.tab-dot {
+  position: absolute;
+  top: -6rpx;
+  right: -6rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #ff4d4f;
+  z-index: 1;
+}
+
+/* 激活标签下划线 */
+.tab-line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 6rpx;
+  border-radius: 3rpx;
+}
+
+/* 自定义操作按钮 */
+.tab-action {
+  margin-left: 10rpx;
+  font-size: 24rpx;
+  color: #07c160;
+  opacity: 0.8;
+} 

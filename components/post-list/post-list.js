@@ -5,6 +5,26 @@ Component({
   behaviors: [baseBehavior, postBehavior],
 
   properties: {
+    posts: {
+      type: Array,
+      value: []
+    },
+    isLoading: {
+      type: Boolean,
+      value: false
+    },
+    hasError: {
+      type: Boolean,
+      value: false
+    },
+    hasMoreData: {
+      type: Boolean,
+      value: true
+    },
+    currentUserOpenid: {
+      type: String,
+      value: ''
+    },
     // 筛选条件
     filter: {
       type: Object,
@@ -41,13 +61,12 @@ Component({
     
     // 添加最后更新时间记录
     _lastUpdateTime: 0,
-    _lastStatusUpdateTime: 0
+    _lastStatusUpdateTime: 0,
+    pageSize: 10
   },
 
   lifetimes: {
     attached() {
-      console.debug('post-list组件已附加');
-      
       // 添加最后更新时间记录
       this.setData({
         _lastUpdateTime: 0,
@@ -56,9 +75,7 @@ Component({
       
       // 组件attached后异步加载数据
       setTimeout(() => {
-        console.debug('post-list组件延迟加载数据');
         this.loadInitialData().then(() => {
-          console.debug('post-list初始数据加载完成，确认状态更新');
           // 再次确保帖子状态已更新
           if (this.data.post && this.data.post.length > 0) {
             this.updatePostsStatus(this.data.post);
@@ -68,7 +85,6 @@ Component({
     },
     
     detached() {
-      console.debug('post-list组件已卸载');
     }
   },
 
@@ -98,49 +114,92 @@ Component({
     
     // 处理帖子点赞事件
     handlePostLike(e) {
-      const { id, isLiked, likeCount } = e.detail;
+      const { id, refreshNeeded } = e.detail;
       if (!id) return;
       
-      // 更新帖子列表中对应帖子的状态
-      const posts = this.data.post;
-      const updatedPosts = posts.map(post => {
-        if (post.id === id) {
-          return {
-            ...post,
-            is_liked: isLiked ? 1 : 0,
-            like_count: likeCount
-          };
-        }
-        return post;
-      });
+      if (refreshNeeded) {
+        // 获取单个帖子的最新状态并更新
+        this._refreshPostStatus(id);
+      }
+    },
+    
+    // 刷新单个帖子状态
+    async _refreshPostStatus(postId) {
+      if (!postId) return;
       
-      this.setData({ post: updatedPosts });
+      try {
+        // 调用API获取帖子状态
+        const statusRes = await this._getPostStatus(postId);
+        
+        if (statusRes && statusRes.code === 200 && statusRes.data) {
+          const statusData = statusRes.data;
+          const status = statusData[postId];
+          
+          if (status) {
+            // 更新列表数据
+            const currentPosts = this.data.post || [];
+            if (currentPosts.length > 0) {
+              const updatedPosts = currentPosts.map(post => {
+                if (String(post.id) === String(postId)) {
+                  // 直接使用后端原始值
+                  const updatedPost = { 
+                    ...post,
+                    is_liked: status.is_liked,
+                    is_favorited: status.is_favorited,
+                    is_following: status.is_following,
+                    like_count: status.like_count !== undefined ? status.like_count : post.like_count,
+                    favorite_count: status.favorite_count !== undefined ? status.favorite_count : post.favorite_count,
+                    comment_count: status.comment_count !== undefined ? status.comment_count : post.comment_count
+                  };
+                  
+                  return updatedPost;
+                }
+                return post;
+              });
+              
+              // 更新数据
+              this.setData({ post: updatedPosts }, () => {
+                // 强制刷新子组件
+                this._refreshPostItem(postId);
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // 忽略错误
+      }
+    },
+    
+    // 刷新特定帖子组件实例
+    _refreshPostItem(postId) {
+      if (!postId) return;
+      
+      // 直接通过ID选择组件，避免复杂查询
+      const selector = `#post_item_${postId}`;
+      const postItemComponent = this.selectComponent(selector);
+      
+      if (postItemComponent) {
+        // 直接更新状态
+        if (typeof postItemComponent._updatePostData === 'function') {
+          postItemComponent._updatePostData();
+        }
+      }
     },
     
     // 处理帖子收藏事件
     handlePostFavorite(e) {
-      const { id, isFavorited, favoriteCount } = e.detail;
+      const { id, refreshNeeded } = e.detail;
       if (!id) return;
       
-      // 更新帖子列表中对应帖子的状态
-      const posts = this.data.post;
-      const updatedPosts = posts.map(post => {
-        if (post.id === id) {
-          return {
-            ...post,
-            is_favorited: isFavorited ? 1 : 0,
-            favorite_count: favoriteCount
-          };
-        }
-        return post;
-      });
-      
-      this.setData({ post: updatedPosts });
+      if (refreshNeeded) {
+        // 获取单个帖子的最新状态并更新
+        this._refreshPostStatus(id);
+      }
     },
     
     // 处理帖子关注事件
     handlePostFollow(e) {
-      const { id, authorId, isFollowed } = e.detail;
+      const { id, authorId, isFollowing } = e.detail;
       if (!id || !authorId) return;
       
       // 更新帖子列表中所有该作者的帖子状态
@@ -149,7 +208,7 @@ Component({
         if (post.openid === authorId) {
           return {
             ...post,
-            is_followed: isFollowed ? 1 : 0
+            is_following: isFollowing
           };
         }
         return post;
@@ -159,11 +218,10 @@ Component({
     },
     
     // 加载初始数据
-    async loadInitialData() {
-      // 防止短时间内重复调用
+    async loadInitialData(force = false) {
+      // 防止短时间内重复调用，但强制刷新时忽略此限制
       const now = Date.now();
-      if (this.data._lastUpdateTime && now - this.data._lastUpdateTime < 5000) {
-        console.debug('短时间内已加载过数据，跳过本次加载');
+      if (!force && this.data._lastUpdateTime && now - this.data._lastUpdateTime < 5000) {
         return Promise.resolve();
       }
       
@@ -189,14 +247,12 @@ Component({
             total: pagination.total || 0,
             total_pages: pagination.total_pages || 0,
             empty: posts.length === 0
-          });
-          
-          // 使用setTimeout确保DOM更新后再更新状态
-          setTimeout(() => {
+          }, () => {
+            // 直接在回调中更新状态，无需延时
             if (posts.length > 0) {
               this.updatePostsStatus(posts);
             }
-          }, 0);
+          });
         } else {
           throw new Error(result?.message || '获取数据失败');
         }
@@ -220,7 +276,6 @@ Component({
         // 添加节流控制，30秒内不重复获取状态
         const now = Date.now();
         if (this.data._lastStatusUpdateTime && now - this.data._lastStatusUpdateTime < 30000) {
-          console.debug('30秒内已更新过状态，跳过本次更新');
           return;
         }
         
@@ -254,13 +309,13 @@ Component({
               const postId = String(post.id);
               const status = statusMap[postId];
               if (status) {
-                // 确保保留原始帖子信息
+                // 直接使用后端返回的原始值
                 return { 
                   ...post, 
-                  // 同时更新状态标志和计数
+                  // 使用后端字段名和值
                   is_liked: status.is_liked,
                   is_favorited: status.is_favorited,
-                  is_followed: status.is_followed,
+                  is_following: status.is_following,
                   // 如果服务器返回了计数，使用服务器返回的
                   like_count: status.like_count !== undefined ? status.like_count : post.like_count,
                   favorite_count: status.favorite_count !== undefined ? status.favorite_count : post.favorite_count,
@@ -271,12 +326,27 @@ Component({
             });
             
             // 更新数据
-            this.setData({ post: updatedPosts });
+            this.setData({ post: updatedPosts }, () => {
+              // 立即刷新组件状态，无需延时
+              this._refreshAllPostItems(updatedPosts);
+            });
           }
         }
       } catch (err) {
         // 不中断流程，仅忽略错误
       }
+    },
+    
+    // 刷新所有帖子组件状态
+    _refreshAllPostItems(posts) {
+      if (!posts || !posts.length) return;
+      
+      posts.forEach(post => {
+        const postId = post.id;
+        if (postId) {
+          this._refreshPostItem(postId);
+        }
+      });
     },
     
     // 更新空状态
@@ -342,7 +412,7 @@ Component({
     
     // 提供给父组件的刷新方法
     refresh() {
-      return this.loadInitialData();
+      return this.loadInitialData(true);
     }
   }
 }); 

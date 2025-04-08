@@ -10,16 +10,12 @@
     bind:buttonTap="onButtonTap"
   />
   
-  <!-- 标签栏 -->
-  <view class="tab-bar" wx:if="{{tabTitles.length > 0}}">
-    <view 
-      wx:for="{{tabTitles}}"
-      wx:key="index"
-      class="tab-item {{activeTab === index ? 'active' : ''}}"
-      bind:tap="onTabChange"
-      data-index="{{index}}"
-    >
-      <text>{{item}}</text>
-    </view>
-  </view>
+  <!-- 使用独立的tab-bar组件 -->
+  <tab-bar 
+    wx:if="{{tabTitles.length > 0}}" 
+    tabs="{{tabTitles}}" 
+    activeTab="{{activeTab}}" 
+    bind:change="onTabChange"
+    activeColor="{{activeTabColor}}"
+  />
 </view> 

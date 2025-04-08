@@ -101,6 +101,16 @@ Component({
     readOnly: {
       type: Boolean,
       value: false
+    },
+    // 是否允许滚动预览内容
+    scroll: {
+      type: Boolean,
+      value: true
+    },
+    // 是否固定高度，不允许滚动
+    fixedHeight: {
+      type: Boolean,
+      value: false
     }
   },
   
@@ -226,35 +236,55 @@ Component({
     updatePreview() {
       let content = this.properties.value || '';
       
+      // 如果内容为空，仅设置空状态并直接返回
+      if (!content || content.trim() === '') {
+        this.setData({ 
+          markdownNodes: null,
+          markdownHTML: '',
+          rendering: false
+        });
+        return;
+      }
+      
       // 如果有标题但内容不包含标题，添加标题
       const title = this.properties.title || '';
       if (title && !content.trim().startsWith('#') && !content.includes(title)) {
         content = `# ${title}\n\n${content}`;
       }
       
-      if (!content) {
-        this.setData({ 
-          markdownNodes: towxml('*暂无内容*', 'markdown') 
-        });
-        return;
-      }
+      // 设置为渲染中状态
+      this.setData({ rendering: true });
       
-      try {
-        // 使用towxml解析Markdown
-        const markdownNodes = towxml(content, 'markdown', {
-          theme: 'light',
-          events: {
-            tap: (e) => {
-              // 点击链接事件处理
-              this.triggerEvent('linktap', e);
+      // 使用setTimeout使渲染过程异步化，避免阻塞UI
+      this.data._timer = setTimeout(() => {
+        try {
+          // 优先使用wxml渲染，这样可以保持样式统一
+          // TODO: 实现一个简单的Markdown -> HTML转换
+          
+          // 使用towxml渲染markdown
+          const markdownNodes = towxml(content, 'markdown', {
+            theme: 'light',
+            events: {
+              tap: (e) => {
+                // 点击链接事件处理
+                this.triggerEvent('linktap', e);
+              }
             }
-          }
-        });
-        
-        this.setData({ markdownNodes });
-      } catch (err) {
-        this.triggerEvent('error', { error: err });
-      }
+          });
+          
+          this.setData({
+            markdownNodes: markdownNodes,
+            rendering: false
+          });
+        } catch (e) {
+          console.error('Markdown渲染失败:', e);
+          this.setData({ 
+            markdownNodes: null,
+            rendering: false
+          });
+          this.triggerEvent('error', { error: e });
+        }
+      }, 50);
     },
     
     // 工具栏操作 - 粗体

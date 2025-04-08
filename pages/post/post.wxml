@@ -13,7 +13,8 @@
 <view class="post-container">
   <!-- 顶部导航栏 -->
   <nav-bar 
-    nav-buttons="{{navButtons}}"
+    title="发布帖子"
+    showBack="{{true}}"
     bind:buttonTap="onNavButtonTap">
     <view slot="center" class="publish-btn-container">
       <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">
@@ -136,6 +137,21 @@
         <text class="setting-text">wiki小知识</text>
       </view>
     </view>
+  </view>
+
+  <!-- 底部安全区域，为底部按钮留出空间 -->
+
+  <!-- 底部固定发布按钮 -->
+  <view class="bottom-fixed-button">
+    <button 
+      text="发布"
+      textColor="#ffffff"
+      textSize="32"
+      textBackground="#4a67d6"
+      disabled="{{!canSubmit || submitting}}"
+      loading="{{submitting}}"
+      bindtap="submitForm"
+    ></button>
   </view>
 
   <!-- 加载中状态 -->

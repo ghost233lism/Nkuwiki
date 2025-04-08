@@ -15,7 +15,7 @@
       userInfo="{{userInfo}}"
       stats="{{stats}}"
       isCurrentUser="{{true}}"
-      currentUserOpenid="{{userInfo.openid}}"
+      currentUserOpenid="{{openid}}"
       loading="{{loading}}"
       error="{{error}}"
       errorMsg="{{errorMsg}}"

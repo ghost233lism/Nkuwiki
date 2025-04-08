@@ -40,5 +40,5 @@
   </view>
 </view>
 
-<!-- 占位元素，防止内容被导航栏遮挡 -->
-<view style="height: {{totalHeight}}px;"></view> 
+<!-- 占位元素，使用更小的高度避免过多空白 -->
+<view style="height: {{navBarHeight}}px;"></view> 

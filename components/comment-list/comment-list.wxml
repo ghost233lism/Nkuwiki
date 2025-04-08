@@ -11,12 +11,12 @@
   </view>
 
   <!-- 错误状态 -->
-  <view class="error-container" wx:elif="{{error}}">
+  <view class="error-message" wx:elif="{{error}}">
     <view class="error-icon">
       <icon name="error" size="48"></icon>
     </view>
     <view class="error-text">{{errorMsg || '加载失败'}}</view>
-    <view class="retry-btn" bindtap="retry">重试</view>
+    <view class="error-btn" bindtap="retry">重试</view>
   </view>
 
   <!-- 空状态 -->
@@ -30,105 +30,78 @@
   <!-- 评论列表 -->
   <view class="comment-list" wx:elif="{{comments && comments.length > 0}}">
     <view class="comment-item" wx:for="{{comments}}" wx:key="id">
-      <view class="comment-main">
-        <view class="avatar-container" bindtap="goToUserProfile" data-user-id="{{item.openid}}">
+      <!-- 用户头像 -->
+      <view class="comment-user">
+        <image 
+          class="user-avatar" 
+          src="{{item.avatar || '/icons/avatar1.png'}}" 
+          mode="aspectFill"
+          binderror="handleImageError"
+          data-user-id="{{item.openid}}"
+          bindtap="goToUserProfile">
+        </image>
+      </view>
+      
+      <!-- 评论主体 -->
+      <view class="comment-body">
+        <!-- 用户名和时间 -->
+        <view class="comment-header">
+          <view class="comment-user-name" bindtap="goToUserProfile" data-user-id="{{item.openid}}">
+            {{item.nickname || '用户'}}
+          </view>
+          <view class="comment-time">{{item.relativeTime}}</view>
+        </view>
+        
+        <!-- 评论内容 -->
+        <view class="comment-content" user-select="{{true}}">
+          {{item.content}}
+        </view>
+        
+        <!-- 评论图片显示 -->
+        <view class="comment-images" wx:if="{{item.image && item.image.length > 0}}">
           <image 
-            class="avatar" 
-            src="{{item.avatar || '/icons/avatar1.png'}}" 
+            wx:for="{{item.image}}" 
+            wx:for-item="img" 
+            wx:key="index"
+            class="comment-image" 
+            src="{{img}}" 
             mode="aspectFill"
-            binderror="handleImageError">
+            data-urls="{{item.image}}"
+            data-current="{{img}}"
+            binderror="handleImageError"
+            bindtap="previewCommentImage">
           </image>
         </view>
         
-        <view class="comment-content">
-          <view class="comment-header">
-            <text 
-              class="comment-author" 
-              bindtap="goToUserProfile" 
-              data-user-id="{{item.openid}}">
-              {{item.nickname || '用户'}}
+        <!-- 回复预览区域 -->
+        <view class="reply-preview" wx:if="{{item.reply_preview && item.reply_preview.length > 0}}">
+          <view class="reply-item" wx:for="{{item.reply_preview}}" wx:for-item="reply" wx:key="id">
+            <text class="reply-author" bindtap="goToUserProfile" data-user-id="{{reply.openid}}">
+              {{reply.nickname || '用户'}}：
             </text>
-            <text class="comment-time">{{item.relativeTime}}</text>
+            <text class="reply-text">{{reply.content}}</text>
           </view>
           
-          <text class="comment-text" user-select="{{true}}">{{item.content}}</text>
-          
-          <!-- 评论图片显示 -->
-          <view class="comment-images" wx:if="{{item.image && item.image.length > 0}}">
-            <image 
-              wx:for="{{item.image}}" 
-              wx:for-item="img" 
-              wx:key="index"
-              class="comment-image" 
-              src="{{img}}" 
-              mode="aspectFill"
-              data-urls="{{item.image}}"
-              data-current="{{img}}"
-              binderror="handleImageError"
-              bindtap="previewCommentImage">
-            </image>
+          <view class="view-more-replies" wx:if="{{item.reply_count > item.reply_preview.length}}" data-comment-id="{{item.id}}" bindtap="viewMoreReplies">
+            <text>查看全部{{item.reply_count}}条回复</text>
           </view>
-          
-          <!-- 回复预览区域 -->
-          <view class="reply-preview" wx:if="{{item.reply_preview && item.reply_preview.length > 0}}">
-            <view class="reply-item" wx:for="{{item.reply_preview}}" wx:for-item="reply" wx:key="id">
-              <text 
-                class="reply-author" 
-                bindtap="goToUserProfile" 
-                data-user-id="{{reply.openid}}">
-                {{reply.nickname || '用户'}}：
-              </text>
-              <text class="reply-text">{{reply.content}}</text>
-            </view>
-            
-            <view 
-              class="view-more-replies" 
-              wx:if="{{item.reply_count > item.reply_preview.length}}" 
-              data-comment-id="{{item.id}}" 
-              bindtap="viewMoreReplies">
-              <text>查看全部{{item.reply_count}}条回复</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      
-      <!-- 评论底部操作区 -->
-      <view class="comment-footer-actions">
-        <view class="comment-actions-left">
-          <view class="action-time">{{item.relativeTime}}</view>
         </view>
         
-        <view class="comment-actions-right">
+        <!-- 评论操作区 -->
+        <view class="comment-actions">
           <!-- 回复按钮 -->
-          <view 
-            class="action-reply" 
-            wx:if="{{allowReply}}"
-            data-id="{{item.id}}" 
-            data-index="{{index}}" 
-            bindtap="handleReply">
-            <icon name="comment" size="28"></icon>
-            <text>回复</text>
+          <view class="action-btn reply-btn" wx:if="{{allowReply}}" data-id="{{item.id}}" data-index="{{index}}" catchtap="handleReply">
+            <text class="action-text">回复</text>
           </view>
           
           <!-- 点赞按钮 -->
-          <view 
-            class="action-like {{item.isLiked ? 'liked' : ''}}" 
-            data-id="{{item.id}}" 
-            data-index="{{index}}" 
-            bindtap="handleLike">
-            <icon name="{{item.isLiked ? 'like-active' : 'like'}}" size="28" color="{{item.isLiked ? '#07c160' : ''}}"></icon>
-            <text class="{{item.isLiked ? 'liked-text' : ''}}">{{item.like_count || 0}}</text>
+          <view class="action-btn like-btn {{item.isLiked ? 'active' : ''}}" data-id="{{item.id}}" data-index="{{index}}" catchtap="handleLike">
+            <text class="action-text">{{item.isLiked ? '已点赞' : '点赞'}} {{item.like_count > 0 ? item.like_count : ''}}</text>
           </view>
           
           <!-- 删除按钮，只有评论作者才能看到 -->
-          <view 
-            class="action-delete" 
-            wx:if="{{item.openid === currentOpenid}}" 
-            data-id="{{item.id}}" 
-            data-index="{{index}}" 
-            bindtap="deleteComment">
-            <icon name="delete" size="28"></icon>
-            <text>删除</text>
+          <view class="action-btn delete-btn" wx:if="{{item.openid === currentUserOpenid}}" data-id="{{item.id}}" data-index="{{index}}" catchtap="handleDelete">
+            <text class="action-text">删除</text>
           </view>
         </view>
       </view>

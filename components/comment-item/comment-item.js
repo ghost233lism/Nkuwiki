@@ -35,7 +35,8 @@ Component({
     isProcessing: {
       like: false,
       delete: false
-    }
+    },
+    _isLiking: false
   },
 
   methods: {
@@ -62,50 +63,38 @@ Component({
     },
     
     // 点赞评论
-    onTapLike() {
-      if (this.data.isProcessing.like) return;
+    async onTapLike() {
+      if (this._isLiking) return;
+      const { id } = this.data.formattedComment;
       
-      const { id, isLiked } = this.data.formattedComment;
-      
-      // 设置处理中状态
-      this.setData({
-        'isProcessing.like': true
-      });
-      
-      // 更新UI状态（乐观更新）
-      this.updateLikeStatus(!isLiked);
-      
-      // 使用commentBehavior的_toggleCommentLike方法
-      this._toggleCommentLike(id)
-        .then(res => {
-          // 服务器返回的实际状态
-          const serverIsLiked = res.data?.is_liked || false;
-          const likeCount = res.data?.like_count || this.data.formattedComment.like_count || 0;
+      try {
+        this._isLiking = true;
+        // 调用API进行点赞
+        const res = await this._likeComment(id);
+        
+        if (res && (res.code === 0 || res.code === 200)) {
+          // 更新本地状态
+          const isLiked = !this.data.formattedComment.isLiked;
+          const likeCount = this.data.formattedComment.like_count + (isLiked ? 1 : -1);
           
-          // 以服务器返回为准更新状态
-          this.updateLikeStatus(serverIsLiked, likeCount);
-          
-          // 触发事件通知父组件
-          this.triggerEvent('like', { 
-            id: id, 
-            isLiked: serverIsLiked,
-            likeCount: likeCount
-          });
-        })
-        .catch(err => {
-          console.error('评论点赞失败:', err);
-          
-          // 恢复原状态
-          this.updateLikeStatus(isLiked);
-          
-          // 显示错误提示
-          this.showToast('操作失败，请稍后重试', 'error');
-        })
-        .finally(() => {
+          // 更新数据
           this.setData({
-            'isProcessing.like': false
+            'formattedComment.isLiked': isLiked,
+            'formattedComment.like_count': Math.max(0, likeCount)
           });
-        });
+          
+          // 通知父组件
+          this.triggerEvent('like', {
+            id,
+            is_liked: isLiked,
+            like_count: Math.max(0, likeCount)
+          });
+        }
+      } catch (err) {
+        console.debug('点赞评论失败:', err);
+      } finally {
+        this._isLiking = false;
+      }
     },
     
     // 回复评论
@@ -170,23 +159,6 @@ Component({
             'isProcessing.delete': false
           });
         });
-    },
-    
-    // 更新点赞状态
-    updateLikeStatus(isLiked, likeCount) {
-      const formattedComment = { ...this.data.formattedComment };
-      formattedComment.isLiked = isLiked;
-      
-      // 如果提供了点赞数则使用，否则根据当前状态计算
-      if (likeCount !== undefined) {
-        formattedComment.like_count = likeCount;
-      } else if (formattedComment.like_count !== undefined) {
-        formattedComment.like_count = isLiked 
-          ? formattedComment.like_count + 1 
-          : Math.max(0, formattedComment.like_count - 1);
-      }
-      
-      this.setData({ formattedComment });
     },
     
     // 预览图片

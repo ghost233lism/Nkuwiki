@@ -16,7 +16,7 @@ module.exports = Behavior({
   methods: {
     /**
      * 获取评论列表
-     * @param {string} postId - 帖子ID
+     * @param {number} postId - 帖子ID
      * @param {object} [options={}] - 可选参数
      * @param {string} [options.parentId] - 父评论ID，获取回复列表时使用
      * @param {number} [options.page=1] - 页码
@@ -31,7 +31,7 @@ module.exports = Behavior({
 
       const openid = storage.get('openid');
       const params = { 
-        post_id: postId, 
+        post_id: Number(postId), // 确保 post_id 是数字类型
         parent_id: parentId, 
         page, 
         page_size: page_size || limit || 20,  // 优先使用page_size，兼容旧的limit参数
@@ -42,41 +42,15 @@ module.exports = Behavior({
         const res = await commentApi.list(params);
         if (res.code !== 200) throw new Error(res.message || '获取评论列表失败');
         
-        // 标准API响应格式
-        if (res.data && res.pagination) {
-          return {
-            data: res.data,
-            pagination: res.pagination
-          };
-        }
+        console.debug('评论API响应:', res);
         
-        // 处理新的响应格式：直接使用data数组作为评论列表
-        if (Array.isArray(res.data)) {
-          const total = res.pagination?.total || res.total || res.data.length;
-          return {
-            data: res.data,
-            pagination: {
-              total: total,
-              page: page,
-              page_size: params.page_size,
-              total_pages: Math.ceil(total / params.page_size),
-              has_more: (page * params.page_size) < total
-            }
-          };
-        }
-        
-        // 兼容旧格式
-        const list = res.data?.list || [];
-        const total = res.pagination?.total || res.data?.total || list.length;
-        return { 
-          data: list,
-          pagination: {
-            total: total,
-            page: page,
-            page_size: params.page_size,
-            total_pages: Math.ceil(total / params.page_size),
-            has_more: (page * params.page_size) < total
-          }
+        // 适配新API响应格式
+        return {
+          list: res.data || [],  // 评论数据直接在data中
+          total: res.pagination?.total || 0,
+          page: res.pagination?.page || page,
+          page_size: res.pagination?.page_size || params.page_size,
+          has_more: res.pagination?.has_more || false
         };
       } catch (err) {
         console.debug('获取评论失败:', err);
@@ -162,21 +136,33 @@ module.exports = Behavior({
      * @returns {Promise<boolean>} 是否删除成功
      */
     async _deleteComment(commentId) {
-      if (!commentId) return false;
+      console.debug('_deleteComment 被调用:', commentId);
+      
+      if (!commentId) {
+        console.debug('评论ID为空');
+        return false;
+      }
       
       const openid = storage.get('openid');
-      if (!openid) return false;
+      if (!openid) {
+        console.debug('用户openid为空');
+        return false;
+      }
 
       try {
-        const res = await commentApi.delete({ 
-          comment_id: commentId, 
+        const params = { 
+          comment_id: Number(commentId), // 确保转换为数字
           openid 
-        });
+        };
+        console.debug('删除评论请求参数:', params);
+        
+        const res = await commentApi.delete(params);
+        console.debug('删除评论API响应:', res);
         
         if (res.code !== 200) throw new Error(res.message || '删除评论失败');
         return true;
       } catch (err) {
-        console.debug('删除评论失败:', err);
+        console.error('删除评论失败:', err);
         return false;
       }
     },

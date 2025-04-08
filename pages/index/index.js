@@ -154,12 +154,21 @@ Page({
   },
 
   onPullDownRefresh() {
+    console.debug('首页下拉刷新触发');
     const postList = this.selectComponent('#postList');
     if (postList) {
-      postList.loadInitialData();
+      // 直接加载第一页最新数据，并强制刷新
+      postList.loadInitialData(true).then(() => {
+        console.debug('首页帖子列表刷新完成');
+      }).catch(err => {
+        console.debug('首页帖子列表刷新失败:', err);
+      }).finally(() => {
+        wx.stopPullDownRefresh();
+      });
+    } else {
+      console.debug('未找到post-list组件');
+      wx.stopPullDownRefresh();
     }
-
-    wx.stopPullDownRefresh();
   },
 
   onReachBottom() {

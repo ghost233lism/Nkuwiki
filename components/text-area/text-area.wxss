@@ -9,13 +9,13 @@
 /* 文本域 */
 .text-area {
   width: 100%;
+  min-height: 80rpx;
   padding: 20rpx;
-  line-height: 1.5;
   box-sizing: border-box;
+  background: #f8f8f8;
+  border-radius: 8rpx;
   font-size: 28rpx;
   color: #333;
-  background: #fff;
-  border-radius: 8rpx;
 }
 
 /* 禁用状态 */
@@ -25,7 +25,7 @@
 }
 
 /* 占位符样式 */
-.placeholder {
+.text-area-placeholder {
   color: #999;
   font-size: 28rpx;
 }
@@ -53,14 +53,12 @@
   font-family: 'Courier New', Courier, monospace;
 }
 
-.markdown-preview {
+.markdown-preview,
+.text-preview {
   width: 100%;
-  padding: 20rpx;
   box-sizing: border-box;
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-  background: #fff;
+  padding: 20rpx;
+  background-color: #f8f8f8;
   border-radius: 8rpx;
 }
 
@@ -132,17 +130,6 @@
   color: #333;
 }
 
-.text-preview {
-  width: 100%;
-  padding: 20rpx;
-  box-sizing: border-box;
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #333;
-  background: #fff;
-  border-radius: 8rpx;
-}
-
 .text-preview.read-only {
   padding: 0;
 }
@@ -156,6 +143,8 @@
   font-size: 28rpx;
   background: #f9f9f9;
   border-radius: 8rpx;
+  min-height: 60rpx;
+  padding: 10rpx 0;
 }
 
 .counter {
@@ -232,4 +221,119 @@
   font-size: 24rpx;
   color: #999;
   border-top: 1rpx solid #eee;
+}
+
+/* 禁止滚动的样式 */
+.no-scroll {
+  overflow: hidden !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+.no-scroll-view {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 100%;
+}
+
+.line-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 4; /* 最多显示4行 */
+  -webkit-box-orient: vertical;
+}
+
+.text-area-input {
+  width: 100%;
+  min-height: 40rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.weui-cells_form .weui-cell_disabled:active {
+  background-color: transparent;
+}
+
+.weui-cells:before {
+  border-top: none; /* 隐藏顶部边框 */
+}
+
+.weui-cells:after {
+  border-bottom: none; /* 隐藏底部边框 */
+}
+
+/* 评论框外部容器 */
+.comment-area {
+  border-radius: 8rpx;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 修改评论框焦点时的样式 */
+.weui-textarea-focused {
+  background-color: #f8f8f8;
+}
+
+/* 评论框 */
+.weui-textarea {
+  background-color: #f5f5f5;
+  padding: 16rpx;
+  border-radius: 8rpx;
+  min-height: 80rpx;
+  width: auto;
+}
+
+/* placeholder颜色 */
+.weui-textarea-placeholder {
+  color: #999;
+}
+
+/* 按钮区样式 */
+.comment-btn-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+}
+
+/* 发送按钮 */
+.comment-send-btn {
+  background: #07c160;
+  color: #fff;
+  font-size: 28rpx;
+  line-height: 1.8;
+  padding: 8rpx 24rpx;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+}
+
+/* 禁用发送按钮 */
+.comment-send-btn-disabled {
+  background: #ccc;
+}
+
+/* 字数统计 */
+.comment-counter {
+  color: #888;
+  font-size: 24rpx;
+  text-align: right;
+}
+
+/* 溢出字数警告 */
+.comment-counter-warn {
+  color: #e64340;
+}
+
+/* 回复提示区域 */
+.reply-tip {
+  font-size: 24rpx;
+  color: #888;
+  padding: 8rpx 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 取消回复按钮 */
+.cancel-reply {
+  color: #07c160;
 } 

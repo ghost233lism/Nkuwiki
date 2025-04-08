@@ -1,5 +1,5 @@
 const behaviors = require('../../behaviors/index');
-const { getAboutInfo } = require('../../utils/util');
+const { getAboutInfo, getOpenID } = require('../../utils/util');
 // 常量配置
 const MENU_CONFIG = {
   SETTINGS: {
@@ -47,6 +47,7 @@ Page({
 
   data: {
     userInfo: null,
+    openid: '',
     stats: {
       posts: 0,
       likes: 0,
@@ -101,7 +102,9 @@ Page({
     
     try {
       // 获取openid
-      const openid = this.getStorage('openid');
+      const openid = await getOpenID();
+      this.setData({ openid: openid || '' });
+      
       if (!openid) {
         this.setData({ 
           userInfo: null, 

@@ -49,12 +49,12 @@
 
 /* 文本计数样式 */
 .text-count {
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: #999;
   font-weight: normal;
   padding: 0;
   margin: 0;
-  margin-left: 6rpx;
+  margin-left: 8rpx;
 }
 
 /* 气泡计数样式 */

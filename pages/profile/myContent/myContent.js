@@ -10,12 +10,20 @@ Page({
 
   data: {
     tabIndex: 0,
-    tabTitles: ['我的帖子', '我的点赞', '我的收藏', '我的评论'],
+    tabTitles: ['帖子', '获赞', '收藏', '关注', '粉丝', '评论'],
     navButtons: [{
       type: 'back',
       text: '返回'
     }],
-    // API参数
+    navBarHeight: 45, // 默认导航栏高度
+    // 筛选条件
+    postFilter: {}, // 帖子筛选条件
+    likeFilter: {}, // 获赞筛选条件
+    favoriteFilter: {}, // 收藏筛选条件
+    followingFilter: {}, // 关注筛选条件
+    followerFilter: {}, // 粉丝筛选条件
+    commentFilter: {}, // 评论筛选条件
+    // API参数 - 可以删除，不再需要
     postApiParams: {
       openid: '',
       page: 1,
@@ -39,6 +47,21 @@ Page({
   },
 
   async onLoad(options) {
+    // 获取设备信息和状态栏高度
+    try {
+      const systemInfo = wx.getSystemInfoSync();
+      const statusBarHeight = systemInfo.statusBarHeight;
+      // 根据状态栏高度推算导航栏高度
+      // iPhone等设备状态栏高度大约为44px，Android设备约为48px
+      const calculatedHeight = statusBarHeight + (systemInfo.platform === 'ios' ? 44 : 48);
+      
+      this.setData({
+        navBarHeight: calculatedHeight
+      });
+    } catch (e) {
+      console.debug('获取系统信息失败', e);
+    }
+
     // 获取登录信息
     const userInfo = await this._getUserInfo();
     if (!userInfo?.openid) {
@@ -64,9 +87,20 @@ Page({
       commentApiParams: { openid: userInfo.openid, offset: 0, limit: 10 }
     };
 
+    // 设置所有的filter
+    const filters = {
+      postFilter: { openid: userInfo.openid }, // 我的帖子 - 显示当前用户发布的帖子
+      likeFilter: { type: 'liked', openid: userInfo.openid }, // 我的获赞 - 显示当前用户获得点赞的帖子
+      favoriteFilter: { favorite: 1, openid: userInfo.openid }, // 我的收藏 - 显示当前用户收藏的帖子
+      followingFilter: { openid: userInfo.openid }, // 我的关注
+      followerFilter: { openid: userInfo.openid }, // 我的粉丝
+      commentFilter: { openid: userInfo.openid } // 我的评论
+    };
+
     this.setData({
       tabIndex,
-      ...apiParams
+      ...apiParams,
+      ...filters
     });
   },
 

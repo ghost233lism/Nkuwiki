@@ -1,134 +1,35 @@
 /* pages/post/detail/detail.wxss */
-page {
-  background-color: #f7f7f7;
-}
 
-.container {
+.post-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  background-color: #f8f8f8;
+  margin-top: 90rpx;
+  padding: 12rpx;
 }
 
-/* 顶部安全区域 */
-.safe-area-top {
-  width: 100%;
-  background-color: #fff;
-  z-index: 1000;
-}
-
-/* 顶部导航栏 */
-.header {
-  position: fixed;
-  left: 0;
-  width: 100%;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  background-color: #fff;
-  z-index: 100;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.back-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.title-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.title {
-  font-size: 17px;
-  font-weight: 500;
-  color: #333;
-}
-
-/* 帖子内容 */
+/* 帖子详情样式 */
 .post-detail {
-  margin: 0;
-  padding: 16px;
-  border-radius: 0;
-  box-shadow: none;
-  background-color: #fff;
+  margin-bottom: 20rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  /* 确保样式能够正确应用到post-item组件 */
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* 评论区域 */
-#commentList {
-  margin-top: 8px;
-}
-
-/* 加载中状态 */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 70vh;
-}
-
-/* 错误状态 */
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 70vh;
-  padding: 20px;
-}
-
-.error-icon {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 16px;
-}
-
-.error-text {
-  font-size: 16px;
-  color: #ff4d4f;
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.retry-btn {
-  width: 120px !important;
-  height: 40px;
-  line-height: 40px;
-  background-color: #07c160;
-  color: #fff;
-  border-radius: 20px;
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-
-.close-btn {
-  width: 120px !important;
-  height: 40px;
-  line-height: 40px;
-  background-color: #f7f7f7;
-  color: #666;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-/* 评论区域 */
-.comment-section {
-  padding: 16px;
-  background-color: #f6f6f6;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 12px;
+/* 评论列表容器样式 */
+.comment-list-container {
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20rpx;
 }
 
 /* 评论输入框 */

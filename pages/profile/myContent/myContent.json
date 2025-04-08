@@ -3,7 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "nav-bar": "/components/nav-bar/nav-bar",
-    "nav-tab-bar": "/components/nav-tab-bar/nav-tab-bar",
+    "tab-bar": "/components/tab-bar/tab-bar",
     "post-list": "/components/post-list/post-list",
     "comment-list": "/components/comment-list/comment-list",
     "floating-button": "/components/floating-button/floating-button"
