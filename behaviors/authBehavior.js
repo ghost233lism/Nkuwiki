@@ -27,7 +27,6 @@ module.exports = Behavior({
       
       try {
         if (!wx.cloud) {
-          console.error('微信云能力未初始化');
           return;
         }
         
@@ -54,7 +53,6 @@ module.exports = Behavior({
         await this._initOpenid();
       }
       try {
-        console.debug('同步用户信息...');
         const res = await userApi.sync();
         if (res.code === 200 && res.data?.id) {
           // 存储用户信息
@@ -62,15 +60,12 @@ module.exports = Behavior({
           storage.set('isLoggedIn', true);
           storage.set('lastSyncTime', Date.now());
           
-          console.debug('同步用户信息成功，已设置登录状态为true');
           return res;
         } else {
           const errorMsg = res.message || '同步用户信息失败';
-          console.error('同步用户信息失败:', res);
           throw new Error(errorMsg);
         }
       } catch (err) {
-        console.error('同步用户信息异常:', err);
         throw err;
       }
     },
@@ -85,8 +80,6 @@ module.exports = Behavior({
       const isLoggedIn = storage.get('isLoggedIn');
       const openid = storage.get('openid');
       
-      console.debug('检查登录状态:', { isLoggedIn, openid });
-      
       // 如果已登录并且有openid，直接返回true
       if (isLoggedIn && openid) {
         return true;
@@ -95,14 +88,11 @@ module.exports = Behavior({
       // 如果未登录但有openid，尝试同步一次用户信息
       if (openid && !isLoggedIn) {
         try {
-          console.debug('尝试同步用户信息');
           const res = await this._syncUserInfo();
           if (res && res.code === 200) {
-            console.debug('同步成功，已登录');
             return true;
           }
         } catch (err) {
-          console.debug('同步失败，未登录', err);
         }
       }
       

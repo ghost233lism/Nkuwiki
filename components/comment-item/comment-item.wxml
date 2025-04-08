@@ -1,54 +1,45 @@
-<view class="comment-item" wx:if="{{formattedComment}}">
-  <view class="comment-header">
-    <view class="user-info" bindtap="onTapUser">
-      <image class="avatar" src="{{formattedComment.avatar}}" mode="aspectFill" binderror="onAvatarError"></image>
-      <view class="user-name-time">
-        <view class="nickname">{{formattedComment.nickname || '匿名用户'}}</view>
-        <view class="time">{{formattedComment.create_time_formatted}}</view>
+<view class="nku-comment-item" wx:if="{{formattedComment}}">
+  <view class="nku-comment-header">
+    <view class="nku-user-info" bindtap="onTapUser">
+      <image class="nku-avatar" src="{{formattedComment.avatar}}" mode="aspectFill" binderror="onAvatarError"></image>
+      <view class="nku-user-name-time">
+        <view class="nku-nickname">{{formattedComment.nickname || '匿名用户'}}</view>
+        <view class="nku-time">{{formattedComment.create_time_formatted}}</view>
       </view>
     </view>
     
-    <view class="actions">
+    <view class="nku-comment-actions">
       <!-- 回复按钮 -->
-      <button 
-        class="action-button"
-        icon="{{ {name: 'comment', size: 28, color: '#999'} }}"
-        bind:tap="onTapReply"
-      ></button>
+      <view class="nku-action-btn" bindtap="onTapReply">
+        <icon name="comment" size="28" color="#999"></icon>
+      </view>
       
       <!-- 点赞按钮 -->
-      <button
-        class="action-button"
-        icon="{{ {name: formattedComment.isLiked ? 'like-active' : 'like', size: 28, color: formattedComment.isLiked ? '#ff6b6b' : '#999'} }}"
-        showCount="{{true}}"
-        count="{{formattedComment.like_count || 0}}"
-        hideZero="{{true}}"
-        bind:tap="onTapLike"
-      ></button>
+      <view class="nku-action-btn {{formattedComment.isLiked ? 'nku-liked' : ''}}" bindtap="onTapLike">
+        <icon name="{{formattedComment.isLiked ? 'like-active' : 'like'}}" size="28" color="{{formattedComment.isLiked ? '#ff6b6b' : '#999'}}"></icon>
+        <text wx:if="{{formattedComment.like_count > 0}}" class="nku-count-text">{{formattedComment.like_count}}</text>
+      </view>
       
       <!-- 删除按钮，仅评论作者可见 -->
-      <button
-        wx:if="{{formattedComment.isOwner}}"
-        class="action-button delete-button"
-        icon="{{ {name: 'delete', size: 28, color: '#ff4d4f'} }}"
-        bind:tap="onTapDelete"
-      ></button>
+      <view wx:if="{{formattedComment.isOwner}}" class="nku-action-btn nku-delete" bindtap="onTapDelete">
+        <icon name="delete" size="28" color="#ff4d4f"></icon>
+      </view>
     </view>
   </view>
   
-  <view class="comment-content">
+  <view class="nku-comment-content">
     <!-- 评论回复对象 -->
-    <view class="reply-to" wx:if="{{formattedComment.reply_to}}">
-      回复 <text class="reply-name">@{{formattedComment.reply_to.nickname || '匿名用户'}}</text>:
+    <view class="nku-reply-to" wx:if="{{formattedComment.reply_to}}">
+      回复 <text class="nku-reply-name">@{{formattedComment.reply_to.nickname || '匿名用户'}}</text>:
     </view>
     
     <!-- 评论内容 -->
-    <view class="content-text">{{formattedComment.content}}</view>
+    <view class="nku-content-text">{{formattedComment.content}}</view>
     
     <!-- 评论图片 -->
-    <view class="content-images" wx:if="{{formattedComment.image && formattedComment.image.length > 0}}">
+    <view class="nku-content-images" wx:if="{{formattedComment.image && formattedComment.image.length > 0}}">
       <view 
-        class="content-image" 
+        class="nku-content-image" 
         wx:for="{{formattedComment.image}}" 
         wx:key="*this" 
         bindtap="onPreviewImage"
@@ -60,7 +51,7 @@
   </view>
   
   <!-- 子评论区域 -->
-  <view class="replies" wx:if="{{formattedComment.replies && formattedComment.replies.length > 0}}">
+  <view class="nku-replies" wx:if="{{formattedComment.replies && formattedComment.replies.length > 0}}">
     <block wx:for="{{formattedComment.replies}}" wx:key="id">
       <comment-item 
         comment="{{item}}" 

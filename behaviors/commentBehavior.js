@@ -27,7 +27,6 @@ module.exports = Behavior({
       if (!postId) return null;
       
       const { parentId, page = 1, page_size = 20, limit } = options;
-      console.debug(`获取评论: postId=${postId}` + (parentId ? ` parentId=${parentId}` : ''));
 
       const openid = storage.get('openid');
       const params = { 
@@ -42,8 +41,6 @@ module.exports = Behavior({
         const res = await commentApi.list(params);
         if (res.code !== 200) throw new Error(res.message || '获取评论列表失败');
         
-        console.debug('评论API响应:', res);
-        
         // 适配新API响应格式
         return {
           list: res.data || [],  // 评论数据直接在data中
@@ -53,7 +50,6 @@ module.exports = Behavior({
           has_more: res.pagination?.has_more || false
         };
       } catch (err) {
-        console.debug('获取评论失败:', err);
         return null;
       }
     },
@@ -75,7 +71,6 @@ module.exports = Behavior({
         if (res.code !== 200) throw new Error(res.message || '获取评论详情失败');
         return res.data;
       } catch (err) {
-        console.debug('获取评论详情失败:', err);
         return null;
       }
     },
@@ -125,7 +120,6 @@ module.exports = Behavior({
         
         throw new Error('评论创建成功但未返回评论数据');
       } catch (err) {
-        console.debug('创建评论失败:', err);
         return null;
       }
     },
@@ -136,16 +130,12 @@ module.exports = Behavior({
      * @returns {Promise<boolean>} 是否删除成功
      */
     async _deleteComment(commentId) {
-      console.debug('_deleteComment 被调用:', commentId);
-      
       if (!commentId) {
-        console.debug('评论ID为空');
         return false;
       }
       
       const openid = storage.get('openid');
       if (!openid) {
-        console.debug('用户openid为空');
         return false;
       }
 
@@ -154,15 +144,12 @@ module.exports = Behavior({
           comment_id: Number(commentId), // 确保转换为数字
           openid 
         };
-        console.debug('删除评论请求参数:', params);
         
         const res = await commentApi.delete(params);
-        console.debug('删除评论API响应:', res);
         
         if (res.code !== 200) throw new Error(res.message || '删除评论失败');
         return true;
       } catch (err) {
-        console.error('删除评论失败:', err);
         return false;
       }
     },
@@ -187,7 +174,6 @@ module.exports = Behavior({
         if (res.code !== 200 || !res.data) throw new Error(res.message || '操作失败');
         return res.data;
       } catch (err) {
-        console.debug('评论点赞操作失败:', err);
         return null;
       }
     }

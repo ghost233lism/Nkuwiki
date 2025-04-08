@@ -58,11 +58,8 @@ Component({
 
   lifetimes: {
     attached() {
-      console.debug('评论列表组件已挂载');
-      
       // 自动获取当前用户openid
       const openid = this.getStorage('openid');
-      console.debug('当前用户openid:', openid);
       
       if (openid) {
         this.setData({ currentUserOpenid: openid });
@@ -72,11 +69,6 @@ Component({
       if (this.properties.postId) {
         this.loadComments();
       }
-      
-      // 确保行为方法正确混入
-      console.debug('检查_deleteComment方法:', typeof this._deleteComment === 'function');
-      console.debug('检查_toggleCommentLike方法:', typeof this._toggleCommentLike === 'function');
-      console.debug('检查_createComment方法:', typeof this._createComment === 'function');
     }
   },
 
@@ -90,7 +82,6 @@ Component({
       const { page, pageSize } = this.data;
       
       if (!postId) {
-        console.debug('未提供帖子ID，不加载评论');
         return Promise.reject(new Error('未提供帖子ID'));
       }
       
@@ -142,14 +133,12 @@ Component({
     
     // 重试加载评论
     retry() {
-      console.debug('重试加载评论');
       this.loadComments();
       this.triggerEvent('retry');
     },
 
     // 加载更多评论
     loadMore() {
-      console.debug('加载更多评论');
       if (this.data.loading || !this.data.hasMore) return;
       
       this.setData({ page: this.data.page + 1 }, () => {
@@ -231,7 +220,6 @@ Component({
             imageArray = comment.image;
           }
         } catch (e) {
-          console.debug('解析评论图片失败:', e);
           imageArray = [];
         }
       }

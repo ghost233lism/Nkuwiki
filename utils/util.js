@@ -823,15 +823,8 @@ function createApiClient(basePath, endpoints = {}) {
 
 /**
  * 导入流式响应处理工具
- * 如果无法直接导入，请确保在使用前已加载ChunkRes函数
  */
-let ChunkRes;
-try {
-  ChunkRes = require('../chunk-res/chunkRes').ChunkRes;
-} catch (err) {
-  console.debug('加载ChunkRes模块失败，将在使用时动态获取', err);
-  // 会在createStreamApiClient中再次尝试获取
-}
+const { createChunkRes } = require('./chunkUtil');
 
 /**
  * 创建支持流式响应的API客户端
@@ -849,16 +842,6 @@ function createStreamApiClient(basePath, endpoints = {}) {
   // 如果已缓存，直接返回缓存的客户端
   if (apiClientCache[cacheKey]) {
     return apiClientCache[cacheKey];
-  }
-  
-  // 如果之前没能加载ChunkRes，再次尝试获取
-  if (!ChunkRes) {
-    try {
-      ChunkRes = require('../chunk-res/chunkRes').ChunkRes;
-    } catch (err) {
-      console.debug('无法加载ChunkRes模块，请确保已正确引入', err);
-      throw new Error('创建流式API客户端失败: 无法加载ChunkRes模块');
-    }
   }
   
   const client = {};
@@ -915,14 +898,14 @@ function createStreamApiClient(basePath, endpoints = {}) {
       }
       
       // 创建流式响应处理器
-      const chunkRes = ChunkRes();
+      const chunkRes = createChunkRes();
       
       // 准备请求数据
       const openid = storage.get('openid');
       const finalUrl = url.startsWith('/') ? url : '/' + url;
-      const apiUrl = finalUrl.startsWith(getAPIConfig().api_prefix) ? finalUrl : getAPIConfig().api_prefix + finalUrl;
+      const apiUrl = finalUrl.startsWith(storage.get('API_CONFIG').api_prefix) ? finalUrl : storage.get('API_CONFIG').api_prefix + finalUrl;
       
-      let requestUrl = `${getAPIConfig().base_url}${apiUrl}`;
+      let requestUrl = `${storage.get('API_CONFIG').base_url}${apiUrl}`;
       let requestData = { ...data };
       
       // 对GET请求，构建查询字符串
@@ -943,7 +926,7 @@ function createStreamApiClient(basePath, endpoints = {}) {
         method: method,
         data: method === 'POST' ? requestData : undefined,
         header: {
-          ...getAPIConfig().headers,
+          ...storage.get('API_CONFIG').headers,
           ...(openid ? {'X-User-OpenID': openid} : {})
         },
         enableChunked: true,  // 启用分块传输

@@ -9,13 +9,6 @@
   bindretry="handleRetry"
   bindloadmore="loadMore"
 >
-  <!-- DEBUG信息 -->
-  <view wx:if="{{post.length === 0 && !loading && !error}}" class="debug-info">
-    <text>post长度: {{post.length}}</text>
-    <text>loading: {{loading}}</text>
-    <text>error: {{error}}</text>
-  </view>
-
   <view class="post-list">
     <!-- 帖子列表 -->
     <block wx:for="{{post}}" wx:key="id">
