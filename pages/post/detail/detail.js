@@ -45,12 +45,20 @@ Page({
     // 从页面参数中获取帖子ID
     const postId = options.id;
     
-    // 获取状态栏高度
-    const systemInfo = wx.getSystemInfoSync();
-    this.setData({
-      statusBarHeight: systemInfo.statusBarHeight,
-      postId: postId
-    });
+    // 获取状态栏高度 - 使用新API替代已废弃的getSystemInfoSync
+    try {
+      const windowInfo = wx.getWindowInfo();
+      this.setData({
+        statusBarHeight: windowInfo.statusBarHeight,
+        postId: postId
+      });
+    } catch (err) {
+      console.error('获取窗口信息失败:', err);
+      this.setData({
+        statusBarHeight: 20, // 默认状态栏高度
+        postId: postId
+      });
+    }
     
     // 加载帖子详情
     this.loadPostDetail();

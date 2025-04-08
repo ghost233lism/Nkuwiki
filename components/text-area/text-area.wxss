@@ -73,43 +73,43 @@
   width: 100%;
 }
 
-.markdown-content h1 {
+.markdown-content .h1 {
   font-size: 36rpx;
   font-weight: bold;
   margin: 30rpx 0 20rpx;
   color: #333;
 }
 
-.markdown-content h2 {
+.markdown-content .h2 {
   font-size: 32rpx;
   font-weight: bold;
   margin: 26rpx 0 18rpx;
   color: #333;
 }
 
-.markdown-content h3 {
+.markdown-content .h3 {
   font-size: 30rpx;
   font-weight: bold;
   margin: 22rpx 0 16rpx;
   color: #333;
 }
 
-.markdown-content p {
+.markdown-content .p {
   margin: 16rpx 0;
   line-height: 1.6;
 }
 
-.markdown-content a {
+.markdown-content .a {
   color: #07c160;
   text-decoration: none;
 }
 
-.markdown-content img {
+.markdown-content .markdown-image {
   max-width: 100%;
   margin: 10rpx 0;
 }
 
-.markdown-content code {
+.markdown-content .code {
   font-family: monospace;
   background: #f5f5f5;
   padding: 4rpx 8rpx;
@@ -118,7 +118,7 @@
   color: #e83e8c;
 }
 
-.markdown-content pre {
+.markdown-content .pre-block {
   background: #f5f5f5;
   padding: 20rpx;
   border-radius: 8rpx;
@@ -126,7 +126,7 @@
   margin: 20rpx 0;
 }
 
-.markdown-content pre code {
+.markdown-content .pre-block .code-block {
   background: none;
   padding: 0;
   color: #333;

@@ -90,7 +90,7 @@ Component({
       console.debug('评论列表组件已挂载');
       
       // 自动获取当前用户openid
-      if (!this.data.currentOpenid) {
+      if (!this.properties.currentOpenid) {
         const openid = this.getStorage('openid');
         if (openid) {
           this.setData({ currentOpenid: openid });
@@ -117,7 +117,8 @@ Component({
   methods: {
     // 加载评论
     loadComments() {
-      const { postId, page, limit } = this.data;
+      const { postId } = this.properties;
+      const { page, limit } = this.data;
       
       if (!postId) {
         console.debug('未提供帖子ID，不加载评论');
@@ -132,11 +133,11 @@ Component({
             const { list: comments, total } = result;
             
             // 格式化评论数据
-            const formattedComments = comments.map(comment => this._formatCommentData(comment));
+            const formattedComments = comments && comments.length ? comments.map(comment => this._formatCommentData(comment)) : [];
             
             // 更新评论列表和分页信息
             this.setData({
-              comments: this.data.page === 1 ? formattedComments : [...this.data.comments, ...formattedComments],
+              comments: this.data.page === 1 ? formattedComments : [...this.properties.comments, ...formattedComments],
               hasMore: (this.data.page * this.data.limit) < total,
               total: total || 0
             });
@@ -170,7 +171,7 @@ Component({
     // 加载更多评论
     loadMore() {
       console.debug('加载更多评论');
-      if (this.data.loading || !this.data.hasMore) return;
+      if (this.properties.loading || !this.properties.hasMore) return;
       
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadComments();
@@ -182,7 +183,7 @@ Component({
     // 点赞评论
     handleLike(e) {
       const { id, index } = e.currentTarget.dataset;
-      const comment = this.data.comments[index];
+      const comment = this.properties.comments[index];
       
       if (!comment) return;
       
@@ -194,7 +195,7 @@ Component({
           if (!result) throw new Error('操作失败');
           
           // 更新评论点赞状态
-          const comments = [...this.data.comments];
+          const comments = [...this.properties.comments];
           comments[index] = {
             ...comment,
             isLiked: result.status === 'liked',
@@ -252,7 +253,7 @@ Component({
       
       const { id, index } = e.currentTarget.dataset;
       // 获取完整的评论对象
-      const comment = this.data.comments[index];
+      const comment = this.properties.comments[index];
       if (!comment) return;
       
       const replyPrefix = comment.nickname ? `回复 @${comment.nickname}: ` : '';
@@ -283,12 +284,12 @@ Component({
                 if (!success) throw new Error('删除失败');
                 
                 // 更新评论列表
-                const comments = [...this.data.comments];
+                const comments = [...this.properties.comments];
                 comments.splice(index, 1);
                 
                 this.setData({ 
                   comments,
-                  total: Math.max(0, this.data.total - 1)
+                  total: Math.max(0, this.properties.total - 1)
                 });
                 
                 this.showToast('删除成功', 'success');
@@ -297,7 +298,7 @@ Component({
                 this.triggerEvent('delete', { 
                   id, 
                   index,
-                  postId: this.data.postId
+                  postId: this.properties.postId
                 });
               })
               .catch(error => {
@@ -372,7 +373,8 @@ Component({
     
     // 提交评论
     submitComment() {
-      const { commentText, postId, replyTo } = this.data;
+      const { commentText, replyTo } = this.data;
+      const { postId } = this.properties;
       
       // 验证评论内容
       if (!commentText.trim()) {
@@ -423,7 +425,7 @@ Component({
           
           // 通知父组件更新评论计数
           this.triggerEvent('commentAdded', {
-            postId: this.data.postId,
+            postId: this.properties.postId,
             comment: result
           });
         })

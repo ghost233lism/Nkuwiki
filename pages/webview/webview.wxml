@@ -1,0 +1,27 @@
+<view class="container">
+  <!-- 导航栏 -->
+  <nav-bar 
+    title="{{title}}" 
+    showBack="{{true}}"
+  ></nav-bar>
+
+  <!-- 内容区域 -->
+  <view class="content-area">
+    <cell-status
+      loading="{{loading}}"
+      error="{{error}}"
+      errorMsg="{{errorMsg}}"
+      bindretry="onRetry">
+      
+      <!-- Web视图 -->
+      <web-view 
+        src="{{url}}" 
+        bindload="onWebviewLoad" 
+        binderror="onWebviewError">
+      </web-view>
+    </cell-status>
+  </view>
+
+  <!-- 顶部通知 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+</view> 

@@ -108,9 +108,9 @@ Component({
       if (!post || !post.id) return;
       
       // 使用nextTick避免框架渲染冲突
+      this._initPost(); // 立即初始化，不要延迟
+      
       wx.nextTick(() => {
-        this._initPost();
-        
         // 格式化发布时间
         if (post.create_time) {
           this.setData({
@@ -159,8 +159,38 @@ Component({
     'detailPage': function(isDetailPage) {
       // 在详情页面，默认展开内容
       if (isDetailPage) {
+        const isLiked = this.data.isLiked;
+        const isFavorited = this.data.isFavorited;
+        
+        // 强制设置按钮相关状态，确保在详情页显示
         this.setData({
-          contentExpanded: true
+          contentExpanded: true,
+          showAction: true,
+          likeIcon: {
+            name: 'like',
+            size: 24,
+            color: isLiked ? '#ff6b6b' : '#666'
+          },
+          commentIcon: {
+            name: 'comment',
+            size: 24,
+            color: '#666'
+          },
+          shareIcon: {
+            name: 'share',
+            size: 24,
+            color: '#666'
+          },
+          favoriteIcon: {
+            name: 'favorite',
+            size: 24,
+            color: isFavorited ? '#ffc107' : '#666'
+          }
+        });
+        
+        // 更新图标状态
+        wx.nextTick(() => {
+          this._updateIcons();
         });
       }
     },
@@ -206,17 +236,37 @@ Component({
         userInfo: userInfo || null
       });
       
+      // 立即更新图标状态，确保在详情页面中显示
+      this._updateIcons();
+      
       // 延迟初始化，避免渲染框架内部状态冲突
       wx.nextTick(() => {
         this.init();
         this.checkContentOverflow();
         this.checkUserInteraction();
-        this._updateIcons();
+        this._updateIcons(); // 再次更新图标状态
       });
     },
     ready() {
       // 在组件完全渲染后检查内容是否溢出
       this.checkContentOverflow();
+      
+      // 确保图标状态已更新
+      this._updateIcons();
+      
+      // 在详情页面中特别处理
+      if (this.properties.detailPage) {
+        console.debug('详情页面中的post-item已准备好');
+        // 强制更新按钮状态
+        this.setData({
+          showAction: true
+        });
+        
+        // 延迟一会儿再次更新图标，确保在详情页面中显示
+        setTimeout(() => {
+          this._updateIcons();
+        }, 100);
+      }
     }
   },
 
@@ -250,6 +300,9 @@ Component({
       const isFavorited = post.is_favorited === 1;
       const isFollowed = post.is_followed === 1;
       
+      // 输出调试信息
+      console.debug('初始化帖子状态:', { isLiked, isFavorited, isFollowed, isDetailPage: this.properties.detailPage });
+      
       // 更新状态
       this.setData({
         isLiked,
@@ -259,6 +312,13 @@ Component({
       
       // 更新图标
       this._updateIcons();
+      
+      // 在详情页面中，确保交互按钮显示
+      if (this.properties.detailPage) {
+        this.setData({
+          showAction: true
+        });
+      }
     },
     
     // 检查内容是否超出

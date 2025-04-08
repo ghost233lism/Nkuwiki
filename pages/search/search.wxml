@@ -1,11 +1,12 @@
 <!-- 美化的搜索页面 -->
 <view class="container">
 	<!-- 导航栏和搜索框 -->
+	<nav-bar 
+		title="探索"
+		showBack="{{true}}"
+	/>
 	<view class="header">
-		<nav-bar 
-			title=""
-			showBack="{{true}}"
-		/>
+		
 		<search-bar
 			value="{{searchValue}}"
 			placeholder="搜索校园知识"

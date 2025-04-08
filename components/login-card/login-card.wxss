@@ -99,14 +99,14 @@
   transform: scale(0.92);
 }
 
-.feature-item icon {
+.feature-item .feature-icon {
   font-size: 52rpx;
   margin-bottom: 16rpx;
   color: #4080ff;
   opacity: 0.9;
 }
 
-.feature-item text {
+.feature-item .feature-text {
   font-size: 26rpx;
   color: #666;
   font-weight: 500;

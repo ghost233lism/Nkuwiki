@@ -4,6 +4,10 @@ Component({
       type: String,
       value: ''
     },
+    name: {
+      type: String,
+      value: ''
+    },
     value: {
       type: String,
       value: ''
@@ -85,7 +89,7 @@ Component({
       this.setData({
         inputValue: value
       })
-      this.triggerEvent('input', { value })
+      this.triggerEvent('input', { value, name: this.properties.name })
     },
 
     onFocus(e) {
@@ -106,7 +110,7 @@ Component({
       this.setData({
         inputValue: ''
       })
-      this.triggerEvent('input', { value: '' })
+      this.triggerEvent('input', { value: '', name: this.properties.name })
       this.triggerEvent('clear')
     },
 

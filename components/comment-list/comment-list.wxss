@@ -57,6 +57,12 @@
   color: #ff5252;
 }
 
+.error-message .error-text {
+  margin: 20rpx 0;
+  font-size: 28rpx;
+  color: #ff5252;
+}
+
 .retry-btn {
   margin-top: 20rpx;
   background-color: #07c160;
@@ -75,7 +81,7 @@
   color: #999;
 }
 
-.empty-message text {
+.empty-message .empty-text {
   margin-top: 20rpx;
   font-size: 28rpx;
 }
@@ -199,7 +205,7 @@
   color: #666;
 }
 
-.action-btn icon {
+.action-btn .icon {
   margin-right: 6rpx;
 }
 

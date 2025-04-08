@@ -1,0 +1,53 @@
+<view class="container">
+  <!-- 导航栏 -->
+  <nav-bar 
+    title="关于我们" 
+    showBack="{{true}}"
+  ></nav-bar>
+  <!-- 内容区域 -->
+  <view class="content-area">
+      <!-- 应用信息 -->
+      <logo-section 
+        app-name="{{companyInfo.app_name}}" 
+        version="{{companyInfo.version}}" 
+        subtitle="校园知识共享平台">
+      </logo-section>
+      <!-- 关于项目 -->
+      <view class="section">
+        <view class="section-title">愿景与目标</view>
+        <view class="section-content">
+          <text class="about-description">{{companyInfo.description || 'nkuwiki是南开大学校园知识共享平台，致力于构建南开知识共同体，践行开源·共治·普惠三位一体价值体系。'}}</text>
+        </view>
+      </view>
+      <!-- 相关链接 -->
+      <view class="section">
+        <view class="section-title">相关链接</view>
+        <mp-cells>
+          <mp-cell link hover value="官方网站" bindtap="onLinkTap" data-link="{{companyInfo.website}}"></mp-cell>
+          <mp-cell link hover value="GitHub" bindtap="onLinkTap" data-link="{{companyInfo.github}}"></mp-cell>
+          <mp-cell link hover value="联系我们" bindtap="contactUs"></mp-cell>
+        </mp-cells>
+      </view>
+      <!-- 开发团队 -->
+      <view class="section">
+        <view class="section-title">开发团队</view>
+        <mp-cells>
+          <mp-cell value="nkuwiki team"></mp-cell>
+        </mp-cells>
+      </view>
+      <!-- 公司信息 -->
+      <view class="section">
+        <view class="section-title">注册公司</view>
+        <mp-cells>
+          <mp-cell value="{{companyInfo.company || '沈阳最优解教育科技有限公司'}}"></mp-cell>
+        </mp-cells>
+      </view>
+      <!-- 版权信息 -->
+      <view class="copyright">
+        <text>{{companyInfo.copyright || '©2025 nkuwiki team'}}</text>
+      </view>
+
+  </view>
+  <!-- 顶部通知 -->
+  <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+</view>

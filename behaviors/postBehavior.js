@@ -63,7 +63,8 @@ module.exports = Behavior({
       }
       
       try {
-        console.debug('API请求参数:', params);
+        // 减少不必要的日志输出
+        // console.debug('API请求参数:', params);
         const res = await postApi.list(params);
         if (res.code !== 200) {
           throw new Error(res.message || '获取帖子列表失败');
@@ -84,7 +85,7 @@ module.exports = Behavior({
         
         return result;
       } catch (err) {
-         console.debug('postBehavior _getPostList failed:', err);
+         console.debug('获取帖子列表失败:', err);
          throw err;
       }
     },
@@ -132,9 +133,14 @@ module.exports = Behavior({
         // 将数组转换为逗号分隔的字符串
         const postIdsParam = Array.isArray(post_ids) ? post_ids.join(',') : post_ids;
         
+        // 如果帖子ID过多，截取前10个避免请求过大
+        const postIdsLimited = postIdsParam.length > 100 
+          ? `${postIdsParam.split(',').slice(0, 10).join(',')}`
+          : postIdsParam;
+        
         // 使用postApi发送请求，确保请求被发出
         const res = await postApi.status({ 
-          post_id: postIdsParam, 
+          post_id: postIdsLimited, 
           openid: openid 
         });
         

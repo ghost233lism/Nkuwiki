@@ -1,225 +1,28 @@
-page {
-  background: #f5f5f5;
+/* 发现页面 - 开发中 */
+.container {
   min-height: 100vh;
+  background-color: #f7f7f7;
 }
 
-.discover-page {
-  padding: 0;
-}
-
-/* 头部样式 */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 30rpx;
-  margin-bottom: 20rpx;
-}
-
-.title {
-  font-size: 34rpx;
-  font-weight: 500;
-}
-
-.header-icons {
-  display: flex;
-  gap: 30rpx;
-}
-
-.header-icons .icon {
-  width: 40rpx;
-  height: 40rpx;
-}
-
-/* 校园热点 */
-.section {
-  padding: 0 30rpx;
-  margin-bottom: 30rpx;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20rpx;
-}
-
-.section-title {
-  font-size: 30rpx;
-  font-weight: 500;
-}
-
-.update-text {
-  font-size: 24rpx;
-  color: #999;
-}
-
-/* AI助手 */
-.ai-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
-}
-
-.ai-btn {
-  flex: 0 0 calc(33.33% - 14rpx);
-  height: 80rpx;
-  line-height: 80rpx;
-  font-size: 28rpx;
-  color: #fff;
-  background-color: #1aad19;
-  border-radius: 8rpx;
-  margin: 0;
-  padding: 0;
-}
-
-.ai-item {
-  flex: 1;
+/* 开发中提示样式 */
+.developing-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f7f8fc;
-  padding: 20rpx 0;
-  border-radius: 12rpx;
-}
-
-.ai-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-bottom: 10rpx;
-}
-
-.ai-item text {
-  font-size: 24rpx;
-  color: #333;
-}
-
-.container {
-  min-height: 100vh;
-  background: #f7f9fc;
-  padding: 0 0 30rpx;
-}
-
-.main-content {
+  justify-content: center;
+  padding: 30% 0;
   width: 100%;
 }
 
-/* 卡片样式 */
-.card {
-  margin: 20rpx 30rpx;
-  background: #fff;
-  border-radius: 12rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid #f0f0f0;
-}
-
-.card-icon {
-  width: 40rpx;
-  height: 40rpx;
-  margin-right: 16rpx;
-}
-
-.card-title {
-  font-size: 30rpx;
+.developing-text {
+  font-size: 18px;
+  color: #666;
+  margin-top: 20px;
   font-weight: 500;
-  color: #333;
 }
 
-.card-subtitle {
-  font-size: 24rpx;
+.developing-subtext {
+  font-size: 14px;
   color: #999;
-  margin-left: auto;
-}
-
-.card-content {
-  padding: 20rpx 24rpx;
-}
-
-.card-footer {
-  padding: 16rpx 24rpx;
-  border-top: 1rpx solid #f0f0f0;
-  text-align: center;
-}
-
-.footer-text {
-  font-size: 26rpx;
-  color: #666;
-}
-
-/* 错误状态 */
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60rpx 40rpx;
-}
-
-.icon-wrapper {
-  margin-bottom: 20rpx;
-}
-
-.icon-wrapper.error {
-  animation: shake 0.6s ease-in-out;
-}
-
-.error-text {
-  font-size: 28rpx;
-  color: #666;
-  margin-bottom: 30rpx;
-}
-
-.error-actions {
-  display: flex;
-  gap: 20rpx;
-}
-
-.retry-btn,
-.close-btn {
-  min-width: 160rpx;
-  height: 72rpx;
-  line-height: 72rpx;
-  text-align: center;
-  border-radius: 36rpx;
-  font-size: 28rpx;
-  padding: 0 30rpx;
-}
-
-.retry-btn {
-  background: #1aad19;
-  color: #fff;
-}
-
-.close-btn {
-  background: #f5f5f5;
-  color: #666;
-}
-
-/* 空状态 */
-.empty-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 120rpx 40rpx;
-}
-
-.empty-text {
-  font-size: 28rpx;
-  color: #999;
-  margin-top: 20rpx;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  margin-top: 10px;
 }

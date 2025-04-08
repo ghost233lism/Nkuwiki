@@ -2,18 +2,18 @@
   <view class="main-content">
     <!-- Logo区域 -->
       <logo-section 
-        app-name="{{appInfo.appName}}" 
-      version="{{appInfo.version}}" 
-      subtitle="{{appInfo.subtitle}}">
+        app-name="{{companyInfo.app_name}}" 
+        version="{{companyInfo.version}}" 
+        subtitle="校园知识共享平台">
     </logo-section>
     <!-- 登录卡片 -->
     <login-card 
       bind:login="handleLogin"
       bind:agreement="onAgreementTap"
     ></login-card>
-    <!-- 底部版权信息 --->
-    <view class="footer">
-      <text class="copyright">© nkuwiki 2025</text>
-    </view>
+     <!-- 版权信息 -->
+      <view class="copyright">
+        <text>{{companyInfo.copyright || '©2025 nkuwiki team'}}</text>
+      </view>
   </view>
 </view>

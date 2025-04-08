@@ -26,11 +26,14 @@
         <view class="avatar-hint">点击更换头像</view>
       </view>
 
-      <!-- 使用新的表单面板组件 -->
+      <!-- 使用表单面板组件 -->
       <form-panel 
         id="profileForm"
         fields="{{formFields}}"
+        groups="{{groups}}"
+        ranges="{{ranges}}"
         submitText="保存修改"
+        submitTextBackground="#666"
         bind:change="onFieldChange"
         bind:submit="onFormSubmit"
       ></form-panel>

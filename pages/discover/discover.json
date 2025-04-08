@@ -1,12 +1,9 @@
 {
-  "navigationBarTitleText": "发现",
+  "navigationStyle": "custom", 
   "enablePullDownRefresh": true,
-  "backgroundColor": "#f7f9fc",
   "backgroundTextStyle": "dark",
+  "backgroundColor": "#f7f9fc",
   "usingComponents": {
-    "loading": "/components/loading/loading",
-    "post-list": "/components/post-list/post-list",
-    "post-item": "/components/post-item/post-item",
     "nav-bar": "/components/nav-bar/nav-bar"
   }
 }

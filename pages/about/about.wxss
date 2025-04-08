@@ -13,26 +13,21 @@ page {
   box-sizing: border-box;
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  padding: 60rpx 0;
-  margin-bottom: 20rpx;
-  border-bottom: 1rpx solid #eee;
+.section {
+  margin-bottom: 30rpx;
 }
 
-.app-name {
-  font-size: 48rpx;
-  font-weight: 600;
+.section-title {
+  font-size: 32rpx;
+  font-weight: 500;
   color: #333;
   margin-bottom: 20rpx;
-  text-align: center;
+  padding-left: 20rpx;
+  border-left: 6rpx solid #07c160;
 }
 
-.version {
-  font-size: 28rpx;
-  color: #999;
-  text-align: center;
+.section-content {
+  padding: 0 20rpx;
 }
 
 .about-description {

@@ -1,31 +1,70 @@
 const baseBehavior = require('../../behaviors/baseBehavior');
 const authBehavior = require('../../behaviors/authBehavior');
-
+const { getAboutInfo } = require('../../utils/util');
 Page({
   behaviors: [baseBehavior, authBehavior],
 
   data: {
-    appInfo: {
-      version: '0.0.2',
-      appName: 'nkuwiki',
-      subtitle: '校园知识共享平台'
-    }
+    companyInfo: {
+      app_name: '',
+      version: '',
+      description: '',
+      company: '',
+      email: '',
+      github: '',
+      website: '',
+      copyright: ''
+    },
   },
   async onLoad() {
-    this.updateState({
-      version: this.getStorage('aboutInfo').version,
-      loading: false,
-      error: false,
-    });
-    const res = await this._syncUserInfo();
-    if(res.code === 200){
-      this.setStorage('isLoggedIn', true);
-      if(res.details.message === '用户已存在'){
-        wx.reLaunch({
-          url: '/pages/index/index'
-        });
+    try {
+      let aboutInfo = await getAboutInfo();
+      // 确保有默认值，避免传null给组件
+      this.updateState({
+        companyInfo: {
+          app_name: aboutInfo?.app_name || 'nkuwiki',
+          version: aboutInfo?.version || '0.0.1',
+          description: aboutInfo?.description || '校园知识共享平台',
+          company: aboutInfo?.company || '',
+          email: aboutInfo?.email || '',
+          github: aboutInfo?.github || '',
+          website: aboutInfo?.website || '',
+          copyright: aboutInfo?.copyright || ''
+        },
+        loading: false,
+        error: false,
+      });
+
+      try {
+        const res = await this._syncUserInfo();
+        if(res && res.code === 200){
+          this.setStorage('isLoggedIn', true);
+          if(res.details && res.details.message === '用户已存在'){
+            wx.reLaunch({
+              url: '/pages/index/index'
+            });
+          }
+          //这里不直接进index页面单纯是为了让新用户点一下登录按钮qwq
+        }
+      } catch (err) {
+        console.warn('登录状态同步失败，需要用户手动登录', err);
       }
-      //这里不直接进index页面单纯是为了让新用户点一下登录按钮qwq
+    } catch (err) {
+      console.error('加载页面数据失败', err);
+      this.updateState({
+        companyInfo: {
+          app_name: 'nkuwiki',
+          version: '0.0.1',
+          description: '校园知识共享平台',
+          company: '',
+          email: '',
+          github: '',
+          website: '',
+          copyright: ''
+        },
+        loading: false,
+        error: false,
+      });
     }
   },
 
@@ -36,7 +75,26 @@ Page({
   // 刷新页面
   async refreshPage() {
     this.updateState({ error: false, errorText: '' });
-    await this.getVersionInfo();
+    
+    try {
+      // 获取最新的应用信息
+      let aboutInfo = await getAboutInfo();
+      
+      this.updateState({
+        companyInfo: {
+          app_name: aboutInfo?.app_name || 'nkuwiki',
+          version: aboutInfo?.version || '0.0.1',
+          description: aboutInfo?.description || '校园知识共享平台',
+          company: aboutInfo?.company || '',
+          email: aboutInfo?.email || '',
+          github: aboutInfo?.github || '',
+          website: aboutInfo?.website || '',
+          copyright: aboutInfo?.copyright || ''
+        }
+      });
+    } catch (err) {
+      console.error('刷新页面失败', err);
+    }
   },
 
   async handleLogin() {

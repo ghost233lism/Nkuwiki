@@ -107,12 +107,6 @@ Page({
       // 设置最近显示时间
       this.updateState({ lastShowTime: now });
       
-      // 先刷新所有帖子的状态（不管是否刚加载）
-      // 延迟执行确保DOM已更新
-      setTimeout(() => {
-        this._refreshPostStatus();
-      }, 100);
-      
       // 检查全局变量是否需要刷新
       const app = getApp();
       const refreshFromGlobal = app && app.globalData && app.globalData.refreshPostList;
@@ -139,25 +133,20 @@ Page({
       
       // 静默检查未读通知
       const openid = this.getStorage('openid');
-      if (openid) {
-        this.checkUnreadNotification().
-            then(res=>{
-        }).catch(err => {
+      if (openid && now - lastShowTime > 60000) { // 增加时间间隔至60秒
+        this.checkUnreadNotification().catch(err => {
           console.debug('检查未读通知失败:', err);
         });
       }
       
-      // 如果有错误或超过30秒没刷新，才刷新帖子列表
-      if (this.data.error || now - lastShowTime > 30000) {
+      // 如果有错误或超过60秒没刷新，才刷新帖子状态
+      if (this.data.error || now - lastShowTime > 60000) {
         this.hideError();
         
-        // 刷新帖子列表 - 通过设置筛选条件触发post-list组件更新
-        const postList = this.selectComponent('#postList');
-        if (postList) {
-          postList.setData({
-            filter: { category_id: this.data.categoryId }
-          });
-        }
+        // 延迟执行确保DOM已更新
+        setTimeout(() => {
+          this._refreshPostStatus();
+        }, 100);
       }
     } catch (err) {
       console.debug('onShow 执行出错:', err);
@@ -270,6 +259,19 @@ Page({
   async _refreshPostStatus() {
     console.debug('开始刷新帖子状态');
     try {
+      // 检查是否最近已刷新过
+      const lastRefreshTime = this.data._lastRefreshTime || 0;
+      const now = Date.now();
+      
+      // 如果60秒内已刷新过，跳过本次刷新
+      if (now - lastRefreshTime < 60000) {
+        console.debug('60秒内已刷新过帖子状态，跳过本次刷新');
+        return;
+      }
+      
+      // 更新最后刷新时间
+      this.setData({ _lastRefreshTime: now });
+      
       // 获取帖子列表组件
       const postList = this.selectComponent('#postList');
       if (!postList) {
@@ -289,21 +291,7 @@ Page({
         // 检查loading状态，如果不是正在加载，则重新加载
         if (!postList.data.loading) {
           // 设置post数组为响应数据中的data数组
-          setTimeout(() => {
-            postList.loadInitialData().then(() => {
-              console.debug('帖子列表重新加载完成');
-              
-              // 如果加载后的帖子列表仍为空，可能是数据问题
-              if (postList.data.post.length === 0) {
-                console.debug('重新加载后帖子列表仍为空，可能是数据或显示问题');
-                
-                // 重新设置筛选条件，尝试触发observer事件
-                postList.setData({
-                  filter: { ...postList.data.filter }
-                });
-              }
-            });
-          }, 100);
+          postList.loadInitialData();
         } else {
           console.debug('帖子列表正在加载中，跳过重新加载');
         }

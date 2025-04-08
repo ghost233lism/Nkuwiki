@@ -94,7 +94,8 @@
           showCount="{{true}}"
           count="{{post.like_count || 0}}"
           bind:tap="_onLikeTap"
-          style="background-color: #fff;"
+          hideZero="{{false}}"
+          style="background-color: #fff; display: block;"
         ></button>
         
         <!-- 评论按钮 -->
@@ -103,7 +104,8 @@
           showCount="{{true}}"
           count="{{post.comment_count || 0}}"
           bind:tap="_onCommentTap"
-          style="background-color: #fff;"
+          hideZero="{{false}}"
+          style="background-color: #fff; display: block;"
         ></button>
 
         <!-- 收藏按钮 -->
@@ -112,7 +114,8 @@
           showCount="{{true}}"
           count="{{post.favorite_count || 0}}"
           bind:tap="_onFavoriteTap"
-          style="background-color: #fff;"
+          hideZero="{{false}}"
+          style="background-color: #fff; display: block;"
         ></button>
         
         <!-- 分享按钮 -->
@@ -121,7 +124,8 @@
           showCount="{{true}}"
           count="{{post.share_count || 0}}"
           openType="share"
-          style="background-color: #fff;"
+          hideZero="{{false}}"
+          style="background-color: #fff; display: block;"
         ></button>
     </view>
   </view>

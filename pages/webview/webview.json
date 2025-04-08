@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "nav-bar": "/components/nav-bar/nav-bar",
+    "cell-status": "/components/cell-status/cell-status",
+    "mp-toptips": "/components/weui/toptips/toptips"
+  }
+} 

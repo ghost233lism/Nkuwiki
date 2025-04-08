@@ -1,104 +1,17 @@
-<!-- 发现页面 -->
-
+<!-- 发现页面 - 开发中 -->
 <view class="container">
-  <!-- 加载状态 -->
-  <loading show="{{loading}}" type="fullscreen" text="加载中..." />
+  <!-- 导航栏 -->
+  <nav-bar 
+    title="发现" 
+    showBack="{{false}}"
+    showNotification="{{true}}"
+    showAvatar="{{true}}"
+  ></nav-bar>
 
-  <!-- 错误状态 -->
-  <view class="error-container" wx:if="{{error}}">
-    <view class="icon-wrapper error">
-      <icon name="clear" size="48" color="#ff4d4f" outline="{{false}}"></icon>
-    </view>
-    <view class="error-text">{{error}}</view>
-    <view class="error-actions">
-      <button class="retry-btn" bindtap="onRetry">重试</button>
-      <button class="close-btn" bindtap="onErrorClose">关闭</button>
-    </view>
-  </view>
-
-  <!-- 主内容区域 -->
-  <view class="main-content" wx:if="{{!loading && !error}}">
-    <!-- 使用nav-bar组件替代原生标题栏 -->
-    <nav-bar 
-      title="发现" 
-      nav-buttons='[{"type": "notification", "hasUnread": hasUnreadNotification}, {"type": "avatar"}]'
-    />
-
-    <!-- 校园热点 -->
-    <view class="card">
-      <view class="card-header">
-        <image class="card-icon" src="/assets/icons/discover/hot.png" />
-        <view class="card-title">校园热点</view>
-        <view class="card-subtitle">实时更新</view>
-      </view>
-      <view class="card-content">
-        <post-list posts="{{hotPosts}}" type="grid" bind:itemClick="viewPostDetail" />
-      </view>
-    </view>
-
-    <!-- AI助手 -->
-    <view class="card">
-      <view class="card-header">
-        <image class="card-icon" src="/assets/icons/discover/ai.png" />
-        <view class="card-title">AI 助手</view>
-      </view>
-      <view class="card-content">
-        <view class="ai-grid">
-          <button 
-            wx:for="{{aiFeatures}}" 
-            wx:key="id"
-            class="ai-btn" 
-            data-type="{{item.id}}"
-            bindtap="navigateToAI">
-            {{item.name}}
-          </button>
-        </view>
-      </view>
-      <view class="card-footer">
-        <text class="footer-text">点击查看全部功能</text>
-      </view>
-    </view>
-
-    <!-- 校园活动 -->
-    <view class="card">
-      <view class="card-header">
-        <image class="card-icon" src="/assets/icons/discover/activity.png" />
-        <view class="card-title">校园活动</view>
-      </view>
-      <view class="card-content">
-        <post-item 
-          post="{{currentActivity}}" 
-          type="activity"
-          bind:click="viewActivityDetail" />
-      </view>
-    </view>
-
-    <!-- 学习资源 -->
-    <view class="card">
-      <view class="card-header">
-        <image class="card-icon" src="/assets/icons/discover/book.png" />
-        <view class="card-title">学习资源</view>
-      </view>
-      <view class="card-content">
-        <post-list posts="{{studyResources}}" type="vertical" />
-      </view>
-    </view>
-
-    <!-- 内容列表 -->
-    <post-list 
-      posts="{{posts}}"
-      loading="{{loading}}"
-      has-more="{{hasMore}}"
-      bind:loadmore="loadMorePosts"
-      bind:refresh="refreshPosts"
-    />
-    
-    <!-- 空状态 -->
-    <view class="empty-container" wx:if="{{!loading && (!posts || posts.length === 0)}}">
-      <view class="icon-wrapper">
-        <icon name="discover" size="48" color="#999999" outline="{{false}}"></icon>
-      </view>
-      <view class="empty-text">暂无发现内容</view>
-    </view>
+  <!-- 开发中提示 -->
+  <view class="developing-container">
+    <icon name="develop" size="80" color="#cccccc"></icon>
+    <view class="developing-text">功能开发中</view>
+    <view class="developing-subtext">敬请期待更多精彩内容</view>
   </view>
 </view>

@@ -7,170 +7,132 @@ Component({
   },
   
   properties: {
-    // 选择器类型
-    mode: {
+    // 字段标签
+    label: {
       type: String,
-      value: 'selector' // selector, multiSelector, time, date, region
+      value: ''
     },
-    // 默认选中项索引
+    // 当前选中的值
     value: {
       type: String,
       value: ''
     },
-    // 对于多列选择器，默认选中项索引数组
-    multiValue: {
+    // 选项数组
+    options: {
       type: Array,
       value: []
-    },
-    // 选择器数据源
-    range: {
-      type: Array,
-      value: []
-    },
-    // 多列选择器数据源
-    multiRange: {
-      type: Array,
-      value: []
-    },
-    // 选定值在数据源中的键名
-    rangeKey: {
-      type: String,
-      value: ''
     },
     // 占位文本
     placeholder: {
       type: String,
       value: '请选择'
     },
-    // 是否禁用
-    disabled: {
-      type: Boolean,
-      value: false
-    },
-    // 开始日期或时间
-    start: {
+    // 字段名称
+    name: {
       type: String,
       value: ''
     },
-    // 结束日期或时间
-    end: {
-      type: String,
-      value: ''
-    },
-    // 自定义图标
-    icon: {
-      type: String,
-      value: 'arrow-down'
-    },
-    // 自定义字段标签
-    label: {
-      type: String,
-      value: ''
-    },
-    // 是否必填
-    required: {
-      type: Boolean,
-      value: false
-    },
-    // 显示的数据格式
-    fields: {
-      type: String,
-      value: 'day' // year, month, day
-    },
-    index: {
+    currentIndex: {
       type: Number,
       value: -1
     }
   },
   
   data: {
-    // 显示的选择值
-    displayValue: ''
+    showPopup: false,
+    selectedIndex: -1,
+    // 城市数据
+    cityMap: {
+      '中国': ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安'],
+      '美国': ['纽约', '洛杉矶', '芝加哥', '休斯顿', '旧金山', '西雅图', '波士顿'],
+      '日本': ['东京', '大阪', '京都', '札幌', '福冈', '神户', '横滨'],
+      '韩国': ['首尔', '釜山', '仁川', '大邱', '光州', '大田'],
+      '英国': ['伦敦', '曼彻斯特', '利物浦', '伯明翰', '爱丁堡', '格拉斯哥'],
+      '法国': ['巴黎', '马赛', '里昂', '波尔多', '尼斯', '斯特拉斯堡'],
+      '德国': ['柏林', '慕尼黑', '汉堡', '法兰克福', '科隆', '斯图加特'],
+      '澳大利亚': ['悉尼', '墨尔本', '布里斯班', '珀斯', '阿德莱德', '堪培拉'],
+      '加拿大': ['多伦多', '温哥华', '蒙特利尔', '渥太华', '卡尔加里', '魁北克']
+    },
+    currentCountry: '',
+    cities: [],
+    selectedCity: ''
   },
   
   observers: {
-    'mode, value, multiValue, range, multiRange, rangeKey': function() {
-      this.updateDisplayValue();
-    }
-  },
-  
-  lifetimes: {
-    attached() {
-      this.updateDisplayValue();
+    'value': function(value) {
+      if (value) {
+        // 解析 'country - city' 格式的值
+        const [country, city] = value.split(' - ');
+        const index = this.data.options.indexOf(country);
+        
+        console.debug('解析location值:', value, '解析结果:', {country, city, index});
+        
+        this.setData({ 
+          currentIndex: index >= 0 ? index : -1,
+          currentCountry: country || '',
+          cities: country ? this.data.cityMap[country] || [] : [],
+          selectedCity: city || ''
+        });
+      }
     }
   },
   
   methods: {
-    // 更新显示值
-    updateDisplayValue() {
-      const { mode, value, multiValue, range, multiRange, rangeKey } = this.properties;
-      let displayValue = '';
-      
-      if (range.length === 0 && mode === 'selector') {
-        this.setData({ displayValue: '' });
-        return;
-      }
-      
-      switch (mode) {
-        case 'selector':
-          if (range[value]) {
-            if (rangeKey && typeof range[value] === 'object') {
-              displayValue = range[value][rangeKey] || '';
-            } else {
-              displayValue = range[value] || '';
-            }
-          }
-          break;
-          
-        case 'multiSelector':
-          if (multiValue.length > 0 && multiRange.length > 0) {
-            displayValue = multiValue.map((v, i) => {
-              const columnItems = multiRange[i] || [];
-              const item = columnItems[v];
-              if (rangeKey && typeof item === 'object') {
-                return item[rangeKey] || '';
-              } 
-              return item || '';
-            }).join(' ');
-          }
-          break;
-          
-        case 'time':
-        case 'date':
-        case 'region':
-          displayValue = value || '';
-          break;
-      }
-      
-      this.setData({ displayValue });
-    },
-    
-    // 选择事件
-    onChange(e) {
-      const index = e.detail.value;
-      let value = '';
-      
-      if (this.properties.rangeKey) {
-        value = this.properties.range[index][this.properties.rangeKey];
-      } else {
-        value = this.properties.range[index];
-      }
-      
-      this.setData({ index });
-      this.triggerEvent('change', {
-        name: this.dataset.name,
-        value: value
+    // 显示picker
+    showPicker() {
+      this.setData({
+        showPopup: true,
+        selectedIndex: this.data.currentIndex,
+        cities: this.data.currentCountry ? this.data.cityMap[this.data.currentCountry] : []
       });
     },
-    
-    // 列选择事件（多列选择器）
-    onColumnChange(e) {
-      this.triggerEvent('columnchange', e.detail);
+
+    // 隐藏picker
+    hidePicker() {
+      this.setData({
+        showPopup: false
+      });
     },
-    
-    // 取消事件
-    onPickerCancel() {
-      this.triggerEvent('cancel');
+
+    // 点击国家选项
+    onOptionTap(e) {
+      const index = e.currentTarget.dataset.index;
+      const country = this.data.options[index];
+      this.setData({
+        selectedIndex: index,
+        cities: this.data.cityMap[country] || [],
+        selectedCity: ''  // 重置已选城市
+      });
+    },
+
+    // 点击城市选项
+    onCityTap(e) {
+      const city = e.currentTarget.dataset.city;
+      this.setData({
+        selectedCity: city
+      });
+    },
+
+    // 确认选择
+    onConfirm() {
+      const { selectedIndex, options, selectedCity, name } = this.data;
+      if (selectedIndex !== -1) {
+        const country = options[selectedIndex];
+        const value = selectedCity ? `${country} - ${selectedCity}` : country;
+        this.setData({
+          currentIndex: selectedIndex,
+          value: value,
+          currentCountry: country
+        });
+        this.triggerEvent('change', {
+          name: this.properties.name,
+          value: value,
+          country: country,
+          city: selectedCity,
+          index: selectedIndex
+        });
+      }
+      this.hidePicker();
     }
   }
 }); 

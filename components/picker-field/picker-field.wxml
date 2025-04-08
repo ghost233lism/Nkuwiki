@@ -1,16 +1,43 @@
-<view class="weui-cell">
-  <view class="field-container">
-    <view class="field-label">{{label}}</view>
-    <picker 
-      mode="selector" 
-      value="{{index}}" 
-      range="{{range}}"
-      range-key="{{rangeKey}}" 
-      bindchange="onChange">
-      <view class="field-value {{value ? '' : 'placeholder'}}">
-        {{value || placeholder}}
-        <view class="arrow"></view>
+<view class="picker-field">
+  <view class="field-label" wx:if="{{label}}">{{label}}</view>
+  <view class="field-value {{value ? '' : 'placeholder'}}" bindtap="showPicker">
+    {{value || placeholder}}
+    <view class="arrow"></view>
+  </view>
+
+  <!-- 自定义picker弹出层 -->
+  <view class="picker-popup {{showPopup ? 'show' : ''}}">
+    <view class="picker-mask" bindtap="hidePicker"></view>
+    <view class="picker-content">
+      <view class="picker-header">
+        <view class="picker-btn" bindtap="hidePicker">取消</view>
+        <view class="picker-btn confirm" bindtap="onConfirm">确定</view>
       </view>
-    </picker>
+      <view class="picker-body">
+        <view class="picker-columns">
+          <!-- 国家列表 -->
+          <scroll-view scroll-y class="picker-list country-list">
+            <view 
+              wx:for="{{options}}" 
+              wx:key="*this"
+              class="picker-item {{selectedIndex === index ? 'active' : ''}}"
+              data-index="{{index}}"
+              bindtap="onOptionTap"
+            >{{item}}</view>
+          </scroll-view>
+          
+          <!-- 城市列表 -->
+          <scroll-view scroll-y class="picker-list city-list" wx:if="{{cities.length > 0}}">
+            <view 
+              wx:for="{{cities}}" 
+              wx:key="*this"
+              class="picker-item {{selectedCity === item ? 'active' : ''}}"
+              data-city="{{item}}"
+              bindtap="onCityTap"
+            >{{item}}</view>
+          </scroll-view>
+        </view>
+      </view>
+    </view>
   </view>
 </view> 

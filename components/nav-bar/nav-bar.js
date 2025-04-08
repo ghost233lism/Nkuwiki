@@ -145,21 +145,18 @@ Component({
     // 初始化系统信息
     initSystemInfo() {
       try {
-        // 获取系统信息
-        const systemInfo = wx.getSystemInfoSync() || storage.get('systemInfo');
-        if (!systemInfo) {
-          console.error('获取系统信息失败');
-          return;
-        }
+        // 使用新API替代旧的getSystemInfoSync
+        const appBaseInfo = wx.getAppBaseInfo();
+        const windowInfo = wx.getWindowInfo();
         
         // 状态栏高度
-        const statusBarHeight = systemInfo.statusBarHeight || 20;
+        const statusBarHeight = windowInfo.statusBarHeight || 20;
         
         // 根据不同平台设置导航栏高度
         let navBarHeight = 48;
-        if (systemInfo.platform === 'android') {
+        if (appBaseInfo.platform === 'android') {
           navBarHeight = 48;
-        } else if (systemInfo.platform === 'ios') {
+        } else if (appBaseInfo.platform === 'ios') {
           navBarHeight = 44;
         }
         
@@ -169,7 +166,12 @@ Component({
         this.setData({
           statusBarHeight,
           navBarHeight,
-          totalHeight
+          totalHeight,
+          // 保存系统信息以供其他方法使用
+          _systemInfo: {
+            platform: appBaseInfo.platform,
+            windowWidth: windowInfo.windowWidth
+          }
         });
 
         // 延迟执行一次布局计算
@@ -313,22 +315,24 @@ Component({
           
           if (this.properties.autoAdjustTitleWidth) {
             // 获取可用空间(总宽度减去左右区域宽度和安全边距)
-            const systemInfo = wx.getSystemInfoSync();
-            const screenWidth = systemInfo.windowWidth || 375;
+            const windowWidth = this.data._systemInfo?.windowWidth || wx.getWindowInfo().windowWidth || 375;
             const safetyMargin = 32; // 两侧安全边距(rpx)
-            const rpxRatio = 750 / screenWidth; // rpx与px的转换比例
+            const rpxRatio = 750 / windowWidth; // rpx与px的转换比例
             
-            // 安全边距转为px
-            const safetyMarginPx = safetyMargin / rpxRatio;
+            // 计算左右区域的rpx宽度
+            const leftRpx = leftWidth * rpxRatio;
+            const rightRpx = rightWidth * rpxRatio;
             
-            // 计算标题可用宽度(px)
-            const availableWidth = screenWidth - leftWidth - rightWidth - safetyMarginPx * 2;
+            // 计算标题可用空间
+            const availableWidth = 750 - leftRpx - rightRpx - safetyMargin;
             
-            // 转换为百分比
-            const availablePercent = Math.floor((availableWidth / screenWidth) * 100);
+            // 将可用空间转换为百分比
+            const percentAvailable = Math.floor((availableWidth / 750) * 100);
             
-            // 确保至少有30%的空间
-            titleMaxWidth = Math.max(30, availablePercent) + '%';
+            // 限制在30%~80%之间
+            const finalPercent = Math.min(Math.max(percentAvailable, 30), 80);
+            
+            titleMaxWidth = `${finalPercent}%`;
           }
           
           this.setData({
@@ -336,11 +340,13 @@ Component({
               leftWidth,
               rightWidth
             },
-            titleMaxWidth
+            computedStyle: {
+              titleMaxWidth
+            }
           });
         });
       } catch (err) {
-        console.error('更新布局计算失败:', err);
+        console.error('更新导航布局失败:', err);
       }
     },
 

@@ -1,4 +1,5 @@
 const behaviors = require('../../behaviors/index');
+const { getAboutInfo } = require('../../utils/util');
 // 常量配置
 const MENU_CONFIG = {
   SETTINGS: {
@@ -8,7 +9,7 @@ const MENU_CONFIG = {
         icon: true,
         iconName: 'about',
         title: '关于我们',
-        path: '/pages/profile/about/about'
+        path: '/pages/about/about'
       },
       {
         id: 'setting',
@@ -68,14 +69,15 @@ Page({
   async onLoad() {
     // 获取系统信息设置状态栏高度
     try {
-      const systemInfo = wx.getSystemInfoSync();
+      // 使用新API替代已废弃的getSystemInfoSync
+      const windowInfo = wx.getWindowInfo();
       this.setData({
-        statusBarHeight: systemInfo.statusBarHeight || 0
+        statusBarHeight: windowInfo.statusBarHeight || 0
       });
     } catch (err) {}
     
     // 准备菜单数据
-    this.processMenuItems();
+    await this.processMenuItems();
     
     // 加载用户数据
     await this.syncUserAndInitPage();
@@ -197,22 +199,42 @@ Page({
   },
 
   // 处理菜单项
-  processMenuItems() {
-    // 设置菜单添加额外内容
-    const settingItems = MENU_CONFIG.SETTINGS.items.map(item => {
-      const newItem = { ...item };
+  async processMenuItems() {
+    try {
+      // 获取应用信息
+      const appInfo = await getAboutInfo();
+      const version = appInfo ? `版本 ${appInfo.version}` : '版本 0.0.1';
       
-      // 添加版本信息到"关于我们"
-      if (item.id === 'about') {
-        newItem.extraContent = '版本 1.0.0';
-      }
+      // 设置菜单添加额外内容
+      const settingItems = MENU_CONFIG.SETTINGS.items.map(item => {
+        const newItem = { ...item };
+        
+        // 添加版本信息到"关于我们"
+        if (item.id === 'about') {
+          newItem.extraContent = version;
+        }
+        
+        return newItem;
+      });
       
-      return newItem;
-    });
-    
-    this.setData({
-      settingItems
-    });
+      this.setData({
+        settingItems
+      });
+    } catch (err) {
+      console.error('获取版本信息失败:', err);
+      // 使用默认菜单
+      const settingItems = MENU_CONFIG.SETTINGS.items.map(item => {
+        const newItem = { ...item };
+        if (item.id === 'about') {
+          newItem.extraContent = '版本 0.0.1';
+        }
+        return newItem;
+      });
+      
+      this.setData({
+        settingItems
+      });
+    }
   },
 
   // 设置菜单点击

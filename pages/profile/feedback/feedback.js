@@ -34,42 +34,17 @@ Page({
   behaviors: [baseBehavior, authBehavior, weuiBehavior],
 
   data: {
-    formFields: [
-      {
-        type: 'radio-group',
-        name: 'type',
-        label: '反馈类型',
-        options: [
-          { label: '功能异常', value: 'bug' },
-          { label: '功能建议', value: 'suggestion' },
-          { label: '其他问题', value: 'other' }
-        ],
-        value: 'bug',
-        required: true
-      },
-      {
-        type: 'textarea',
-        name: 'content',
-        label: '反馈内容',
-        placeholder: '请详细描述问题或建议（5-500字）',
-        maxlength: 500,
-        required: true,
-        autoHeight: true
-      },
-      {
-        type: 'image-uploader',
-        name: 'images',
-        label: '相关截图',
-        maxCount: 3,
-        uploadUrl: '/api/upload/image'
-      },
-      {
-        type: 'input',
-        name: 'contact',
-        label: '联系方式',
-        placeholder: '手机/邮箱/微信（选填）'
-      }
+    types: [
+      { label: '功能异常', value: 'bug' },
+      { label: '功能建议', value: 'suggestion' },
+      { label: '其他问题', value: 'other' }
     ],
+    typeLabels: ['功能异常', '功能建议', '其他问题'],
+    typeValues: ['bug', 'suggestion', 'other'],
+    feedbackType: 'bug',
+    typeName: '功能异常',
+    content: '',
+    contact: '',
     submitting: false,
     deviceInfo: null
   },
@@ -82,35 +57,67 @@ Page({
 
   // 初始化设备信息
   initDeviceInfo() {
-    const systemInfo = wx.getSystemInfoSync();
+    try {
+      // 使用新API替代已废弃的getSystemInfoSync
+      const appBaseInfo = wx.getAppBaseInfo();
+      const deviceInfo = wx.getDeviceInfo();
+      
+      this.setData({
+        deviceInfo: {
+          model: deviceInfo.model,
+          system: deviceInfo.system,
+          platform: deviceInfo.platform,
+          sdkVersion: appBaseInfo.SDKVersion
+        }
+      });
+    } catch (err) {
+      console.error('获取设备信息失败:', err);
+    }
+  },
+  
+  // 反馈类型变更 - 使用picker-field
+  onTypeChange(e) {
+    const { value, index } = e.detail;
     this.setData({
-      deviceInfo: {
-        model: systemInfo.model,
-        system: systemInfo.system,
-        platform: systemInfo.platform,
-        sdkVersion: systemInfo.SDKVersion
-      }
+      typeName: value,
+      feedbackType: this.data.typeValues[index]
+    });
+    console.debug(`[Feedback] 类型变更: ${value}, 索引:${index}, 值:${this.data.feedbackType}`);
+  },
+  
+  // 反馈内容变更
+  onContentInput(e) {
+    this.setData({
+      content: e.detail.value
+    });
+  },
+  
+  // 联系方式变更 - 使用input-field
+  onContactInput(e) {
+    this.setData({
+      contact: e.detail.value
     });
   },
 
-  // 表单字段变更
-  onFormChange(e) {
-    const { name, value } = e.detail;
-    console.debug(`[Feedback] 字段变更: ${name}=`, value);
-  },
-
-  // 表单提交
-  async onFormSubmit(e) {
+  // 提交反馈
+  async submitFeedback() {
     if (this.data.submitting) return;
+    
+    // 基本验证
+    if (!this.data.content || this.data.content.length < 5) {
+      this.showToptips('请填写反馈内容（至少5个字）', 'error');
+      return;
+    }
     
     try {
       this.setData({ submitting: true });
       this.showLoading('提交中...');
 
-      const formData = e.detail;
       const payload = {
-        ...formData,
         openid: this.data.openid,
+        content: this.data.content,
+        type: this.data.feedbackType,
+        contact: this.data.contact,
         device_info: this.data.deviceInfo
       };
 

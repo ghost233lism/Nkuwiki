@@ -37,12 +37,22 @@ Component({
     loadingText: '加载中...',
     
     // 按钮相关配置
-    noMoreText: '没有更多数据了'
+    noMoreText: '没有更多数据了',
+    
+    // 添加最后更新时间记录
+    _lastUpdateTime: 0,
+    _lastStatusUpdateTime: 0
   },
 
   lifetimes: {
     attached() {
       console.debug('post-list组件已附加');
+      
+      // 添加最后更新时间记录
+      this.setData({
+        _lastUpdateTime: 0,
+        _lastStatusUpdateTime: 0
+      });
       
       // 组件attached后异步加载数据
       setTimeout(() => {
@@ -66,7 +76,11 @@ Component({
     'filter': function(filter) {
       // 当筛选条件变化时重新加载数据
       if (filter) {
-        this.loadInitialData();
+        const now = Date.now();
+        // 如果30秒内已经加载过，不要重复加载
+        if (!this.data._lastUpdateTime || now - this.data._lastUpdateTime > 30000) {
+          this.loadInitialData();
+        }
       }
     }
   },
@@ -146,10 +160,20 @@ Component({
     
     // 加载初始数据
     async loadInitialData() {
+      // 防止短时间内重复调用
+      const now = Date.now();
+      if (this.data._lastUpdateTime && now - this.data._lastUpdateTime < 5000) {
+        console.debug('短时间内已加载过数据，跳过本次加载');
+        return Promise.resolve();
+      }
+      
       try {
         this.showLoading('正在加载...');
         this.hideError();
         this.resetPagination();
+        
+        // 更新最后加载时间
+        this.setData({ _lastUpdateTime: now });
         
         // 调用API获取帖子列表
         const result = await this._getPostList(this.data.filter || {}, 1, this.data.page_size);
@@ -178,9 +202,11 @@ Component({
         }
         
         this.hideLoading();
+        return Promise.resolve();
       } catch (err) {
         this.hideLoading();
         this.showError('获取内容失败');
+        return Promise.reject(err);
       }
     },
     
@@ -191,6 +217,16 @@ Component({
       }
       
       try {
+        // 添加节流控制，30秒内不重复获取状态
+        const now = Date.now();
+        if (this.data._lastStatusUpdateTime && now - this.data._lastStatusUpdateTime < 30000) {
+          console.debug('30秒内已更新过状态，跳过本次更新');
+          return;
+        }
+        
+        // 更新状态最后更新时间
+        this.setData({ _lastStatusUpdateTime: now });
+        
         // 检查用户登录状态
         const openid = this.getStorage('openid');
         if (!openid) {

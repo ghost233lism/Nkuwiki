@@ -113,7 +113,7 @@ Component({
       'back': '/icons/back.png',
       'arrow-right': '/icons/arrow-right.png',
       'history': '/icons/history.png',
-      'feedback': '/icons/feedback.png',
+      'feedback': '/icons/support.png',
       'draft': '/icons/draft.png',
       'about': '/icons/about.png',
       'message': '/icons/message.png',

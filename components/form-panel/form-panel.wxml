@@ -1,113 +1,72 @@
 <view class="form-panel">
-  <!-- 基本资料 -->
-  <view class="field-group">
-    <view class="group-title" wx:if="{{title}}">{{title}}</view>
-    
-    <block wx:for="{{fields}}" wx:key="name" wx:if="{{item.group === 'basic' || !item.group}}">
-      <!-- 动态组件渲染 -->
-      <input-field
-        wx:if="{{item.type === 'input' || item.type === 'textarea'}}"
-        label="{{item.label}}"
-        type="{{item.type}}"
-        value="{{formData[item.name]}}"
-        placeholder="{{item.placeholder}}"
-        maxlength="{{item.maxlength}}"
-        bind:input="handleFieldChange"
-        data-name="{{item.name}}"
-      />
 
-      <!-- Picker 类型 -->
-      <picker-field
-        wx:elif="{{item.type === 'picker'}}"
-        label="{{item.label}}"
-        value="{{formData[item.name]}}"
-        range="{{getPickerRange(item)}}"
-        bind:change="handleFieldChange"
-        data-name="{{item.name}}"
-      />
-      
-      <!-- 图片上传类型 -->
-      <image-uploader
-        wx:elif="{{item.type === 'image-uploader'}}"
-        label="{{item.label}}"
-        fileList="{{formData[item.name]}}"
-        bind:change="handleFieldChange"
-        data-name="{{item.name}}"
-      />
-    </block>
-  </view>
-  
-  <!-- 联系方式 -->
-  <view class="field-group">
-    <view class="group-title">联系方式</view>
-    
-    <block wx:for="{{fields}}" wx:key="name" wx:if="{{item.group === 'contact'}}">
-      <!-- 动态组件渲染 -->
-      <input-field
-        wx:if="{{item.type === 'input' || item.type === 'textarea'}}"
-        label="{{item.label}}"
-        type="{{item.type}}"
-        value="{{formData[item.name]}}"
-        placeholder="{{item.placeholder}}"
-        maxlength="{{item.maxlength}}"
-        bind:input="handleFieldChange"
-        data-name="{{item.name}}"
-      />
-    </block>
-  </view>
-  
-  <!-- 地区信息 -->
-  <view class="field-group">
-    <view class="group-title">地区信息</view>
-    
-    <block wx:for="{{fields}}" wx:key="name" wx:if="{{item.group === 'location'}}">
-      <!-- Picker 类型 -->
-      <picker-field
-        wx:if="{{item.type === 'picker'}}"
-        label="{{item.label}}"
-        value="{{formData[item.name]}}"
-        range="{{getPickerRange(item)}}"
-        bind:change="handleFieldChange"
-        data-name="{{item.name}}"
-      />
-    </block>
-  </view>
-  
-  <!-- 其他信息 -->
-  <view class="field-group">
-    <view class="group-title">其他信息</view>
-    
-    <block wx:for="{{fields}}" wx:key="name" wx:if="{{item.group === 'other'}}">
-      <!-- 动态组件渲染 -->
-      <input-field
-        wx:if="{{item.type === 'input' || item.type === 'textarea'}}"
-        label="{{item.label}}"
-        type="{{item.type}}"
-        value="{{formData[item.name]}}"
-        placeholder="{{item.placeholder}}"
-        maxlength="{{item.maxlength}}"
-        bind:input="handleFieldChange"
-        data-name="{{item.name}}"
-      />
 
-      <!-- Picker 类型 -->
-      <picker-field
-        wx:elif="{{item.type === 'picker'}}"
-        label="{{item.label}}"
-        value="{{formData[item.name]}}"
-        range="{{getPickerRange(item)}}"
-        bind:change="handleFieldChange"
-        data-name="{{item.name}}"
-      />
-    </block>
-  </view>
+  <block class="field-group" wx:for="{{groups}}" wx:key="name" wx:for-item="group">
+    <view class="group-title" wx:if="{{group.title}}">{{group.title}}</view>
+    
+    <view class="field-list">
+      <block wx:for="{{fields}}" wx:key="name" wx:for-item="field">
+        <view class="field-item" wx:if="{{field.group === group.name}}">
+          <!-- 动态组件渲染 -->
+          <input-field
+            wx:if="{{field.type === 'input' || field.type === 'textarea'}}"
+            label="{{field.label}}"
+            type="{{field.type}}"
+            value="{{formData[field.name]}}"
+            placeholder="{{field.placeholder}}"
+            maxlength="{{field.maxlength || 0}}"
+            name="{{field.name}}"
+            bind:input="handleFieldChange"
+          />
 
-  <!-- 提交按钮 -->
-  <view class="weui-btn-area" wx:if="{{submitText}}">
-    <button 
-      class="weui-btn" 
-      type="primary" 
-      bindtap="handleSubmit"
-    >{{submitText}}</button>
-  </view>
+          <!-- Picker 类型 -->
+          <picker-field
+            wx:elif="{{field.type === 'picker'}}"
+            label="{{field.label}}"
+            value="{{formData[field.name]}}"
+            options="{{pickerRanges[field.name]}}"
+            name="{{field.name}}"
+            placeholder="{{field.placeholder}}"
+            bind:change="handleFieldChange"
+          />
+          
+          <!-- 图片上传类型 -->
+          <image-uploader
+            wx:elif="{{field.type === 'image-uploader'}}"
+            label="{{field.label}}"
+            fileList="{{formData[field.name]}}"
+            bind:change="handleFieldChange"
+            data-name="{{field.name}}"
+          />
+          
+          <!-- 自定义text-area组件 -->
+          <view wx:elif="{{field.type === 'custom' && field.componentName === 'text-area'}}" class="custom-field-wrapper">
+            <view class="field-label" wx:if="{{field.label}}">{{field.label}}</view>
+            <text-area
+              value="{{formData[field.name]}}"
+              placeholder="{{field.placeholder}}"
+              maxlength="{{field.maxlength || 500}}"
+              height="{{field.height || 200}}"
+              show-count="{{field.showCount !== false}}"
+              auto-height="{{field.autoHeight}}"
+              disabled="{{field.disabled}}"
+              show-toolbar="{{field.showToolbar}}"
+              mark-down-mode="{{field.markdownMode}}"
+              bind:input="handleTextAreaInput"
+              data-name="{{field.name}}"
+            />
+          </view>
+        </view>
+      </block>
+    </view>
+  </block>
 </view> 
+<!-- 提交按钮 -->
+<button
+  icon="none"
+  text="{{submitText}}"
+  textSize="34"
+  textBackground="#07c160"
+  bind:tap="handleSubmit"
+  showCount="{{false}}"
+></button>

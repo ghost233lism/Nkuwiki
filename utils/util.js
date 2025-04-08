@@ -10,14 +10,64 @@ const config = {
     api_prefix: '/api',
     prefixes: {wxapp: '/wxapp', agent: '/agent'},
     headers: {'Content-Type': 'application/json'}
+  },
+  // 添加日志级别配置
+  LOG_LEVEL: {
+    DEBUG: 4,
+    INFO: 3, 
+    WARN: 2,
+    ERROR: 1,
+    NONE: 0
+  },
+  // 设置当前日志级别 - 生产环境可以设置为INFO或更低
+  currentLogLevel: 2  // WARN级别，只输出警告和错误
+}
+
+// 日志函数，根据级别决定是否输出
+function log(level, ...args) {
+  const { LOG_LEVEL, currentLogLevel } = config;
+  
+  if (level <= currentLogLevel) {
+    switch(level) {
+      case LOG_LEVEL.ERROR:
+        console.error(...args);
+        break;
+      case LOG_LEVEL.WARN:
+        console.warn(...args);
+        break;
+      case LOG_LEVEL.INFO:
+        console.info(...args);
+        break;
+      case LOG_LEVEL.DEBUG:
+        console.debug(...args);
+        break;
+      default:
+        // 不输出
+        break;
+    }
   }
 }
+
+// 导出日志函数
+const logger = {
+  debug: (...args) => log(config.LOG_LEVEL.DEBUG, ...args),
+  info: (...args) => log(config.LOG_LEVEL.INFO, ...args),
+  warn: (...args) => log(config.LOG_LEVEL.WARN, ...args),
+  error: (...args) => log(config.LOG_LEVEL.ERROR, ...args),
+  // 设置日志级别
+  setLevel: (level) => {
+    if (typeof level === 'number' && level >= 0 && level <= 4) {
+      config.currentLogLevel = level;
+    }
+  }
+};
+
 async function init() {
   storage.set('defaultAvatar', config.defaultAvatar);
   storage.set('cloudEnv', config.cloudEnv);
   storage.set('API_CONFIG', config.API_CONFIG);
   if (!wx.cloud) {
-    console.debug('请使用 2.2.3 或以上的基础库以使用云能力');
+    logger.debug('请使用 2.2.3 或以上的基础库以使用云能力');
   } else {
     wx.cloud.init({
       env: storage.get('cloudEnv'),
@@ -30,15 +80,15 @@ async function init() {
   // 并行执行三个异步操作
   const results = await Promise.all([
     getAboutInfo().catch(err => {
-      console.debug('获取关于信息出错:', err);
+      logger.debug('获取关于信息出错:', err);
       return null;
     }),
     getUserProfile().catch(err => {
-      console.debug('获取用户信息出错:', err);
+      logger.debug('获取用户信息出错:', err);
       return null;
     }),
     getOpenID().catch(err => {
-      console.debug('获取OPENID出错:', err);
+      logger.debug('获取OPENID出错:', err);
       return null;
     })
   ]);
@@ -81,6 +131,14 @@ const getAboutInfo = async () => {
   } catch (err) {
     return null;
   }
+};
+
+/**
+ * 获取App信息（兼容函数，同getAboutInfo）
+ * @returns {Promise<Object>} App信息
+ */
+const getAppInfo = async () => {
+  return getAboutInfo();
 };
 
 /**
@@ -551,14 +609,10 @@ const error = {
  * @param {object} [params] - 请求参数
  * @returns {Promise<object>} - 响应数据
  */
-const get = async (url, params = {}) => {
+const get = async (apiUrl, requestData = {}) => {
   const openid = storage.get('openid')
-  const finalUrl = url.startsWith('/') ? url : '/' + url
-  const apiUrl = finalUrl.startsWith(storage.get('API_CONFIG').api_prefix) ? finalUrl : storage.get('API_CONFIG').api_prefix + finalUrl
-  
-  const requestData = { ...params }
-  if (openid && !requestData.openid) {
-    requestData.openid = openid
+  if (!apiUrl) {
+    return Promise.reject({ code: -1, message: '未指定API路径' })
   }
   
   let requestUrl = `${storage.get('API_CONFIG').base_url}${apiUrl}`
@@ -570,7 +624,8 @@ const get = async (url, params = {}) => {
     requestUrl += `${apiUrl.includes('?') ? '&' : '?'}${queryParams}`
   }
   
-  console.debug('GET请求:', requestUrl)
+  // 使用高级别日志，生产环境不会输出
+  logger.debug('GET请求:', requestUrl)
   
   return new Promise((resolve, reject) => {
     wx.request({
@@ -581,7 +636,8 @@ const get = async (url, params = {}) => {
         ...(openid ? {'X-User-OpenID': openid} : {})
       },
       success(res) {
-        console.debug('GET响应:', res.data)
+        // 使用高级别日志，生产环境不会输出
+        logger.debug('GET响应:', res.data)
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data)
         } else {
@@ -592,7 +648,8 @@ const get = async (url, params = {}) => {
         }
       },
       fail(err) {
-        console.debug('GET请求失败:', err)
+        // 使用警告级别，生产环境会输出
+        logger.warn('GET请求失败:', err)
         reject({
           code: -1,
           message: err.errMsg || '网络请求失败'
@@ -619,7 +676,8 @@ const post = async (url, data = {}) => {
     requestData.openid = openid
   }
   
-  console.debug('POST请求:', requestUrl, requestData)
+  // 使用高级别日志，生产环境不会输出
+  logger.debug('POST请求:', requestUrl, requestData)
   
   return new Promise((resolve, reject) => {
     wx.request({
@@ -631,7 +689,8 @@ const post = async (url, data = {}) => {
         ...(openid ? {'X-User-OpenID': openid} : {})
       },
       success(res) {
-        console.debug('POST响应:', res.data)
+        // 使用高级别日志，生产环境不会输出
+        logger.debug('POST响应:', res.data)
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data)
         } else {
@@ -642,7 +701,8 @@ const post = async (url, data = {}) => {
         }
       },
       fail(err) {
-        console.debug('POST请求失败:', err)
+        // 使用警告级别，生产环境会输出
+        logger.warn('POST请求失败:', err)
         reject({
           code: -1,
           message: err.errMsg || '网络请求失败'
@@ -1092,7 +1152,12 @@ module.exports = {
   getSystemInfo,
   getOpenID,
   parseUrl,
-  parseImageUrl
+  parseImageUrl,
+  getAboutInfo,
+  getAppInfo,
+  
+  // 日志工具
+  logger
 }
 
 /**

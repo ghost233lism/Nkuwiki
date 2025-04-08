@@ -117,8 +117,8 @@ Component({
     _timer: null,
     nodes: [],
     rendering: false,
-    // 内部状态
-    focus: false,
+    // 内部状态 - 修改为_focus避免与property重名
+    _focus: false,
     rows: 1,
     markdownHTML: ''
   },

@@ -8,14 +8,28 @@
   background: transparent;
   line-height: 1;
   flex-direction: row;
-  width: auto !important;
-  min-width: 40rpx;
+  min-width: 10rpx;
   box-sizing: border-box;
   position: relative;
+  text-align: center;
+}
+.text-button {
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background:#07c160;
+  line-height: 1;
+  flex-direction: row;
+  box-sizing: border-box;
+  position: relative;
+  text-align: center;
 }
 
+
 /* 调整文本与图标间距 */
-.btn-content icon + .btn-text {
+.btn-content .btn-icon + .btn-text {
   margin-left: 8rpx;
 }
 
@@ -107,14 +121,6 @@
   color: #07c160;
 }
 
-/* 文本按钮 */
-.type-text {
-  background: transparent;
-  color: #07c160;
-  height: auto;
-  line-height: 1.5;
-  padding: 8rpx 16rpx;
-}
 
 /* 链接按钮 */
 .type-link {
@@ -126,23 +132,6 @@
   padding: 4rpx 8rpx;
 }
 
-/* 轮廓按钮 */
-.plain {
-  background: transparent;
-  border: 2rpx solid currentColor;
-}
-
-.plain.type-primary {
-  color: #07c160;
-}
-
-.plain.type-warn {
-  color: #fa5151;
-}
-
-.plain.type-default {
-  color: #999;
-}
 
 /* 按钮尺寸变体 */
 .size-medium {
@@ -220,13 +209,6 @@
   height: 14rpx !important;
 }
 
-.text-fit {
-  font-size: 10rpx !important;
-  margin-left: 0 !important;
-  padding: 0 !important;
-  transform: scale(0.85);
-  transform-origin: left center;
-}
 
 .badge-fit {
   width: 6rpx !important;
@@ -274,31 +256,9 @@
   margin-right: 0;
 }
 
-/* 按钮文本样式 */
-.btn-text {
-  font-size: 28rpx;
-  color: #333;
-  font-weight: normal;
-  padding: 0 10rpx;
-  text-align: center;
-  line-height: 1.4;
-  display: inline-block;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: initial;
-  max-width: none;
-  width: auto;
-}
 
-/* 文本按钮容器 */
-.btn-content.text-only {
-  padding: 8rpx 16rpx;
-  border-radius: 4rpx;
-  min-height: 40rpx;
-  max-width: none;
-  width: auto !important;
-  box-sizing: border-box;
-}
+
+
 
 .btn-text.primary {
   color: #07c160;
@@ -312,6 +272,52 @@
   color: #576b95;
 }
 
-.text-default {
-  color: #333;
-} 
+
+/* 布局样式 */
+.text-wrapper {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 文本居中样式 */
+.text-center {
+  text-align: center;
+  width: 100%;
+  font-size: 30rpx;
+  line-height: 1.2;
+}
+
+/* 按钮文本样式 */
+.button-text {
+  display: block;
+  text-align: center;
+  width: 100%;
+  font-size: 30rpx;
+  line-height: 1.2;
+}
+
+/* 使用line-height实现文本居中 */
+.text-line-wrapper {
+  width: 100%;
+  text-align: center;
+  height: 100%;
+  line-height: 76rpx; /* 与size-medium的高度一致 */
+  background-color: #07c160; /* 绿色背景 */
+  color: #fff; /* 白色文字以提高对比度 */
+}
+
+/* 按钮内文本样式 */
+.button-text-content {
+  display: block;
+  text-align: center;
+  width: 100%;
+  font-size: 30rpx;
+  line-height: 76rpx;
+  color: #fff; /* 白色文字 */
+  background: transparent; /* 透明背景 */
+}
+
+

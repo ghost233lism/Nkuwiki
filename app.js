@@ -1,7 +1,22 @@
-const {init, nav} = require('./utils/index');
+const {init, nav, logger} = require('./utils/index');
 App({
   async onLaunch() {
     try {
+      // 根据环境设置日志级别
+      if (logger && typeof logger.setLevel === 'function') {
+        // 使用新的API代替废弃的getSystemInfoSync
+        const appBaseInfo = wx.getAppBaseInfo();
+        if (appBaseInfo.platform === 'devtools') {
+          // 开发环境 - 输出所有日志
+          logger.setLevel(4); // DEBUG级别
+        } else {
+          // 生产环境 - 只输出警告和错误
+          logger.setLevel(2); // WARN级别
+        }
+      } else {
+        console.warn('日志工具未正确初始化，将使用默认日志行为');
+      }
+      
       // 使用一个函数完成所有初始化操作
       await init();
       // 强制先进一下登录页，展示logo和版本信息

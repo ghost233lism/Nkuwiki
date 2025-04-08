@@ -75,3 +75,43 @@ page {
   margin: 20rpx 0;
   border-radius: 12rpx;
 }
+
+/* 手动表单样式 */
+.manual-form {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-top: 20rpx;
+}
+
+.manual-group {
+  margin-bottom: 30rpx;
+}
+
+.manual-group .group-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 10rpx;
+  border-bottom: 1px solid #eee;
+}
+
+.manual-field {
+  margin-bottom: 20rpx;
+}
+
+.field-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.field-input {
+  width: 100%;
+  height: 80rpx;
+  border: 1px solid #eee;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+}
