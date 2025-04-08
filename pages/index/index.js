@@ -1,18 +1,6 @@
 const { createApiClient } = require('../../utils/util');
 const behaviors = require('../../behaviors/index');
-// 搜索API
-const searchApi = createApiClient('/api/wxapp/search', {
-  search: {
-    method: 'GET',
-    path: '',
-    params: {
-      keyword: true,
-      search_type: false,
-      page: false,
-      limit: false
-    }
-  }
-});
+
 
 
 // 分类配置

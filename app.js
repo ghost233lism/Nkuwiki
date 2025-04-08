@@ -5,7 +5,9 @@ App({
       // 使用一个函数完成所有初始化操作
       await init();
       // 强制先进一下登录页，展示logo和版本信息
-      nav.reLaunch('/pages/login/login');
+      wx.reLaunch({
+        url: '/pages/login/login'
+      });
     } catch (err) {
       console.error('应用启动失败', err);
     }

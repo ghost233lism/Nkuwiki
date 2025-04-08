@@ -21,7 +21,9 @@ Page({
     if(res.code === 200){
       this.setStorage('isLoggedIn', true);
       if(res.details.message === '用户已存在'){
-        this.reLaunch('/pages/index/index');
+        wx.reLaunch({
+          url: '/pages/index/index'
+        });
       }
       //这里不直接进index页面单纯是为了让新用户点一下登录按钮qwq
     }
@@ -38,7 +40,9 @@ Page({
   },
 
   async handleLogin() {
-    this.reLaunch('/pages/index/index');
+    wx.reLaunch({
+      url: '/pages/index/index'
+    });
   },
 
   async onAgreementTap(e) {
