@@ -23,6 +23,10 @@ Component({
     backgroundColor: {
       type: String,
       value: '#f5f5f5'
+    },
+    navBarHeight: {
+      type: Number,
+      value: 45
     }
   },
 

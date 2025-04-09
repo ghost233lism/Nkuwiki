@@ -1,26 +1,37 @@
+.search-bar-container {
+  width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
 .search-bar {
   display: flex;
   align-items: center;
-  padding: 16rpx;
+  padding: 10rpx 16rpx;
   background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .search-input {
   flex: 1;
   display: flex;
   align-items: center;
-  height: 72rpx;
-  border-radius: 36rpx;
-  padding: 0 24rpx;
+  height: 68rpx;
+  border-radius: 34rpx;
+  padding: 0 20rpx;
+  background-color: #f5f5f5;
 }
 
 .input {
   flex: 1;
-  height: 72rpx;
-  line-height: 72rpx;
+  height: 68rpx;
+  line-height: 68rpx;
   font-size: 28rpx;
   color: #333333;
-  padding: 0 16rpx;
+  padding: 0 12rpx;
 }
 
 .placeholder {
@@ -28,11 +39,11 @@
 }
 
 .clear-icon {
-  padding: 8rpx;
+  padding: 6rpx;
 }
 
 .action {
-  padding: 0 24rpx;
+  padding: 0 20rpx;
   font-size: 28rpx;
   color: #333333;
 } 

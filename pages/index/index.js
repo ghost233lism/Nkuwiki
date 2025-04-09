@@ -1,8 +1,4 @@
-const { createApiClient } = require('../../utils/util');
 const behaviors = require('../../behaviors/index');
-
-
-
 // 分类配置
 const CATEGORY_CONFIG = [
   { category_id: 1, tag:'study', text: '学习交流' },
@@ -22,6 +18,8 @@ Page({
   ],
 
   data: {
+    // 导航栏高度
+    navBarHeight: 45,
     // 关于信息
     aboutInfo: null,
     // 用户信息
@@ -88,6 +86,7 @@ Page({
           this.checkUnreadNotification();
         }
       }).catch(err => {
+        console.debug('登录检查失败', err);
       });
     } catch (err) {
       this.showError('加载失败，请下拉刷新重试');
@@ -223,6 +222,21 @@ Page({
       searchValue: e.detail.value
     });
   },
+  
+  clearSearch() {
+    this.setData({
+      searchValue: ''
+    });
+  },
+
+  search() {
+    const value = this.data.searchValue;
+    if (value) {
+      this.navigateTo({
+        url: `/pages/search/search?keyword=${encodeURIComponent(value)}`
+      });
+    }
+  },
 
   handleSearch(e) {
     const value = e.detail.value || this.data.searchValue;
@@ -312,22 +326,6 @@ Page({
         postList.updatePostsStatus(posts);
       }
     } catch (err) {
-    }
-  },
-
-  // 处理导航栏按钮点击
-  onNavButtonTap(e) {
-    const { type } = e.detail;
-    
-    switch (type) {
-      case 'avatar':
-        this.navigateTo({ url: '/pages/profile/profile' });
-        break;
-      case 'notification':
-        this.navigateTo({ url: '/pages/notification/notification' });
-        break;
-      default:
-        break;
     }
   },
 });
