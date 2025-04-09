@@ -120,7 +120,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 100rpx 0;
+  padding: 160rpx 0;
 }
 
 .empty-text {
