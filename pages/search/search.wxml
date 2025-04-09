@@ -1,46 +1,39 @@
-<!-- 美化的搜索页面 -->
+<!-- 简化的搜索页面 -->
 <view class="container">
 	<!-- 导航栏和搜索框 -->
-	<nav-bar 
-		title="探索"
-		showBack="{{true}}"
+	<nav-bar title="探索" showBack="{{true}}" />
+	
+	<search-bar
+		value="{{searchValue}}"
+		placeholder="搜索校园知识"
+		focus="{{false}}"
+		show-action="{{false}}"
+		bindinput="onSearchInput"
+		bindclear="clearSearch"
+		bindconfirm="search"
+		bindselect="onSearchSelect"
+		options="{{searchOptions}}"
 	/>
-	<view class="header">
-		
-		<search-bar
-			value="{{searchValue}}"
-			placeholder="搜索校园知识"
-			focus="{{false}}"
-			show-action="{{true}}"
-			action-text="搜索"
-			bindinput="onSearchInput"
-			bindclear="clearSearch"
-			bindconfirm="search"
-			bindaction="search"
-		/>
+
+	<!-- 搜索建议 -->
+	<view class="search-suggestions" wx:if="{{suggestions.length > 0 && searchValue && !isSearching}}">
+		<view 
+			class="suggestion-item" 
+			wx:for="{{suggestions}}" 
+			wx:key="index"
+			bindtap="onSuggestionTap"
+			data-keyword="{{item}}"
+		>
+			<icon name="search" size="32" />
+			<text>{{item}}</text>
+		</view>
 	</view>
 
-	<!-- 内容区域 -->
-	<view class="content">
-		<!-- 搜索建议 -->
-		<view class="search-suggestions" wx:if="{{suggestions.length > 0 && searchValue && !isSearching}}">
-			<view 
-				class="suggestion-item" 
-				wx:for="{{suggestions}}" 
-				wx:key="index"
-				bindtap="onSuggestionTap"
-				data-keyword="{{item}}"
-			>
-				<view class="suggestion-icon">
-					<icon name="search" size="32" />
-				</view>
-				<view class="suggestion-text">{{item}}</view>
-			</view>
-		</view>
-
+	<!-- 热门搜索和历史 -->
+	<block wx:if="{{!isSearching && !searchValue}}">
 		<!-- 热门搜索 -->
-		<view class="hot-searches" wx:if="{{!isSearching && !searchValue && hotSearches.length > 0}}">
-			<view class="hot-title">热门搜索</view>
+		<view class="hot-searches" wx:if="{{hotSearches.length > 0}}">
+			<view class="section-title">热门搜索</view>
 			<view class="hot-list">
 				<view 
 					class="hot-item" 
@@ -49,19 +42,18 @@
 					bindtap="onHotSearchTap"
 					data-keyword="{{item.keyword || item}}"
 				>
-					<view class="hot-rank" wx:if="{{index < 3}}">{{index + 1}}</view>
-					<view class="hot-rank normal" wx:else>{{index + 1}}</view>
-					<view class="hot-text">{{item.keyword || item}}</view>
-					<view class="hot-count" wx:if="{{item.count}}">{{item.count}}</view>
+					<text class="hot-rank {{index < 3 ? 'top' : ''}}">{{index + 1}}</text>
+					<text>{{item.keyword || item}}</text>
+					<text wx:if="{{item.count}}" class="count">{{item.count}}</text>
 				</view>
 			</view>
 		</view>
 
 		<!-- 搜索历史 -->
-		<view class="search-history" wx:if="{{!isSearching && !searchValue && searchHistory.length > 0 && !searchResults.length}}">
-			<view class="history-title">
+		<view class="search-history" wx:if="{{searchHistory.length > 0}}">
+			<view class="section-title">
 				<text>搜索历史</text>
-				<text class="clear-history" bindtap="clearSearchHistory">清空</text>
+				<text class="clear-btn" bindtap="clearSearchHistory">清空</text>
 			</view>
 			<view class="history-list">
 				<view 
@@ -73,36 +65,69 @@
 				>{{item}}</view>
 			</view>
 		</view>
+	</block>
 
-		<!-- 搜索结果 -->
-		<view class="search-results" wx:if="{{searchResults.length > 0}}">
-			<view class="result-count">找到 {{pagination.total || searchResults.length}} 条结果</view>
+	<!-- 加载中 -->
+	<view class="loading" wx:if="{{isSearching}}">
+		<view class="loading-icon"></view>
+		<text>搜索中...</text>
+	</view>
+
+	<!-- 搜索结果 -->
+	<view class="search-content" wx:if="{{!isSearching && (searchResults.length > 0 || showRagResults)}}">
+		<!-- RAG查询回答 -->
+		<block wx:if="{{showRagResults}}">
+			<text-area 
+				value="{{ragResults}}" 
+				readOnly="{{true}}" 
+				markdownMode="{{true}}"
+				height="{{500}}"
+				showToolbar="{{false}}"
+			></text-area>
+		</block>
+		
+		<!-- 结果摘要 -->
+		<view class="result-summary" wx:if="{{!showRagResults}}">
+			找到 {{pagination.total || searchResults.length}} 条结果
+		</view>
+		
+		<!-- 统一的来源列表 -->
+		<view wx:if="{{(showRagResults && ragSources && ragSources.length > 0) || (!showRagResults && searchResults.length > 0)}}">
+			<view class="section-title">信息来源</view>
 			<source-list 
-				sources="{{searchResults}}" 
-				binditemtap="onResultTap"
+				sources="{{showRagResults ? ragSources : searchResults}}" 
+				binditemtap="{{showRagResults ? 'onRagSourceTap' : 'onResultTap'}}"
 				show-rank="{{true}}"
 			/>
-			
-			<!-- 加载更多 -->
-			<view class="load-more" wx:if="{{pagination.has_more}}">
-				<view class="load-more-btn" bindtap="loadMore">加载更多</view>
+		</view>
+		
+		<!-- 建议问题 -->
+		<view class="suggest-questions" wx:if="{{ragSuggestions && ragSuggestions.length > 0}}">
+			<view class="section-title">你可能还想了解</view>
+			<view class="question-list">
+				<view 
+					class="question-item" 
+					wx:for="{{ragSuggestions}}" 
+					wx:key="index"
+					bindtap="onRagSuggestionTap"
+					data-question="{{item}}"
+				>
+					<icon name="question" size="28" />
+					<text>{{item}}</text>
+				</view>
 			</view>
-			
-			<!-- 没有更多了 -->
-			<view class="no-more" wx:if="{{!pagination.has_more && searchResults.length > 0}}">
-				<text>没有更多结果了</text>
-			</view>
 		</view>
+		
+		<!-- 分页控制 -->
+		<view class="pagination" wx:if="{{!showRagResults && searchResults.length > 0}}">
+			<view class="load-more" wx:if="{{pagination.has_more}}" bindtap="loadMore">加载更多</view>
+			<view class="no-more" wx:else>没有更多结果了</view>
+		</view>
+	</view>
 
-		<!-- 加载中 -->
-		<view class="loading" wx:if="{{isSearching}}">
-			<view class="loading-icon"></view>
-			<view class="loading-text">搜索中...</view>
-		</view>
-
-		<!-- 无结果 -->
-		<view class="no-result" wx:if="{{!isSearching && searchValue && !searchResults.length}}">
-			<view class="no-result-text">暂无搜索结果</view>
-		</view>
+	<!-- 无结果 -->
+	<view class="no-result" wx:if="{{!isSearching && searchValue && !searchResults.length && !showRagResults}}">
+		<icon name="empty" size="64" />
+		<text>暂无搜索结果</text>
 	</view>
 </view>

@@ -7,13 +7,13 @@ const { storage, createApiClient, createStreamApiClient, ui, ToastType } = requi
 const agentApi = createApiClient('/api/agent', {
   status: { method: 'GET', path: '/status', params: {} },
   chat: { method: 'POST', path: '/chat', params: { openid: true, query: true } },
-  rag: { method: 'POST', path: '', params: { openid: true, query: true } }
+  rag: { method: 'POST', path: '/rag', params: { openid: true, query: true } }
 });
 
 // 创建流式智能体API客户端
 const agentStreamApi = createStreamApiClient('/api/agent', {
   chat: { method: 'POST', path: '/chat', params: { openid: true, query: true } },
-  rag: { method: 'POST', path: '', params: { openid: true, query: true } }
+  rag: { method: 'POST', path: '/rag', params: { openid: true, query: true } }
 });
 
 
@@ -295,15 +295,22 @@ module.exports = Behavior({
     },
     
     /**
-     * 发送基于知识库的检索增强生成查询（RAG）
-     * @param {string} query - 用户问题
-     * @param {Array<string>} tables - 要检索的数据表列表
+     * 发送RAG检索增强生成查询
+     * @param {string} query - 查询内容
+     * @param {string|Array} platform - 要检索的平台，如'wechat,website,wxapp'
      * @param {boolean} stream - 是否使用流式返回
+     * @param {Object} options - 额外选项
      * @returns {Promise<Object|boolean>} 查询结果或发送结果
      */
-    async _sendRagQuery(query, tables = ['wxapp_posts', 'website_nku', 'wechat_nku'], stream = true) {
+    async _sendRagQuery(query, platform = 'wxapp,website,wechat', stream = false, options = {}) {
       if (!query || !query.trim()) {
         ui.showToast('请输入内容', { type: ToastType.ERROR });
+        return null;
+      }
+      
+      const openid = storage.get('openid');
+      if (!openid) {
+        console.debug('缺少必要参数：openid');
         return null;
       }
       
@@ -337,14 +344,20 @@ module.exports = Behavior({
         'session.loading': true
       });
       
-      // 准备请求参数
+      // 准备请求参数 - 根据API文档完整添加
       const requestData = {
-        openid: storage.get('openid'),
-        query: query,
-        tables: tables,
-        max_results: 3,
-        stream: stream,
-        format: this.data.session.format
+        // 必填参数
+        openid: openid,
+        query: query.trim(),
+        
+        // 平台参数 - 确保是字符串
+        platform: Array.isArray(platform) ? platform.join(',') : platform,
+        
+        // 可选参数
+        tag: options.tag || 'nku', // 默认nku标签
+        max_results: options.max_results || 3,
+        stream: !!stream, // 确保是布尔值
+        format: options.format || this.data.session.format || 'markdown'
       };
       
       if (stream) {
@@ -459,18 +472,26 @@ module.exports = Behavior({
       } else {
         // 非流式请求
         try {
+          console.debug('发送非流式RAG请求:', JSON.stringify(requestData));
+          
           // 发送请求
           const res = await agentApi.rag(requestData);
+          
+          console.debug('收到RAG响应:', JSON.stringify(res));
           
           if (res.code !== 200) {
             throw new Error(res.message || '查询响应异常');
           }
           
+          if (!res.data) {
+            throw new Error('查询结果数据为空');
+          }
+          
           // 添加智能体回复
           const assistantMessage = {
             role: 'assistant',
-            content: res.data.response,
-            format: res.data.format,
+            content: res.data.response || '',
+            format: res.data.format || 'markdown',
             sources: res.data.sources || [],
             suggested_questions: res.data.suggested_questions || [],
             original_query: res.data.original_query,
@@ -483,9 +504,13 @@ module.exports = Behavior({
             'session.loading': false
           });
           
-          return assistantMessage;
+          return res;
         } catch (err) {
           console.debug('发送RAG查询失败:', err);
+          
+          if (err.response) {
+            console.debug('错误响应:', JSON.stringify(err.response));
+          }
           
           // 添加错误消息
           const errorMessage = {
