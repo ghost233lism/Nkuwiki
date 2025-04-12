@@ -7,6 +7,7 @@ Component({
   behaviors: [baseBehavior, postBehavior, userBehavior],
 
   options: {
+    pureDataPattern: /^_/,
     multipleSlots: true,
     addGlobalClass: true,
     styleIsolation: 'apply-shared'
@@ -125,6 +126,19 @@ Component({
       
       // 检查内容是否溢出
       this.checkContentOverflow();
+    },
+
+    shouldUpdate(newVal, oldVal) {
+      // 只关注以下字段变化
+      const watchFields = [
+        'is_liked', 'like_count', 
+        'is_favorited', 'favorite_count',
+        'is_following', 'comment_count'
+      ];
+      
+      return watchFields.some(field => 
+        newVal.post[field] !== oldVal.post[field]
+      );
     }
   },
 

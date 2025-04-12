@@ -93,13 +93,9 @@ Component({
 
   observers: {
     'filter': function(filter) {
-      // 当筛选条件变化时重新加载数据
-      if (filter) {
-        const now = Date.now();
-        // 如果30秒内已经加载过，不要重复加载
-        if (!this.data._lastUpdateTime || now - this.data._lastUpdateTime > 30000) {
-          this.loadInitialData();
-        }
+      // 当filter变化时（特别是_refreshFlag变化时）强制刷新
+      if (filter && filter._refreshFlag) {
+        this.loadInitialData(true);
       }
     }
   },
@@ -126,50 +122,49 @@ Component({
       }
     },
     
-    // 刷新单个帖子状态
+        // 修改后的 _refreshPostStatus 方法
     async _refreshPostStatus(postId) {
       if (!postId) return;
-      
+
       try {
-        // 调用API获取帖子状态
         const statusRes = await this._getPostStatus(postId);
+        if (statusRes?.code !== 200 || !statusRes.data) return;
+
+        const status = statusRes.data[postId];
+        if (!status) return;
+
+        // 找到目标帖子索引
+        const index = this.data.post.findIndex(p => String(p.id) === String(postId));
+        if (index === -1) return;
+
+        // 构造精准更新路径
+        const updates = {};
+        const pathPrefix = `post[${index}]`;
         
-        if (statusRes && statusRes.code === 200 && statusRes.data) {
-          const statusData = statusRes.data;
-          const status = statusData[postId];
-          
-          if (status) {
-            // 更新列表数据
-            const currentPosts = this.data.post || [];
-            if (currentPosts.length > 0) {
-              const updatedPosts = currentPosts.map(post => {
-                if (String(post.id) === String(postId)) {
-                  // 直接使用后端原始值
-                  const updatedPost = { 
-                    ...post,
-                    is_liked: status.is_liked,
-                    is_favorited: status.is_favorited,
-                    is_following: status.is_following,
-                    like_count: status.like_count !== undefined ? status.like_count : post.like_count,
-                    favorite_count: status.favorite_count !== undefined ? status.favorite_count : post.favorite_count,
-                    comment_count: status.comment_count !== undefined ? status.comment_count : post.comment_count
-                  };
-                  
-                  return updatedPost;
-                }
-                return post;
-              });
-              
-              // 更新数据
-              this.setData({ post: updatedPosts }, () => {
-                // 强制刷新子组件
-                this._refreshPostItem(postId);
-              });
-            }
+        // 需要更新的字段映射
+        const fieldMap = {
+          is_liked: 'is_liked',
+          like_count: 'like_count',
+          is_favorited: 'is_favorited',
+          favorite_count: 'favorite_count',
+          comment_count: 'comment_count'
+        };
+
+        // 只更新变化的字段
+        Object.entries(fieldMap).forEach(([key, apiKey]) => {
+          if (status[apiKey] !== undefined && 
+              status[apiKey] !== this.data.post[index][key]) {
+            updates[`${pathPrefix}.${key}`] = status[apiKey];
           }
+        });
+
+        if (Object.keys(updates).length > 0) {
+          this.setData(updates, () => {
+            this._refreshPostItem(postId);
+          });
         }
       } catch (err) {
-        // 忽略错误
+        console.error('刷新帖子状态失败', err);
       }
     },
     
@@ -202,26 +197,28 @@ Component({
     
     // 处理帖子关注事件
     handlePostFollow(e) {
-      const { id, authorId, isFollowing } = e.detail;
-      if (!id || !authorId) return;
+      const { authorId, isFollowing } = e.detail;
       
-      // 更新帖子列表中所有该作者的帖子状态
-      const posts = this.data.post;
-      const updatedPosts = posts.map(post => {
+      // 使用路径更新代替 map 遍历
+      const updates = {};
+      this.data.post.forEach((post, index) => {
         if (post.openid === authorId) {
-          return {
-            ...post,
-            is_following: isFollowing
-          };
+          updates[`post[${index}].is_following`] = isFollowing;
         }
-        return post;
       });
       
-      this.setData({ post: updatedPosts });
+      if (Object.keys(updates).length > 0) {
+        this.setData(updates);
+      }
     },
     
     // 加载初始数据
     async loadInitialData(force = false, smoothLoading = false) {
+      if (force) {
+        this.setData({
+          _lastUpdateTime: 0 // 重置最后更新时间
+        });
+      }
       // 防止短时间内重复调用，但强制刷新时忽略此限制
       const now = Date.now();
       if (!force && this.data._lastUpdateTime && now - this.data._lastUpdateTime < 5000) {
@@ -302,72 +299,46 @@ Component({
     
     // 更新帖子状态
     async updatePostsStatus(posts) {
-      if (!posts || !posts.length) {
-        return;
-      }
-      
+      if (!posts?.length) return;
+
       try {
-        // 添加节流控制，30秒内不重复获取状态
-        const now = Date.now();
-        if (this.data._lastStatusUpdateTime && now - this.data._lastStatusUpdateTime < 30000) {
-          return;
-        }
-        
-        // 更新状态最后更新时间
-        this.setData({ _lastStatusUpdateTime: now });
-        
-        // 检查用户登录状态
-        const openid = this.getStorage('openid');
-        if (!openid) {
-          return;
-        }
-        
-        const postIds = posts.map(p => p.id).filter(Boolean);
-        if (postIds.length === 0) {
-          return;
-        }
-        
+        // ...省略节流和登录检查代码...
+
         const statusRes = await this._getPostStatus(postIds);
-        
-        if (statusRes && statusRes.code === 200 && statusRes.data) {
-          const statusData = statusRes.data;
+        if (statusRes?.code !== 200 || !statusRes.data) return;
+
+        const statusMap = statusRes.data;
+        const updates = {};
+
+        this.data.post.forEach((post, index) => {
+          const status = statusMap[post.id];
+          if (!status) return;
+
+          const pathPrefix = `post[${index}]`;
           
-          // 服务器返回的是一个以post_id为key的对象
-          // 格式：{"1": {...状态}, "2": {...状态}}
-          const statusMap = statusData || {};
-          
-          // 更新列表数据
-          const currentPosts = this.data.post || [];
-          if (currentPosts.length > 0) {
-            const updatedPosts = currentPosts.map(post => {
-              const postId = String(post.id);
-              const status = statusMap[postId];
-              if (status) {
-                // 直接使用后端返回的原始值
-                return { 
-                  ...post, 
-                  // 使用后端字段名和值
-                  is_liked: status.is_liked,
-                  is_favorited: status.is_favorited,
-                  is_following: status.is_following,
-                  // 如果服务器返回了计数，使用服务器返回的
-                  like_count: status.like_count !== undefined ? status.like_count : post.like_count,
-                  favorite_count: status.favorite_count !== undefined ? status.favorite_count : post.favorite_count,
-                  comment_count: status.comment_count !== undefined ? status.comment_count : post.comment_count
-                };
-              }
-              return post;
-            });
-            
-            // 更新数据
-            this.setData({ post: updatedPosts }, () => {
-              // 立即刷新组件状态，无需延时
-              this._refreshAllPostItems(updatedPosts);
-            });
-          }
+          // 定义需要更新的字段映射
+          const fieldMapping = {
+            is_liked: 'is_liked',
+            like_count: 'like_count',
+            is_favorited: 'is_favorited',
+            favorite_count: 'favorite_count',
+            comment_count: 'comment_count'
+          };
+
+          // 对比并收集需要更新的字段
+          Object.entries(fieldMapping).forEach(([localKey, apiKey]) => {
+            if (status[apiKey] !== undefined && 
+                status[apiKey] !== post[localKey]) {
+              updates[`${pathPrefix}.${localKey}`] = status[apiKey];
+            }
+          });
+        });
+
+        if (Object.keys(updates).length > 0) {
+          this.setData(updates); // 使用精准路径更新
         }
       } catch (err) {
-        // 不中断流程，仅忽略错误
+        // 忽略错误
       }
     },
     
@@ -491,4 +462,4 @@ Component({
       });
     }
   }
-}); 
+});

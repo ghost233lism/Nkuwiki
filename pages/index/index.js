@@ -141,7 +141,7 @@ Page({
       this.switchCategory(categoryId);
     }
   },
-  
+    
   // post-list组件的重试回调
   onRetry() {
     const postList = this.selectComponent('#postList');
