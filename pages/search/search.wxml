@@ -15,7 +15,7 @@
 		options="{{searchOptions}}"
 	/>
 
-	<!-- 搜索建议 -->
+	<!-- 搜索建议
 	<view class="search-suggestions" wx:if="{{suggestions.length > 0 && searchValue && !isSearching}}">
 		<view 
 			class="suggestion-item" 
@@ -28,7 +28,7 @@
 			<text>{{item}}</text>
 		</view>
 	</view>
-
+	 -->
 	<!-- 热门搜索和历史 -->
 	<block wx:if="{{!isSearching && !searchValue}}">
 		<!-- 热门搜索 -->
@@ -125,9 +125,16 @@
 		</view>
 	</view>
 
-	<!-- 无结果 -->
-	<view class="no-result" wx:if="{{!isSearching && searchValue && !searchResults.length && !showRagResults}}">
+	<!-- 无结果状态 -->
+	<!-- 已执行搜索但没有结果 -->
+	<view class="no-result" wx:if="{{!isSearching && searchValue && !searchResults.length && !showRagResults && hasSearched}}">
 		<icon name="empty" size="64" />
 		<text>暂无搜索结果</text>
+	</view>
+	
+	<!-- 输入了关键词但尚未搜索 -->
+	<view class="search-tips" wx:if="{{!isSearching && searchValue && !hasSearched && !showRagResults}}">
+		<icon name="search" size="64" color="#cccccc" />
+		<text>输入关键词后，按回车键开始搜索</text>
 	</view>
 </view>

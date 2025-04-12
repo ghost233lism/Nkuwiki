@@ -1,0 +1,15 @@
+<!-- 自定义水平布局分类导航 -->
+<view class="category-scroll {{customClass}}">
+  <view class="category-list">
+    <view 
+      class="category-item {{item.category_id === categoryId ? 'active' : ''}}" 
+      wx:for="{{tabs}}" 
+      wx:key="index" 
+      data-index="{{index}}"
+      bindtap="onTabTap"
+    >
+      <icon name="{{item.icon || item.tag}}" size="{{iconSize}}" color="{{item.category_id === categoryId ? activeColor : inactiveColor}}"></icon>
+      <text class="category-text">{{item.name || item.text}}</text>
+    </view>
+  </view>
+</view> 

@@ -47,6 +47,12 @@ page {
   --info-color: #2196f3;
   --gray-color: #999;
   --light-gray: #f5f5f5;
+  /* 添加过渡效果，使重新渲染时更平滑 */
+  transition: background-color 0.3s ease;
+  /* 确保页面高度至少是视口高度，避免内容太少时背景色不一致 */
+  min-height: 100vh;
+  /* 确保元素不会在滚动时移动 */
+  overflow-anchor: auto;
 }
 
 .container {

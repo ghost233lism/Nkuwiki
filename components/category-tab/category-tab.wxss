@@ -1,0 +1,74 @@
+/* 分类导航样式 */
+.category-scroll {
+  width: 100%;
+  padding: 15rpx 0 20rpx;
+  background-color: #fff;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  /* 添加阴影和过渡效果，使外观更稳定 */
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.category-list {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 0 30rpx;
+  /* 添加过渡效果 */
+  transition: all 0.2s ease;
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110rpx;
+  padding: 15rpx 0;
+  border-radius: 10rpx;
+  transition: all 0.3s;
+  /* 将过渡时间改为更快的0.2s */
+  transition: all 0.2s ease;
+}
+
+.category-item.active {
+  background-color: rgba(26, 173, 25, 0.08);
+}
+
+.category-text {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: #333;
+  /* 添加过渡效果使颜色变化更平滑 */
+  transition: color 0.2s ease;
+}
+
+.category-item.active .category-text {
+  color: #1aad19;
+  font-weight: 500;
+}
+
+/* 允许自定义激活颜色 */
+.category-item.active.custom-active {
+  background-color: var(--active-bg-color, rgba(26, 173, 25, 0.08));
+}
+
+.category-item.active.custom-active .category-text {
+  color: var(--active-color, #1aad19);
+}
+
+/* 添加点击波纹效果 */
+.tab-item:active {
+  opacity: 0.8;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  color: transparent;
+} 

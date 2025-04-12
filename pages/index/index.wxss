@@ -10,50 +10,6 @@ page {
   position: relative;
 }
 
-
-/* 分类导航样式 */
-.category-scroll {
-  width: 100%;
-  padding: 15rpx 0 20rpx;
-  background-color: #fff;
-  overflow: hidden;
-  margin-bottom: 16rpx;
-}
-
-.category-list {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: 0 30rpx;
-}
-
-.category-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 110rpx;
-  padding: 15rpx 0;
-  border-radius: 10rpx;
-  transition: all 0.3s;
-}
-
-.category-item.active {
-  background-color: rgba(26, 173, 25, 0.08);
-}
-
-.category-text {
-  margin-top: 10rpx;
-  font-size: 26rpx;
-  color: #333;
-}
-
-.category-item.active .category-text {
-  color: #1aad19;
-  font-weight: 500;
-}
-
 .post-list-container {
   width: 100%;
   flex: 1;

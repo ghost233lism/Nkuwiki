@@ -1,37 +1,17 @@
-<!-- 顶部消息提示 -->
-<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<!-- 顶部导航栏 -->
+<nav-bar title="发布帖子" showBack="{{true}}" />
 
-<!-- 确认对话框 -->
-<mp-dialog 
-  title="{{dialogTitle}}" 
-  show="{{dialogShow}}" 
-  bindbuttontap="tapDialogButton" 
-  buttons="{{dialogButtons}}">
-  <view>{{dialogContent}}</view>
-</mp-dialog>
+<tab-bar
+  tabs="{{tabTitles}}"
+  activeTab="{{isMarkdownMode ? 1 : 0}}"
+  equalWidth="{{true}}"
+  fixed="{{true}}"
+  bind:change="onModeTabChange"
+/>
 
 <view class="post-container">
-  <!-- 顶部导航栏 -->
-  <nav-bar 
-    title="发布帖子"
-    showBack="{{true}}"
-    bind:buttonTap="onNavButtonTap">
-    <view slot="center" class="publish-btn-container">
-      <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">
-        <text wx:if="{{canSubmit}}">发布</text>
-        <text wx:else>请完善内容</text>
-      </button>
-    </view>
-  </nav-bar>
-
   <!-- 表单内容 -->
   <view class="post-form">
-    <!-- 模式切换按钮 -->
-    <view class="mode-switch">
-      <view class="mode-item {{isMarkdownMode ? '' : 'active'}}" bindtap="switchToNormalMode">富文本模式</view>
-      <view class="mode-item {{isMarkdownMode ? 'active' : ''}}" bindtap="switchToMarkdownMode">Markdown</view>
-    </view>
-    
     <!-- 标题输入 - 仅在非markdown模式下显示 -->
     <block wx:if="{{!isMarkdownMode}}">
       <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
@@ -42,10 +22,9 @@
     <text-area
       value="{{form.content}}"
       placeholder="分享你的想法..."
-      maxlength="5000"
+      maxlength="300"
       height="300"
       showCount="{{true}}"
-      autoHeight="{{true}}"
       markdownMode="{{isMarkdownMode}}"
       showToolbar="{{true}}"
       title="{{form.title}}"
@@ -54,17 +33,23 @@
       bindimagetap="showImageUploader"
       bindpreviewchange="onPreviewChange"
       binderror="_showToptips"
-    ></text-area>
+    />
   </view>
 
   <!-- 标签栏 -->
-  <view class="tag-section">
+  <view class="section-container">
     <view class="section-title">选择话题</view>
     <view class="tag-list">
       <view wx:for="{{['校园生活', '学习交流', '求助']}}" wx:key="*this" 
-            class="tag-item {{tagSelected[item] ? 'active' : ''}}" 
             bindtap="selectTag" 
             data-tag="{{item}}">
+        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
+      </view>
+    </view>
+
+    <!-- 自定义标签显示 -->
+    <view class="custom-tag-list" wx:if="{{customTags.length > 0}}">
+      <view wx:for="{{customTags}}" wx:key="*this" bindtap="removeCustomTag" data-tag="{{item}}">
         <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
       </view>
     </view>
@@ -79,85 +64,53 @@
       />
       <view class="tag-add-btn" bindtap="addTag">添加</view>
     </view>
-    
-    <!-- 自定义标签显示 -->
-    <view class="custom-tag-list" wx:if="{{customTags.length > 0}}">
-      <view wx:for="{{customTags}}" wx:key="*this" class="tag-item" bindtap="removeCustomTag" data-tag="{{item}}">
-        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
-      </view>
-    </view>
   </view>
 
   <!-- 分类选择 -->
-  <view class="category-section">
+  <view class="section-container">
     <view class="section-title">选择分类</view>
-    <view class="category-list">
-      <view class="category-item {{form.category_id === 1 ? 'active' : ''}}" 
-        data-category="1" bindtap="onTopicSelect">
-        <icon name="study" size="40"></icon>
-        <text class="category-text">学习交流</text>
-      </view>
-      <view class="category-item {{form.category_id === 2 ? 'active' : ''}}" 
-        data-category="2" bindtap="onTopicSelect">
-        <icon name="life" size="40"></icon>
-        <text class="category-text">校园生活</text>
-      </view>
-      <view class="category-item {{form.category_id === 3 ? 'active' : ''}}" 
-        data-category="3" bindtap="onTopicSelect">
-        <icon name="job" size="40"></icon>
-        <text class="category-text">就业创业</text>
-      </view>
-      <view class="category-item {{form.category_id === 4 ? 'active' : ''}}" 
-        data-category="4" bindtap="onTopicSelect">
-        <icon name="club" size="40"></icon>
-        <text class="category-text">社团活动</text>
-      </view>
-      <view class="category-item {{form.category_id === 5 ? 'active' : ''}}" 
-        data-category="5" bindtap="onTopicSelect">
-        <icon name="lost" size="40"></icon>
-        <text class="category-text">失物招领</text>
-      </view>
-    </view>
+    <category-tab
+      tabs="{{tabItems}}"
+      categoryId="{{categoryId}}"
+    />
   </view>
 
   <!-- 底部设置 -->
-  <view class="post-settings">
-    <view class="settings-title">发布设置</view>
+  <view class="section-container">
+    <view class="section-title">发布设置</view>
     <view class="setting-group">
-      <view class="setting-item {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
-        <icon name="eye" size="20"></icon>
-        <text class="setting-text">公开</text>
-      </view>
-      <view class="setting-item {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
-        <icon name="comment" size="20"></icon>
-        <text class="setting-text">允许评论</text>
-      </view>
-      <view class="setting-item {{form.wikiKnowledge ? 'active' : ''}}" bindtap="onSwitchChange" data-field="wikiKnowledge" data-value="{{!form.wikiKnowledge}}">
-        <icon name="txt" size="20"></icon>
-        <text class="setting-text">wiki小知识</text>
-      </view>
+      <button 
+        wx:for="{{settingButtons}}" 
+        wx:key="field"
+        class="setting-btn {{form[item.field] ? 'active' : ''}}" 
+        icon="{{item.icon}}"
+        iconColor="{{form[item.field] ? '#5853e2' : '#666'}}"
+        iconSize="{{item.iconSize}}"
+        text="{{item.text}}"
+        textColor="{{form[item.field] ? '#5853e2' : '#666'}}"
+        textSize="26"
+        bindtap="onSwitchChange" 
+        data-field="{{item.field}}" 
+        data-value="{{!form[item.field]}}"
+      />
     </view>
   </view>
 
-  <!-- 底部安全区域，为底部按钮留出空间 -->
-
-  <!-- 底部固定发布按钮 -->
-  <view class="bottom-fixed-button">
-    <button 
-      text="发布"
-      textColor="#ffffff"
-      textSize="32"
-      textBackground="#4a67d6"
-      disabled="{{!canSubmit || submitting}}"
-      loading="{{submitting}}"
-      bindtap="submitForm"
-    ></button>
-  </view>
+  <!-- 发布按钮 -->
+  <button 
+    class="submit-btn"
+    text="发布"
+    textColor="#ffffff"
+    textSize="32"
+    disabled="{{!canSubmit || submitting}}"
+    loading="{{submitting}}"
+    bindtap="submitForm"
+  ></button>
 
   <!-- 加载中状态 -->
   <view class="loading-mask" wx:if="{{submitting}}">
     <view class="loading-content">
-      <loading type="circle" color="#5853e2" />
+      <loading type="circle" color="#ffffff" />
       <text>发布中...</text>
     </view>
   </view>

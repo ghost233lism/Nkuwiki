@@ -11,10 +11,7 @@ Page({
   data: {
     tabIndex: 0,
     tabTitles: ['帖子', '获赞', '收藏', '关注', '粉丝', '评论'],
-    navButtons: [{
-      type: 'back',
-      text: '返回'
-    }],
+  
     // 筛选条件
     postFilter: {}, // 帖子筛选条件
     likeFilter: {}, // 获赞筛选条件

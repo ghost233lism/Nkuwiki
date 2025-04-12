@@ -1,6 +1,22 @@
-<view class="search-bar-container" style="{{navBarHeight ? 'margin-top:' + navBarHeight + 'px;' : ''}}">
+<!-- 添加WXS模块用于计算样式 -->
+<wxs module="searchUtil">
+  function getContainerStyle(navBarHeight) {
+    return navBarHeight ? 'margin-top:' + navBarHeight + 'px;' : '';
+  }
+  
+  function getInputStyle(bgColor) {
+    return 'background-color: ' + bgColor;
+  }
+  
+  module.exports = {
+    getContainerStyle: getContainerStyle,
+    getInputStyle: getInputStyle
+  };
+</wxs>
+
+<view class="search-bar-container" style="{{searchUtil.getContainerStyle(navBarHeight)}}">
   <view class="search-bar">
-    <view class="search-input" style="background-color: {{backgroundColor}}">
+    <view class="search-input" style="{{searchUtil.getInputStyle(backgroundColor)}}">
       <icon name="search" size="32" color="#999999" />
       <block wx:if="{{hasSelected && selectedType}}">
         <view class="prefix-tag">@{{selectedType}}</view>

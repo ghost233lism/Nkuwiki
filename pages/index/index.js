@@ -1,12 +1,4 @@
 const behaviors = require('../../behaviors/index');
-// 分类配置
-const CATEGORY_CONFIG = [
-  { category_id: 1, tag:'study', text: '学习交流' },
-  { category_id: 2, tag:'life', text: '校园生活' },
-  { category_id: 3, tag:'job', text: '就业创业' },
-  { category_id: 4, tag:'club', text: '社团活动' },
-  { category_id: 5, tag:'lost', text: '失物招领' }
-];  
 
 Page({
   behaviors: [
@@ -18,57 +10,30 @@ Page({
   ],
 
   data: {
-    // 导航栏高度
-    navBarHeight: 45,
     // 关于信息
     aboutInfo: null,
     // 用户信息
     userInfo: null,
     // 分类导航
     categoryId: 0,  // 默认不选中任何分类
-    navItems: CATEGORY_CONFIG,
+    tabItems:  [
+      { category_id: 1, tag:'study', text: '学习交流' },
+      { category_id: 2, tag:'life', text: '校园生活' },
+      { category_id: 3, tag:'job', text: '就业创业' },
+      { category_id: 4, tag:'club', text: '社团活动' },
+      { category_id: 5, tag:'lost', text: '失物招领' }
+    ],  
     // 筛选条件
     filter: {
       category_id: 0  // 默认不筛选分类
     },
-    
-    // 通知状态
-    hasUnreadNotification: false,
     
     // 搜索相关
     searchValue: '',
     searchHistory: [],
     showSearchResult: false,
     isSearching: false,
-    
-    // 分类图标数据
-    tabs: [
-      {
-        title: '学习交流',
-        iconName: 'study',
-        icon: '/icons/study.png'
-      },
-      {
-        title: '校园生活',
-        iconName: 'life',
-        icon: '/icons/life.png'
-      },
-      {
-        title: '就业创业',
-        iconName: 'job',
-        icon: '/icons/job.png'
-      },
-      {
-        title: '社团活动',
-        iconName: 'club',
-        icon: '/icons/club.png'
-      },
-      {
-        title: '失物招领',
-        iconName: 'lost',
-        icon: '/icons/lost.png'
-      }
-    ],
+  
     retryLastOperation: null, 
   },
 
@@ -83,7 +48,6 @@ Page({
           this.updateState({ 
             userInfo: this._getUserInfo(true)
           });
-          this.checkUnreadNotification();
         }
       }).catch(err => {
         console.debug('登录检查失败', err);
@@ -127,12 +91,7 @@ Page({
         return;
       }
       
-      // 静默检查未读通知
-      const openid = this.getStorage('openid');
-      if (openid && now - lastShowTime > 60000) { // 增加时间间隔至60秒
-        this.checkUnreadNotification().catch(err => {
-        });
-      }
+      // 如果有错误或超过60秒没刷新，才刷新帖子状态
       
       // 如果有错误或超过60秒没刷新，才刷新帖子状态
       if (this.data.error || now - lastShowTime > 60000) {
@@ -168,44 +127,18 @@ Page({
     }
   },
   
-  // 分类切换
-  onTabChange(e) {
-    const categoryId = parseInt(e.currentTarget.dataset.index);
+  // 处理category-tab组件的change事件
+  onCategoryTabChange(e) {
+    const { index, tab } = e.detail;
+    const categoryId = tab.category_id;
     
-    // 如果当前选中的是该分类，再次点击取消选中（显示所有）
+    // 检查是否重复点击当前选中的分类
     if (categoryId === this.data.categoryId) {
-      this.setData({ 
-        categoryId: 0,
-        filter: { category_id: 0 }
-      });
-      
-      // 获取post-list组件并强制刷新
-      const postList = this.selectComponent('#postList');
-      if (postList) {
-        postList.setData({
-          filter: { category_id: 0 }
-        }, () => {
-          // 强制刷新，绕过时间限制
-          postList.loadInitialData(true);
-        });
-      }
+      // 重复点击同一分类，应该取消选择
+      this.switchCategory(0); // 传入0表示取消选择任何分类
     } else {
-      // 否则选中点击的分类
-      this.setData({ 
-        categoryId: categoryId,
-        filter: { category_id: categoryId }
-      });
-      
-      // 获取post-list组件并强制刷新
-      const postList = this.selectComponent('#postList');
-      if (postList) {
-        postList.setData({
-          filter: { category_id: categoryId }
-        }, () => {
-          // 强制刷新，绕过时间限制
-          postList.loadInitialData(true);
-        });
-      }
+      // 点击不同分类，正常切换
+      this.switchCategory(categoryId);
     }
   },
   
@@ -262,22 +195,6 @@ Page({
     }).catch(err => {
     });
   },
-
-  async checkUnreadNotification() {
-    try {
-      const result = await this._checkUnreadNotification();
-      const hasUnread = result && result.hasUnread;
-      
-      this.updateState({
-        hasUnreadNotification: hasUnread
-      });
-      
-      return hasUnread;
-    } catch (err) {
-      return false;
-    }
-  },
-
   // 刷新帖子状态
   async _refreshPostStatus() {
     try {
@@ -326,6 +243,25 @@ Page({
         postList.updatePostsStatus(posts);
       }
     } catch (err) {
+    }
+  },
+
+  // 统一处理分类切换
+  switchCategory(categoryId) {
+    // 一次性更新所有状态，避免多次渲染导致闪烁
+    this.setData({
+      categoryId,
+      filter: {
+        category_id: categoryId
+      }
+    });
+
+    // 刷新帖子列表，使用平滑加载避免闪烁
+    const postList = this.selectComponent('#postList');
+    if (postList) {
+      postList.updateFilter({
+        category_id: categoryId
+      });
     }
   },
 });

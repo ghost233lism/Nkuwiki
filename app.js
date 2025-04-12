@@ -1,4 +1,4 @@
-const {init, nav, logger} = require('./utils/index');
+const {init, logger} = require('./utils/index');
 App({
   async onLaunch() {
     try {

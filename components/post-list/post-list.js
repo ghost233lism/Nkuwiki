@@ -62,7 +62,10 @@ Component({
     // 添加最后更新时间记录
     _lastUpdateTime: 0,
     _lastStatusUpdateTime: 0,
-    pageSize: 10
+    pageSize: 10,
+    
+    // 添加淡入淡出效果的样式
+    fadeStyle: ''
   },
 
   lifetimes: {
@@ -218,7 +221,7 @@ Component({
     },
     
     // 加载初始数据
-    async loadInitialData(force = false) {
+    async loadInitialData(force = false, smoothLoading = false) {
       // 防止短时间内重复调用，但强制刷新时忽略此限制
       const now = Date.now();
       if (!force && this.data._lastUpdateTime && now - this.data._lastUpdateTime < 5000) {
@@ -226,7 +229,18 @@ Component({
       }
       
       try {
-        this.showLoading('正在加载...');
+        // 只有在非平滑加载时才显示loading状态
+        if (!smoothLoading) {
+          this.showLoading('正在加载...');
+        } else {
+          // 在平滑加载模式下，使用淡入淡出效果
+          if (!this.data.fadeStyle) {
+            this.setData({
+              fadeStyle: 'opacity: 0.6; transition: opacity 0.2s ease;'
+            });
+          }
+        }
+        
         this.hideError();
         this.resetPagination();
         
@@ -252,16 +266,36 @@ Component({
             if (posts.length > 0) {
               this.updatePostsStatus(posts);
             }
+            
+            // 在平滑加载模式下，数据加载完成后恢复透明度
+            if (smoothLoading) {
+              setTimeout(() => {
+                this.setData({
+                  fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
+                });
+              }, 100);
+            }
           });
         } else {
           throw new Error(result?.message || '获取数据失败');
         }
         
-        this.hideLoading();
+        // 只有在非平滑加载时才隐藏loading状态
+        if (!smoothLoading) {
+          this.hideLoading();
+        }
         return Promise.resolve();
       } catch (err) {
-        this.hideLoading();
-        this.showError('获取内容失败');
+        // 只有在非平滑加载时才隐藏loading状态并显示错误
+        if (!smoothLoading) {
+          this.hideLoading();
+          this.showError('获取内容失败');
+        } else {
+          // 即使在平滑加载模式下出错，也要恢复透明度
+          this.setData({
+            fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
+          });
+        }
         return Promise.reject(err);
       }
     },
@@ -413,6 +447,48 @@ Component({
     // 提供给父组件的刷新方法
     refresh() {
       return this.loadInitialData(true);
+    },
+    
+    // 更新筛选条件
+    updateFilter(filter) {
+      // 合并现有筛选条件
+      const newFilter = { ...this.data.filter, ...filter };
+      
+      // 添加淡出效果
+      const postListView = this.selectComponent('.post-list');
+      if (postListView) {
+        postListView.setStyle({
+          opacity: 0.5,
+          transition: 'opacity 0.2s ease'
+        });
+      } else {
+        // 如果找不到.post-list，则使用setData直接设置透明度
+        this.setData({
+          fadeStyle: 'opacity: 0.5; transition: opacity 0.2s ease;'
+        });
+      }
+      
+      this.setData({ filter: newFilter }, () => {
+        // 强制刷新数据，使用平滑加载避免闪烁
+        this.loadInitialData(true, true).then(() => {
+          // 数据加载完成后淡入
+          if (postListView) {
+            setTimeout(() => {
+              postListView.setStyle({
+                opacity: 1,
+                transition: 'opacity 0.3s ease'
+              });
+            }, 100);
+          } else {
+            // 如果找不到.post-list，则使用setData直接设置透明度
+            setTimeout(() => {
+              this.setData({
+                fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
+              });
+            }, 100);
+          }
+        });
+      });
     }
   }
 }); 

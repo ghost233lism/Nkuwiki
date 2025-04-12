@@ -12,6 +12,7 @@ Page({
     suggestions: [],
     loading: false,
     isSearching: false,
+    hasSearched: false, // 标记是否已执行过搜索
     // RAG相关数据
     showRagResults: false,
     ragQuery: '',
@@ -112,6 +113,7 @@ Page({
       isSearching: true,
       suggestions: [],
       showRagResults: false,
+      hasSearched: true, // 标记已执行过搜索
       'pagination.page': 1
     });
     
@@ -215,10 +217,7 @@ Page({
               update_time: source.update_time || createTime,
               publish_time: source.create_time || createTime,
               relevance: relevance,
-              // 添加额外字段满足source-list组件的需求
-              is_official: source.is_official !== undefined ? source.is_official : true,
-              views: source.views || Math.floor(Math.random() * 1000 + 500), // 添加浏览量
-              likes: source.likes || Math.floor(Math.random() * 200 + 100)   // 添加点赞数
+              is_official: source.is_official !== undefined ? source.is_official : false
             };
           });
         }
@@ -264,8 +263,16 @@ Page({
         page: this.data.pagination.page,
         page_size: this.data.pagination.page_size,
         sort_by: 'relevance', // 默认按相关度排序
-        platform: 'wxapp,wechat,website' // 添加平台参数，同时搜索小程序、公众号和网站内容
       };
+      
+      // 根据不同的搜索类型设置不同的platform参数
+      if (type === 'post' || type === 'user') {
+        // 帖子类型只搜索小程序内容
+        searchParams.platform = 'wxapp';
+      } else {
+        // 其他类型搜索所有平台
+        searchParams.platform = 'wxapp,wechat,website';
+      }
       
       // 如果有指定搜索类型，添加到参数中
       if (type) {
@@ -318,10 +325,15 @@ Page({
             } else if (item.original_url && item.original_url.includes('mp.weixin.qq.com')) {
               item.platform = 'wechat';
             } else if (item.type === 'post') {
-              item.platform = 'website';
+              item.platform = 'wxapp'; // 帖子类型应该是小程序平台
             } else {
               item.platform = 'website'; // 默认为网站
             }
+          }
+          
+          // 如果是帖子搜索，确保平台标记为小程序
+          if (type === 'post' && item.platform !== 'wxapp') {
+            item.platform = 'wxapp';
           }
           
           return item;
@@ -437,6 +449,7 @@ Page({
       suggestions: [],
       showRagResults: false,
       ragResults: null,
+      hasSearched: false, // 重置搜索状态
       'pagination.page': 1
     });
   },
@@ -465,11 +478,31 @@ Page({
   // 加载搜索历史
   async loadSearchHistory() {
     try {
-      const history = await this._getSearchHistory();
-      const historyArray = Array.isArray(history) 
-        ? history.map(item => typeof item === 'string' ? item : item.query) 
+      let history = [];
+      
+      // 尝试从API获取搜索历史
+      if (typeof this._getSearchHistory === 'function') {
+        try {
+          history = await this._getSearchHistory();
+        } catch (apiErr) {
+          console.debug('从API加载搜索历史失败:', apiErr);
+          // 如果API调用失败，尝试从本地存储加载
+          history = storage.get('searchHistory') || [];
+        }
+      } else {
+        // 如果API方法不存在，从本地存储加载
+        history = storage.get('searchHistory') || [];
+      }
+      
+      // 过滤掉null值和空字符串
+      const validHistory = Array.isArray(history) 
+        ? history.filter(item => item && (
+            (typeof item === 'string' && item.trim() !== '') || 
+            (typeof item === 'object' && item.query && item.query.trim() !== '')
+          )).map(item => typeof item === 'string' ? item : item.query) 
         : [];
-      this.setData({ searchHistory: historyArray });
+      
+      this.setData({ searchHistory: validHistory });
     } catch (err) {
       console.debug('加载搜索历史失败:', err);
       this.setData({ searchHistory: [] });
@@ -478,10 +511,16 @@ Page({
 
   // 保存搜索历史
   saveSearchHistory(keyword) {
-    if (!keyword) return;
+    if (!keyword || typeof keyword !== 'string' || keyword.trim() === '') {
+      return;
+    }
     
     // 先从本地数据中处理
     let history = this.data.searchHistory.slice(0);
+    
+    // 过滤掉null值和空字符串
+    history = history.filter(item => item && typeof item === 'string' && item.trim() !== '');
+    
     const index = history.indexOf(keyword);
     
     // 如果已存在则删除旧的
@@ -499,27 +538,36 @@ Page({
     
     this.setData({ searchHistory: history });
     
-    // 异步保存到服务器
+    // 保存到本地存储
     storage.set('searchHistory', history);
+    
+    // 如果有API方法，则尝试调用
+    if (typeof this._saveSearchHistory === 'function') {
+      this._saveSearchHistory(keyword).catch(err => {
+        console.debug('保存搜索历史到服务器失败:', err);
+      });
+    }
   },
 
   // 清空搜索历史
   async clearSearchHistory() {
-    try {
-      await this._clearSearchHistory();
-      this.setData({ searchHistory: [] });
-      storage.set('searchHistory', []);
-      wx.showToast({
-        title: '搜索历史已清空',
-        icon: 'success'
-      });
-    } catch (err) {
-      console.debug('清空搜索历史失败:', err);
-      wx.showToast({
-        title: '清空失败: ' + err.message,
-        icon: 'none'
-      });
+    // 清空本地数据
+    this.setData({ searchHistory: [] });
+    storage.set('searchHistory', []);
+    
+    // 尝试清空服务器数据
+    if (typeof this._clearSearchHistory === 'function') {
+      try {
+        await this._clearSearchHistory();
+      } catch (err) {
+        console.debug('清空服务器搜索历史失败:', err);
+      }
     }
+    
+    wx.showToast({
+      title: '搜索历史已清空',
+      icon: 'success'
+    });
   },
   
   // 点击搜索结果

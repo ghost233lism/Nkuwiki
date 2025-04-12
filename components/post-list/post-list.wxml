@@ -9,7 +9,7 @@
   bindretry="handleRetry"
   bindloadmore="loadMore"
 >
-  <view class="post-list">
+  <view class="post-list" style="{{fadeStyle || ''}}">
     <!-- 帖子列表 -->
     <block wx:for="{{post}}" wx:key="id">
       <post-item 

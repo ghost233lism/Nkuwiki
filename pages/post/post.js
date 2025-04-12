@@ -1,15 +1,6 @@
 const { ToastType } = require('../../utils/util');
 const behaviors = require('../../behaviors/index');
 
-// 常量配置
-const CATEGORIES = [
-  { id: 1, name: '学习交流', tag: 'study' },
-  { id: 2, name: '校园生活', tag: 'life' },
-  { id: 3, name: '就业创业', tag: 'job' },
-  { id: 4, name: '社团活动', tag: 'club' },
-  { id: 5, name: '失物招领', tag: 'lost' }
-];
-
 Page({
   behaviors: [
     behaviors.baseBehavior,
@@ -19,6 +10,9 @@ Page({
   ],
 
   data: {
+    tabIndex: 0,
+    tabTitles: ['富文本模式', 'Markdown'],
+  
     // --- Form Data ---
     form: {
       title: '',
@@ -30,12 +24,14 @@ Page({
       category_id: 1,
       tags: []
     },
-
-    // 导航按钮配置
-    navButtons: [
-      {type: "back", show: true}
-    ],
-
+    categoryId: 1,  
+    tabItems:  [
+      { category_id: 1, tag:'study', text: '学习交流' },
+      { category_id: 2, tag:'life', text: '校园生活' },
+      { category_id: 3, tag:'job', text: '就业创业' },
+      { category_id: 4, tag:'club', text: '社团活动' },
+      { category_id: 5, tag:'lost', text: '失物招领' }
+    ],  
     tagInputValue: '',
     tagSelected: {}, // 用于标记标签选中状态
     customTags: [], // 自定义标签列表
@@ -74,9 +70,6 @@ Page({
       ]
     },
 
-    categories: CATEGORIES,
-    categoryIndex: 0,
-
     // --- UI State ---
     canSubmit: false,
     submitting: false,
@@ -102,7 +95,29 @@ Page({
     dialogButtons: [],
 
     // Markdown预览状态
-    showMarkdownPreview: false
+    showMarkdownPreview: false,
+
+    // 设置按钮配置
+    settingButtons: [
+      {
+        field: 'isPublic',
+        icon: 'eye',
+        text: '公开',
+        iconSize: 24
+      },
+      {
+        field: 'allowComment',
+        icon: 'comment',
+        text: '允许评论',
+        iconSize: 24
+      },
+      {
+        field: 'wikiKnowledge',
+        icon: 'txt',
+        text: 'wiki小知识',
+        iconSize: 24
+      }
+    ],
   },
 
   async onLoad() {
@@ -225,42 +240,6 @@ Page({
     
     this.setFormField(field, value);
     this.validatePostForm();
-  },
-
-  // 分类选择
-  onTopicSelect(e) {
-    const { category } = e.currentTarget.dataset;
-    const categoryId = parseInt(category);
-    
-    // 找到对应分类的索引
-    const categoryIndex = this.data.categories.findIndex(item => item.id === categoryId);
-    if (categoryIndex !== -1) {
-      this.updateState({ categoryIndex });
-    }
-    
-    this.setFormField('category_id', categoryId);
-    this.validatePostForm();
-  },
-
-  // 返回上一页
-  navigateBack() {
-    // 返回上一页
-    wx.navigateBack({
-      delta: 1,
-      fail: () => {
-        wx.switchTab({
-          url: '/pages/index/index'
-        });
-      }
-    });
-  },
-
-  // 处理导航栏按钮点击
-  onNavButtonTap(e) {
-    const { type } = e.detail;
-    if (type === 'publish') {
-      this.submitForm();
-    }
   },
 
   // 标签相关方法
@@ -513,5 +492,17 @@ Page({
     this.setData(newData, () => {
       this.validatePostForm();
     });
+  },
+
+  // 处理模式Tab切换事件
+  onModeTabChange(e) {
+    const { index } = e.detail;
+    
+    // index为1表示Markdown模式，0表示富文本模式
+    if (index === 1) {
+      this.switchToMarkdownMode();
+    } else {
+      this.switchToNormalMode();
+    }
   }
 }); 

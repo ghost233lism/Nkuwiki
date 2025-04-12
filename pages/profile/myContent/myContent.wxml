@@ -1,6 +1,6 @@
 <!-- 顶部标题栏和标签栏 -->
 <!-- 导航栏 -->
-  <nav-bar
+<nav-bar
     title="我的内容"
     show-back="{{true}}"
 />
