@@ -5,26 +5,6 @@ Component({
   behaviors: [baseBehavior, postBehavior],
 
   properties: {
-    posts: {
-      type: Array,
-      value: []
-    },
-    isLoading: {
-      type: Boolean,
-      value: false
-    },
-    hasError: {
-      type: Boolean,
-      value: false
-    },
-    hasMoreData: {
-      type: Boolean,
-      value: true
-    },
-    currentUserOpenid: {
-      type: String,
-      value: ''
-    },
     // 筛选条件
     filter: {
       type: Object,
@@ -93,10 +73,42 @@ Component({
 
   observers: {
     'filter': function(filter) {
-      // 当filter变化时（特别是_refreshFlag变化时）强制刷新
-      if (filter && filter._refreshFlag) {
-        this.loadInitialData(true);
+      // 当filter变化时刷新列表
+      if (!filter) return;
+      
+      // 添加淡出效果
+      const postListView = this.selectComponent('.post-list');
+      if (postListView) {
+        postListView.setStyle({
+          opacity: 0.5,
+          transition: 'opacity 0.2s ease'
+        });
+      } else {
+        // 如果找不到.post-list，则使用setData直接设置透明度
+        this.setData({
+          fadeStyle: 'opacity: 0.5; transition: opacity 0.2s ease;'
+        });
       }
+      
+      // 强制刷新数据，使用平滑加载避免闪烁
+      this.loadInitialData(true, true).then(() => {
+        // 数据加载完成后淡入
+        if (postListView) {
+          setTimeout(() => {
+            postListView.setStyle({
+              opacity: 1,
+              transition: 'opacity 0.3s ease'
+            });
+          }, 100);
+        } else {
+          // 如果找不到.post-list，则使用setData直接设置透明度
+          setTimeout(() => {
+            this.setData({
+              fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
+            });
+          }, 100);
+        }
+      });
     }
   },
 
@@ -109,107 +121,6 @@ Component({
         total: 0,
         total_pages: 0
       });
-    },
-    
-    // 处理帖子点赞事件
-    handlePostLike(e) {
-      const { id, refreshNeeded } = e.detail;
-      if (!id) return;
-      
-      if (refreshNeeded) {
-        // 获取单个帖子的最新状态并更新
-        this._refreshPostStatus(id);
-      }
-    },
-    
-        // 修改后的 _refreshPostStatus 方法
-    async _refreshPostStatus(postId) {
-      if (!postId) return;
-
-      try {
-        const statusRes = await this._getPostStatus(postId);
-        if (statusRes?.code !== 200 || !statusRes.data) return;
-
-        const status = statusRes.data[postId];
-        if (!status) return;
-
-        // 找到目标帖子索引
-        const index = this.data.post.findIndex(p => String(p.id) === String(postId));
-        if (index === -1) return;
-
-        // 构造精准更新路径
-        const updates = {};
-        const pathPrefix = `post[${index}]`;
-        
-        // 需要更新的字段映射
-        const fieldMap = {
-          is_liked: 'is_liked',
-          like_count: 'like_count',
-          is_favorited: 'is_favorited',
-          favorite_count: 'favorite_count',
-          comment_count: 'comment_count'
-        };
-
-        // 只更新变化的字段
-        Object.entries(fieldMap).forEach(([key, apiKey]) => {
-          if (status[apiKey] !== undefined && 
-              status[apiKey] !== this.data.post[index][key]) {
-            updates[`${pathPrefix}.${key}`] = status[apiKey];
-          }
-        });
-
-        if (Object.keys(updates).length > 0) {
-          this.setData(updates, () => {
-            this._refreshPostItem(postId);
-          });
-        }
-      } catch (err) {
-        console.error('刷新帖子状态失败', err);
-      }
-    },
-    
-    // 刷新特定帖子组件实例
-    _refreshPostItem(postId) {
-      if (!postId) return;
-      
-      // 直接通过ID选择组件，避免复杂查询
-      const selector = `#post_item_${postId}`;
-      const postItemComponent = this.selectComponent(selector);
-      
-      if (postItemComponent) {
-        // 直接更新状态
-        if (typeof postItemComponent._updatePostData === 'function') {
-          postItemComponent._updatePostData();
-        }
-      }
-    },
-    
-    // 处理帖子收藏事件
-    handlePostFavorite(e) {
-      const { id, refreshNeeded } = e.detail;
-      if (!id) return;
-      
-      if (refreshNeeded) {
-        // 获取单个帖子的最新状态并更新
-        this._refreshPostStatus(id);
-      }
-    },
-    
-    // 处理帖子关注事件
-    handlePostFollow(e) {
-      const { authorId, isFollowing } = e.detail;
-      
-      // 使用路径更新代替 map 遍历
-      const updates = {};
-      this.data.post.forEach((post, index) => {
-        if (post.openid === authorId) {
-          updates[`post[${index}].is_following`] = isFollowing;
-        }
-      });
-      
-      if (Object.keys(updates).length > 0) {
-        this.setData(updates);
-      }
     },
     
     // 加载初始数据
@@ -228,7 +139,10 @@ Component({
       try {
         // 只有在非平滑加载时才显示loading状态
         if (!smoothLoading) {
-          this.showLoading('正在加载...');
+          this.setData({
+            loading: true,
+            loadingText: '正在加载...'
+          });
         } else {
           // 在平滑加载模式下，使用淡入淡出效果
           if (!this.data.fadeStyle) {
@@ -238,7 +152,7 @@ Component({
           }
         }
         
-        this.hideError();
+        this.setData({ error: false });
         this.resetPagination();
         
         // 更新最后加载时间
@@ -259,7 +173,10 @@ Component({
             total_pages: pagination.total_pages || 0,
             empty: posts.length === 0
           }, () => {
-            // 直接在回调中更新状态，无需延时
+            // 重置状态更新时间，确保获取最新状态
+            this.setData({ _lastStatusUpdateTime: 0 });
+            
+            // 直接在回调中更新状态
             if (posts.length > 0) {
               this.updatePostsStatus(posts);
             }
@@ -279,18 +196,18 @@ Component({
         
         // 只有在非平滑加载时才隐藏loading状态
         if (!smoothLoading) {
-          this.hideLoading();
+          this.setData({
+            loading: false
+          });
         }
         return Promise.resolve();
       } catch (err) {
         // 只有在非平滑加载时才隐藏loading状态并显示错误
         if (!smoothLoading) {
-          this.hideLoading();
-          this.showError('获取内容失败');
-        } else {
-          // 即使在平滑加载模式下出错，也要恢复透明度
           this.setData({
-            fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
+            loading: false,
+            error: true,
+            errorText: err.message || '加载失败，请稍后再试'
           });
         }
         return Promise.reject(err);
@@ -302,8 +219,22 @@ Component({
       if (!posts?.length) return;
 
       try {
-        // ...省略节流和登录检查代码...
+        // 检查最后更新时间，防止频繁请求
+        const now = Date.now();
+        if (this.data._lastStatusUpdateTime && now - this.data._lastStatusUpdateTime < 3000) {
+          return;
+        }
+        this.setData({ _lastStatusUpdateTime: now });
 
+        // 检查登录状态
+        const openid = this.getStorage('openid');
+        if (!openid) return;
+
+        // 获取所有帖子ID
+        const postIds = posts.map(post => post.id).filter(Boolean);
+        if (!postIds.length) return;
+
+        // 获取状态
         const statusRes = await this._getPostStatus(postIds);
         if (statusRes?.code !== 200 || !statusRes.data) return;
 
@@ -322,7 +253,8 @@ Component({
             like_count: 'like_count',
             is_favorited: 'is_favorited',
             favorite_count: 'favorite_count',
-            comment_count: 'comment_count'
+            comment_count: 'comment_count',
+            is_following: 'is_following'
           };
 
           // 对比并收集需要更新的字段
@@ -338,20 +270,8 @@ Component({
           this.setData(updates); // 使用精准路径更新
         }
       } catch (err) {
-        // 忽略错误
+        console.debug('更新帖子状态失败:', err);
       }
-    },
-    
-    // 刷新所有帖子组件状态
-    _refreshAllPostItems(posts) {
-      if (!posts || !posts.length) return;
-      
-      posts.forEach(post => {
-        const postId = post.id;
-        if (postId) {
-          this._refreshPostItem(postId);
-        }
-      });
     },
     
     // 更新空状态
@@ -392,10 +312,15 @@ Component({
               hasMore: pagination.has_more !== undefined ? pagination.has_more : (newPosts.length >= this.data.page_size),
               total: pagination.total || 0,
               total_pages: pagination.total_pages || 0
+            }, () => {
+              // 重置状态更新时间，确保获取最新状态
+              this.setData({ _lastStatusUpdateTime: 0 });
+              
+              // 立即更新新加载帖子的状态
+              if (newPosts.length > 0) {
+                this.updatePostsStatus(newPosts);
+              }
             });
-            
-            // 异步更新新加载帖子的状态
-            this.updatePostsStatus(newPosts);
           } else {
             // 没有更多数据
             this.setData({ hasMore: false });
@@ -407,6 +332,7 @@ Component({
         this.hideLoadingMore();
       } catch (err) {
         this.hideLoadingMore();
+        console.debug('加载更多失败:', err);
       }
     },
     
@@ -415,51 +341,24 @@ Component({
       this.loadInitialData();
     },
     
-    // 提供给父组件的刷新方法
-    refresh() {
-      return this.loadInitialData(true);
+    // 显示加载更多状态
+    showLoadingMore() {
+      this.setData({ loadingMore: true });
     },
     
-    // 更新筛选条件
-    updateFilter(filter) {
-      // 合并现有筛选条件
-      const newFilter = { ...this.data.filter, ...filter };
-      
-      // 添加淡出效果
-      const postListView = this.selectComponent('.post-list');
-      if (postListView) {
-        postListView.setStyle({
-          opacity: 0.5,
-          transition: 'opacity 0.2s ease'
-        });
-      } else {
-        // 如果找不到.post-list，则使用setData直接设置透明度
-        this.setData({
-          fadeStyle: 'opacity: 0.5; transition: opacity 0.2s ease;'
-        });
-      }
-      
-      this.setData({ filter: newFilter }, () => {
-        // 强制刷新数据，使用平滑加载避免闪烁
-        this.loadInitialData(true, true).then(() => {
-          // 数据加载完成后淡入
-          if (postListView) {
-            setTimeout(() => {
-              postListView.setStyle({
-                opacity: 1,
-                transition: 'opacity 0.3s ease'
-              });
-            }, 100);
-          } else {
-            // 如果找不到.post-list，则使用setData直接设置透明度
-            setTimeout(() => {
-              this.setData({
-                fadeStyle: 'opacity: 1; transition: opacity 0.3s ease;'
-              });
-            }, 100);
-          }
-        });
+    // 隐藏加载更多状态
+    hideLoadingMore() {
+      this.setData({ loadingMore: false });
+    },
+    
+    // 提供给父组件的刷新方法
+    refresh() {
+      // 重置状态更新时间，确保强制刷新时获取最新状态
+      this.setData({ 
+        _lastUpdateTime: 0,
+        _lastStatusUpdateTime: 0
       });
+      return this.loadInitialData(true);
     }
   }
 });

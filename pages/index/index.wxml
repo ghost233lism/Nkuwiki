@@ -32,13 +32,17 @@
     <post-list 
       id="postList"
       filter="{{filter}}"
-      bind:retry="onRetry"
     />
   </view>
   
   <!-- 悬浮发帖按钮 -->
-  <view class="floating-button" bindtap="onCreatePost">
-    <icon name="add" size="56" color="#ffffff"></icon>
-  </view>
+  <button
+    floating="{{true}}"
+    type="primary"
+    shape="circle"
+    size="medium"
+    floatingPosition="bottom-right"
+    bindtap="onCreatePost"
+  />
   
 </view>

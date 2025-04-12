@@ -1,4 +1,7 @@
 const { createApiClient } = require('../../utils/util');
+const baseBehavior = require('../../behaviors/baseBehavior');
+const userBehavior = require('../../behaviors/userBehavior');
+const { storage } = require('../../utils/util');
 
 // 创建用户API客户端
 const userApi = {
@@ -6,14 +9,16 @@ const userApi = {
 };
 
 Component({
+  behaviors: [baseBehavior, userBehavior],
+
   properties: {
     user: {
       type: Object,
-      value: {}
+      value: null
     },
     userInfo: {
       type: Object,
-      value: {}
+      value: null
     },
     stats: {
       type: Object,
@@ -46,6 +51,10 @@ Component({
     errorMsg: {
       type: String,
       value: ''
+    },
+    showFollow: {
+      type: Boolean,
+      value: true
     }
   },
 
@@ -119,7 +128,7 @@ Component({
     formatUser(user, stats) {
       if (!user) return null;
       
-      // 统一兼容字段
+      const openid = storage.get('openid');
       return {
         ...user,
         nickname: user.nickname || user.nickName || '未知用户',
@@ -131,7 +140,9 @@ Component({
         favorite_count: stats?.favorites || user.favorite_count || 0,
         following_count:  stats?.following_count || user.following_count || 0,
         follower_count: stats?.follower_count || user.follower_count || 0,
-        token: user.token || 0
+        token: user.token || 0,
+        isFollowed: Array.isArray(user.followers) && user.followers.includes(openid),
+        isOwner: user.openid === openid
       };
     },
 
@@ -184,61 +195,40 @@ Component({
     },
     
     // 关注用户
-    followUser(targetOpenid) {
-      userApi.follow({
-        followed_id: targetOpenid,
-        openid: this.properties.currentUserOpenid
-      })
-        .then(res => {
-          if (res.code === 0) {
-            wx.showToast({
-              title: '关注成功',
-              icon: 'none'
-            });
-            this.updateFollowStatus(true);
-            this.triggerEvent('follow', { user_id: targetOpenid });
-          } else {
-            wx.showToast({
-              title: res.message || '关注失败',
-              icon: 'none'
-            });
-          }
-        })
-        .catch(err => {
+    async followUser(targetOpenid) {
+      try {
+        // 使用 userBehavior 中的 _toggleFollow 方法
+        const res = await this._toggleFollow({
+          followed_id: targetOpenid
+        });
+        
+        if (res && res.code === 200) {
           wx.showToast({
-            title: '网络错误',
+            title: res.data.is_following ? '关注成功' : '已取消关注',
             icon: 'none'
           });
+          
+          // 更新关注状态
+          this.updateFollowStatus(res.data.is_following);
+          this.triggerEvent('follow', { user_id: targetOpenid });
+        } else {
+          wx.showToast({
+            title: res?.message || '操作失败',
+            icon: 'none'
+          });
+        }
+      } catch (err) {
+        console.debug('关注操作失败:', err);
+        wx.showToast({
+          title: '网络错误',
+          icon: 'none'
         });
+      }
     },
     
-    // 取消关注用户 - 使用同一个接口
-    unfollowUser(targetOpenid) {
-      userApi.follow({
-        followed_id: targetOpenid,
-        openid: this.properties.currentUserOpenid
-      })
-        .then(res => {
-          if (res.code === 0) {
-            wx.showToast({
-              title: '已取消关注',
-              icon: 'none'
-            });
-            this.updateFollowStatus(false);
-            this.triggerEvent('follow', { user_id: targetOpenid });
-          } else {
-            wx.showToast({
-              title: res.message || '取消关注失败',
-              icon: 'none'
-            });
-          }
-        })
-        .catch(err => {
-          wx.showToast({
-            title: '网络错误',
-            icon: 'none'
-          });
-        });
+    // 取消关注用户 - 使用同一个方法
+    async unfollowUser(targetOpenid) {
+      await this.followUser(targetOpenid);
     },
     
     // 更新关注状态
@@ -313,6 +303,49 @@ Component({
       wx.navigateTo({
         url: '/pages/profile/points/points'
       });
+    },
+
+    // 点击头像或用户名
+    onUserTap() {
+      const { openid } = this.data.formattedUser;
+      if (!openid) return;
+      
+      wx.navigateTo({
+        url: `/pages/profile/profile?id=${openid}`,
+        fail: () => {
+          storage.set('temp_profile_openid', openid);
+          wx.redirectTo({
+            url: `/pages/profile/profile?id=${openid}`
+          });
+        }
+      });
+    },
+    
+    // 关注/取消关注
+    async onFollowTap() {
+      const { openid, isFollowed } = this.data.formattedUser;
+      if (!openid) return;
+      
+      const currentOpenid = storage.get('openid');
+      if (!currentOpenid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
+      
+      // 不能关注自己
+      if (openid === currentOpenid) {
+        this.showToast('不能关注自己', 'error');
+        return;
+      }
+      
+      try {
+        await this._toggleFollow({
+          followed_id: openid
+        });
+      } catch (err) {
+        console.error('关注操作失败:', err);
+        this.showToast('操作失败', 'error');
+      }
     }
   }
 }); 

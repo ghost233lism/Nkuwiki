@@ -6,6 +6,30 @@
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
   width: 100%;
   box-sizing: border-box;
+  position: relative;
+}
+
+/* 点击跳转覆盖层 */
+.tap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* 互动元素的z-index需要高于覆盖层 */
+.author-avatar,
+.author-name,
+.follow-button,
+.tag-item,
+.action-button,
+.read-more-wrapper,
+.post-image,
+.view-more {
+  position: relative;
+  z-index: 2;
 }
 
 /* 头部样式 */
@@ -20,11 +44,14 @@
   display: flex;
   align-items: center;
   flex: 1;
+  max-width: 75%;
 }
 
 .header-right {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  justify-content: flex-start;
 }
 
 .author-avatar {
@@ -60,9 +87,10 @@
 /* 内容区域固定高度 */
 .post-content-wrapper {
   min-height: 80rpx;
-  max-height: 800rpx;
+  max-height: 1000rpx;
   overflow: hidden;
   position: relative;
+  margin: 10rpx 0;
 }
 
 /* 内容样式 */
@@ -93,11 +121,11 @@
 }
 
 .post-body.collapsed {
-  max-height: 200rpx; /* 4行文字的高度 */
+  max-height: 320rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 8; /* 默认最多显示4行 */
+  -webkit-line-clamp: 12;
   -webkit-box-orient: vertical;
   position: relative;
 }
@@ -108,7 +136,7 @@
   bottom: 0;
   right: 0;
   width: 100%;
-  height: 100rpx;
+  height: 120rpx;
   background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
   pointer-events: none;
 }
@@ -118,31 +146,28 @@
   font-size: 28rpx;
   line-height: 1.6;
   overflow: hidden;
+  padding: 0 8rpx;
+  margin-bottom: 8rpx;
 }
 
 .markdown-wrapper.collapsed {
-  max-height: 400rpx; /* 限制折叠状态下的高度 */
+  max-height: none;
   overflow: hidden;
   position: relative;
 }
 
 .markdown-wrapper.collapsed::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 100%;
-  height: 40rpx;
-  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
-  pointer-events: none;
+  display: none;
 }
 
 /* 展开按钮 */
 .read-more-wrapper {
   width: 100%;
   text-align: center;
-  margin-top: 12rpx;
+  margin-top: 6rpx;
   padding-top: 8rpx;
+  position: relative;
+  z-index: 2;
 }
 
 .read-more {
@@ -159,6 +184,17 @@
 
 .expand-icon {
   margin-left: 6rpx;
+  width: 20rpx;
+  height: 20rpx;
+  transition: transform 0.3s ease;
+}
+
+.rotate-down {
+  transform: rotate(90deg);
+}
+
+.rotate-up {
+  transform: rotate(-90deg);
 }
 
 /* 图片样式 */
@@ -186,9 +222,71 @@
 
 /* 底部样式 */
 .post-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   padding: 8rpx 0;
   margin-top: 10rpx;
   border-top: 1rpx solid #f0f0f0;
+}
+
+.post-time {
+  font-size: 24rpx;
+  color: #999;
+  white-space: nowrap;
+  flex-grow: 1;
+  max-width: 50%;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 240rpx;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  padding: 0 2rpx;
+  margin-left: 4rpx;
+  background: none;
+  border: none;
+  min-height: 0;
+  line-height: normal;
+  font-size: 30rpx;
+}
+
+.action-button::after {
+  border: none;
+}
+
+.action-button-active {
+  color: #ff4400;
+}
+
+.action-count {
+  font-size: 22rpx;
+  color: #999;
+  margin-left: 2rpx;
+}
+
+.share-button {
+  background: none;
+  border: none;
+  padding: 0 2rpx;
+  margin: 0 0 0 4rpx;
+  display: flex;
+  align-items: center;
+  line-height: normal;
+  font-size: unset;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.share-button::after {
+  border: none;
 }
 
 /* 标签样式 */
@@ -237,17 +335,50 @@
   text-align: center;
 }
 
+/* 关注按钮容器 */
+.follow-container {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: -20rpx;
+}
+
 /* 关注按钮 */
 .follow-button {
-  min-width: 160rpx !important;
-  height: 56rpx !important;
-  line-height: 56rpx !important;
-  border-radius: 30rpx !important;
-  padding: 0 40rpx !important;
-  text-align: center !important;
-  font-size: 28rpx !important;
-  background: transparent !important;
-  border: none !important;
+  min-width: 60rpx;
+  max-width: 120rpx;
+  width: auto;
+  height: 52rpx;
+  line-height: 52rpx;
+  border-radius: 26rpx;
+  padding: 0 14rpx;
+  text-align: center;
+  font-size: 24rpx;
+  background-color: #e8f8ed;
+  color: #07c160;
+  border: none;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* 覆盖按钮的默认样式 */
+.follow-button::after {
+  border: none;
+}
+
+/* 将button标签选择器改为类选择器 */
+.follow-button.button {
+  margin: 0;
+  padding: 0 14rpx;
+}
+
+.follow-button.followed {
+  background-color: #f2f2f2;
+  color: #999;
+}
+
+.button-hover {
+  opacity: 0.8;
 }
 
 /* 空内容提示 */
@@ -262,7 +393,17 @@
   min-height: 60rpx;
 }
 
-.empty-content-notice text {
+.empty-content-text {
   font-size: 28rpx;
   color: #999;
+}
+
+.action-icon {
+  width: 40rpx;
+  height: 40rpx;
+  flex-shrink: 0;
+}
+
+.action-button-active .action-icon {
+  /* 已经在图片上使用了不同的图标，所以这里不需要特别处理 */
 } 

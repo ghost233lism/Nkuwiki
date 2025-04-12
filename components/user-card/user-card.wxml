@@ -33,7 +33,7 @@
         
         <button 
           wx:else 
-          class="follow-btn {{formattedUser.isFollowed ? 'followed' : ''}}" 
+          class="follow-button {{formattedUser.isFollowed ? 'followed' : ''}}" 
           size="mini" 
           bindtap="onFollow"
         >{{formattedUser.isFollowed ? '已关注' : '关注'}}</button>

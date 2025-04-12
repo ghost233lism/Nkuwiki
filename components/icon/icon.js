@@ -57,8 +57,6 @@ Component({
     // 转换后的尺寸数字
     sizeNumber: 20,
     
-    // 显示涟漪效果
-    showRipple: false,
 
     // 微信原生支持的icon type
     wxIconTypes: [
@@ -169,30 +167,6 @@ Component({
     }
   },
   
-  observers: {
-    // 'name,size,icon,type': function(name, size, icon, type) {
-    //   if (this.data.updating) return;
-    //   this.initializeIcon();
-    // },
-    'name': function(name) {
-      // 对name属性单独监听，确保当name变化时立即刷新
-      if (this.data.updating) return;
-      if (name && this.data.iconMap[name]) {
-        this.setData({
-          useImage: true,
-          imageSrc: this.data.iconMap[name],
-          type: '',
-          icon: ''
-        });
-      }
-    }
-    // 'color': function(color) {
-    //   // 对颜色单独监听
-    //   this.setData({
-    //     color: color
-    //   });
-    // }
-  },
   
   methods: {
     // 初始化图标
@@ -268,20 +242,13 @@ Component({
       });
     },
     
-    // 点击图标
-    handleTap: function() {
-      // 如果开启了涟漪效果，显示涟漪
-      if (this.properties.ripple) {
-        this.setData({ showRipple: true });
-        
-        // 300ms后隐藏涟漪
-        setTimeout(() => {
-          this.setData({ showRipple: false });
-        }, 300);
-      }
-      
-      // 触发点击事件
-      this.triggerEvent('tap');
+    // 处理点击事件
+    handleTap(e) {
+      // 触发一个自定义事件，将点击事件传递给父组件
+      this.triggerEvent('tap', {
+        name: this.properties.name,
+        ...e.detail
+      });
     }
   }
 }); 

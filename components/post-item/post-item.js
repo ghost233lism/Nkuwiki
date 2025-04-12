@@ -1,7 +1,7 @@
 const baseBehavior = require('../../behaviors/baseBehavior');
 const postBehavior = require('../../behaviors/postBehavior');
 const userBehavior = require('../../behaviors/userBehavior');
-const { formatRelativeTime } = require('../../utils/util.js');
+const { formatRelativeTime, parseJsonField, storage } = require('../../utils/util.js');
 
 Component({
   behaviors: [baseBehavior, postBehavior, userBehavior],
@@ -18,273 +18,95 @@ Component({
       type: Object,
       value: {}
     },
-    showAction: {
-      type: Boolean,
-      value: true
-    },
-    showComment: {
-      type: Boolean,
-      value: true
-    },
-    showFollow: {
-      type: Boolean,
-      value: true
-    },
-    showUserInfo: {
-      type: Boolean,
-      value: true
-    },
-    showImage: {
-      type: Boolean,
-      value: true
-    },
-    showContent: {
-      type: Boolean,
-      value: true
-    },
-    isCard: {
-      type: Boolean,
-      value: false
-    },
-    index: {
-      type: Number,
-      value: -1
-    },
-    customStyle: {
-      type: String,
-      value: ''
-    },
-    // 是否在详情页面显示，详情页不应折叠内容
-    detailPage: {
-      type: Boolean,
-      value: false
-    },
-    isLiked: {
-      type: Boolean,
-      value: false
-    },
-    isFavorited: {
-      type: Boolean,
-      value: false
-    },
-    currentUserOpenid: {
-      type: String,
-      value: ''
-    }
-  },
-
-  data: {
-    is_liked: false,
-    is_favorited: false,
-    is_following: false,
-    showFull: false,
-    isProcessing: false,
-    contentExpanded: false,
-    contentOverflow: false,
-    formattedTime: '',
-    // Markdown相关
-    isMarkdown: true,
-    markdownNodes: null,
-    // 默认头像
-    defaultAvatar: '',
-    // 用户信息
-    userInfo: null,
-    isSubmitting: false
+    showAction: { type: Boolean, value: true },
+    showComment: { type: Boolean, value: true },
+    showFollow: { type: Boolean, value: true },
+    showUserInfo: { type: Boolean, value: true },
+    showImage: { type: Boolean, value: true },
+    showContent: { type: Boolean, value: true },
+    isCard: { type: Boolean, value: false },
+    index: { type: Number, value: -1 },
+    customStyle: { type: String, value: '' },
+    detailPage: { type: Boolean, value: false },
+    isProcessing: { type: Boolean, value: false },
+    contentExpanded: { type: Boolean, value: false },
+    contentOverflow: { type: Boolean, value: false },
+    formattedTime: { type: String, value: '' },
+    isMarkdown: { type: Boolean, value: true },
+    previewHeight: { type: Number, value: 60 },
+    currentUserOpenid: { type: String, value: '' }
   },
 
   observers: {
     'post': function(post) {
       if (!post || !post.id) return;
       
-      this._updatePostData();
+      // 格式化时间
+      this.setData({
+        formattedTime: post.create_time ? formatRelativeTime(post.create_time) : ''
+      });
+
+      // 解析JSON字段
+      this._parseJsonFields(post);
       
-      // 解析内容数据
-      this._parsePostContent();
+      // 检查内容是否需要展开按钮
+      this._checkContentOverflow(post.content);
     },
+    
     'detailPage': function(isDetailPage) {
       if (isDetailPage) {
         this.setData({ contentExpanded: true });
-        // 详情页模式下，每次属性变化时都主动刷新状态
-        this._updateFromServer();
       }
     }
   },
 
   lifetimes: {
-    attached() {
-      this.setData({ 
-        defaultAvatar: this.getStorage('defaultAvatar'),
-        userInfo: this.getStorage('userInfo')
-      });
-    },
-    
     ready() {
-      // 只在详情页面时由post-item自己刷新状态
+      this.setData({ currentUserOpenid: storage.get('openid') });
+      
+      // 只在详情页面时刷新状态
       if (this.properties.detailPage) {
         this._updateFromServer();
       }
       
       // 检查内容是否溢出
       this.checkContentOverflow();
-    },
-
-    shouldUpdate(newVal, oldVal) {
-      // 只关注以下字段变化
-      const watchFields = [
-        'is_liked', 'like_count', 
-        'is_favorited', 'favorite_count',
-        'is_following', 'comment_count'
-      ];
-      
-      return watchFields.some(field => 
-        newVal.post[field] !== oldVal.post[field]
-      );
     }
   },
 
   methods: {
-    // 初始化/刷新组件
-    init() {
-      // 解析内容数据
-      this._parsePostContent();
-      
-      // 检查内容是否溢出
-      this.checkContentOverflow();
-      
-      // 如果在详情页，主动刷新状态
-      if (this.properties.detailPage) {
-        this._updateFromServer();
-      }
-    },
-    
-    // 解析帖子内容数据（图片、标签等）
-    _parsePostContent() {
-      const post = this.properties.post;
-      if (!post) return;
-      
-      // 处理用户信息
-      let userData = post.user || {};
-      // 如果帖子包含用户信息字段，但没有专门的user对象，创建一个
-      if (!post.user && (post.nickname || post.avatar || post.bio || post.openid)) {
-        userData = {
-          openid: post.openid,
-          nickname: post.nickname,
-          avatar: post.avatar,
-          bio: post.bio
-        };
-      }
-      
-      // 格式化发布时间
-      if (post.create_time) {
-        this.setData({
-          formattedTime: formatRelativeTime(post.create_time),
-          userData: userData
-        });
-      } else {
-        this.setData({
-          userData: userData
-        });
-      }
-      
-      // 解析图片数据
-      if (post.image && typeof post.image === 'string') {
-        try {
-          const images = JSON.parse(post.image);
-          if (Array.isArray(images)) {
-            this.setData({ 'post.images': images });
-          }
-        } catch (e) {}
-      }
-      
-      // 解析标签数据
-      if (post.tag && typeof post.tag === 'string') {
-        try {
-          const tags = JSON.parse(post.tag);
-          if (Array.isArray(tags)) {
-            this.setData({ 'post.tags': tags });
-          }
-        } catch (e) {}
-      }
-    },
-    
-    // 更新帖子状态数据
-    _updatePostData() {
-      const post = this.data.post;
-      if (!post) return;
-      
-      // 准备更新的数据对象，只包含有效值
-      const updateData = {};
-      
-      // 只有当值不是 undefined 时才设置
-      if (post.is_liked !== undefined) {
-        updateData.is_liked = post.is_liked;
-      }
-      
-      if (post.is_favorited !== undefined) {
-        updateData.is_favorited = post.is_favorited;
-      }
-      
-      if (post.is_following !== undefined) {
-        updateData.is_following = post.is_following;
-      }
-      
-      // 只有在有数据需要更新时才调用 setData
-      if (Object.keys(updateData).length > 0) {
-        this.setData(updateData);
-      }
-    },
-    
-    // 从服务器获取最新帖子状态
+    // 从服务器更新帖子状态
     async _updateFromServer() {
-      const postId = this.data.post?.id;
-      if (!postId) return;
+      if (!this.properties.post?.id) return;
       
       try {
-        // 使用postBehavior中的_getPostStatus获取最新状态
-        const res = await this._getPostStatus(postId);
+        const postId = this.properties.post.id;
+        const openid = storage.get('openid');
         
-        if (res && res.code === 200 && res.data) {
-          // 更新帖子状态
-          const statusData = res.data[postId] || {};
+        if (openid) {
+          // 不需要传递openid参数，postBehavior中的_getPostStatus会自动获取openid
+          const res = await this._getPostStatus(postId);
           
-          // 准备更新的数据对象，只包含有效值
-          const updateData = {};
-          
-          // 直接使用后端返回的值和字段名，但要检查是否为 undefined
-          if (statusData.is_liked !== undefined) {
-            updateData['post.is_liked'] = statusData.is_liked;
-          }
-          
-          if (statusData.like_count !== undefined) {
-            updateData['post.like_count'] = statusData.like_count;
-          }
-          
-          if (statusData.is_favorited !== undefined) {
-            updateData['post.is_favorited'] = statusData.is_favorited;
-          }
-          
-          if (statusData.favorite_count !== undefined) {
-            updateData['post.favorite_count'] = statusData.favorite_count;
-          }
-          
-          if (statusData.is_following !== undefined) {
-            updateData['post.is_following'] = statusData.is_following;
-          }
-          
-          // 只有在有数据需要更新时才调用 setData
-          if (Object.keys(updateData).length > 0) {
-            this.setData(updateData, () => {
-              // 更新UI状态标志 - 精简后只需要调用一次
-              this._updatePostData();
+          if (res?.code === 200 && res.data) {
+            // 更新状态数据，按照API文档中的规范解构
+            const { is_liked, is_favorited, is_following, like_count, favorite_count, comment_count } = res.data;
+            
+            this.setData({
+              'post.is_liked': !!is_liked,
+              'post.is_favorited': !!is_favorited,
+              'post.is_following': !!is_following,
+              'post.like_count': like_count || 0,
+              'post.favorite_count': favorite_count || 0,
+              'post.comment_count': comment_count || 0
             });
           }
         }
       } catch (err) {
-        // 忽略错误
+        console.debug('获取帖子状态失败:', err);
       }
     },
     
-    // 检查内容是否超出，基于长度判断是否需要显示展开按钮
+    // 检查内容是否超出
     checkContentOverflow() {
       // 详情页始终展开
       if (this.properties.detailPage) {
@@ -292,61 +114,55 @@ Component({
         return;
       }
       
-      const content = this.data.post?.content;
-      if (!content || content.trim() === '') {
+      const content = this.properties.post?.content;
+      if (!content) {
         this.setData({ contentOverflow: false });
         return;
       }
       
-      // 判断纯文本长度，超过50个字符就显示展开按钮
-      // 这个阈值设置较小，因为我们希望在首页预览时内容固定高度
       const textLength = content.trim().length;
-      
-      // 默认阈值
-      const threshold = 50; 
-      
-      // 内容超出判断标准
-      let isLongContent = textLength > threshold;
-      
-      // 对于Markdown内容有特殊处理
-      if (this.data.isMarkdown) {
-        // 如果包含标题、列表、代码块等结构化内容，视为长内容
-        const hasMultipleHeaders = (content.match(/#{1,6}\s/g) || []).length > 0;
-        const hasList = content.includes('- ') || content.includes('* ') || content.includes('1. ');
-        const hasCodeBlock = content.includes('```');
-        
-        isLongContent = isLongContent || hasMultipleHeaders || hasList || hasCodeBlock;
-      }
-      
-      // 对于非常短的内容，不显示展开按钮
-      if (textLength < 20) {
-        isLongContent = false;
-      }
-      
-      this.setData({ contentOverflow: isLongContent });
+      // 长度超过50，但不要对短于20的内容显示展开按钮
+      this.setData({ contentOverflow: textLength > 50 && textLength >= 20 });
     },
     
     // 展开/收起内容
     _onExpandTap() {
-      this.setData({ contentExpanded: !this.data.contentExpanded });
+      this.setData({ contentExpanded: !this.properties.contentExpanded });
     },
     
     // 点击头像或作者
     _onAvatarTap() {
-      const openid = this.data.post?.openid;
+      const post = this.properties.post;
+      if (!post) return;
+      
+      // 首先尝试直接从post对象获取openid
+      const openid = post?.openid || (post?.user?.openid);
+      
       if (openid) {
-        wx.navigateTo({ url: `/pages/profile/profile?openid=${openid}` });
+        console.debug('头像点击跳转，openid:', openid);
+        
+        // 将openid存入缓存，防止URL参数失效时作为备用
+        storage.set('temp_profile_openid', openid);
+        
+        // 使用reLaunch跳转到profile页面，直接在URL中传递openid参数
+        wx.reLaunch({
+          url: `/pages/profile/profile?openid=${openid}`,
+          fail: (err) => {
+            console.error('跳转到个人主页失败:', err);
+          }
+        });
       }
     },
     
-    // 点击作者
+    // 点击作者名称
     _onAuthorTap() {
+      // 复用头像点击方法
       this._onAvatarTap();
     },
     
     // 点击帖子
     _onPostTap() {
-      const postId = this.data.post?.id;
+      const postId = this.properties.post?.id;
       if (postId) {
         wx.navigateTo({ url: `/pages/post/detail/detail?id=${postId}` });
       }
@@ -355,7 +171,7 @@ Component({
     // 点击图片
     _onImageTap(e) {
       const { index } = e.currentTarget.dataset;
-      const urls = this.data.post?.images || [];
+      const urls = this.properties.post?.images || [];
       wx.previewImage({ current: urls[index], urls });
     },
     
@@ -366,154 +182,101 @@ Component({
     },
     
     // 点赞
-    _onLikeTap() {
-      if (this.data.isProcessing) return;
+    async _onLikeTap() {
+      if (this.properties.isProcessing) return;
       
-      const postId = this.data.post?.id;
+      const postId = this.properties.post?.id;
       if (!postId) return;
       
-      // 检查用户登录状态
-      const openid = this.getStorage('openid');
+      const openid = storage.get('openid');
       if (!openid) {
         this.showToast('请先登录', 'error');
         return;
       }
       
-      // 设置处理中状态，避免重复点击
       this.setData({ isProcessing: true });
       
-      // 预先更新UI状态，提供即时反馈
-      const new_is_liked = !this.data.is_liked;
-      const newLikeCount = this.data.post.like_count + (new_is_liked ? 1 : -1);
-      
-      this.setData({
-        is_liked: new_is_liked,
-        'post.is_liked': new_is_liked,
-        'post.like_count': newLikeCount >= 0 ? newLikeCount : 0
-      });
-      
-      // 调用API发送请求
-      this._likePost(postId)
-        .then(res => {
-          if (res && res.code === 200) {
-            // 触发事件通知父组件刷新数据
-            this.triggerEvent('like', {
-              id: postId,
-              refreshNeeded: true
-            });
-            
-            // 如果在详情页则完整刷新状态
-            if (this.properties.detailPage) {
-              this._updateFromServer();
-            }
-          } else {
-            // 操作失败，恢复原状态
-            this.setData({
-              is_liked: !new_is_liked,
-              'post.is_liked': !new_is_liked,
-              'post.like_count': this.data.post.like_count + (!new_is_liked ? 1 : -1)
-            });
-            this.showToast('操作失败', 'error');
-          }
-        })
-        .catch(err => {
-          console.debug('点赞请求失败', err);
-          // 恢复原状态
+      try {
+        const res = await this._likePost(postId);
+        
+        // 点赞成功后更新UI状态
+        if (res && res.code === 200 && res.data) {
+          // API返回的数据格式：{ is_liked: true/false, like_count: 数量 }
+          const { is_liked, like_count } = res.data;
+          
+          // 更新UI显示，使用typeof判断是否存在like_count字段
           this.setData({
-            is_liked: !new_is_liked,
-            'post.is_liked': !new_is_liked,
-            'post.like_count': this.data.post.like_count + (!new_is_liked ? 1 : -1)
+            'post.is_liked': !!is_liked,
+            'post.like_count': typeof like_count === 'number' ? like_count : this.properties.post.like_count || 0
           });
-          this.showToast('网络异常', 'error');
-        })
-        .finally(() => {
-          this.setData({ isProcessing: false });
-        });
+          
+          // 输出调试信息
+          console.debug('点赞操作结果:', res.data, '，UI已更新为:', this.data.post.is_liked, this.data.post.like_count);
+        }
+      } catch (err) {
+        console.error('点赞失败:', err);
+        this.showToast('点赞失败', 'error');
+      } finally {
+        this.setData({ isProcessing: false });
+      }
     },
     
     // 收藏
-    _onFavoriteTap() {
-      if (this.data.isProcessing) return;
+    async _onFavoriteTap() {
+      if (this.properties.isProcessing) return;
       
-      const postId = this.data.post?.id;
+      const postId = this.properties.post?.id;
       if (!postId) return;
       
-      // 检查用户登录状态
-      const openid = this.getStorage('openid');
+      const openid = storage.get('openid');
       if (!openid) {
         this.showToast('请先登录', 'error');
         return;
       }
       
-      // 设置处理中状态，避免重复点击
       this.setData({ isProcessing: true });
       
-      // 预先更新UI状态，提供即时反馈
-      const new_is_favorited = !this.data.is_favorited;
-      const newFavoriteCount = this.data.post.favorite_count + (new_is_favorited ? 1 : -1);
-      
-      this.setData({
-        is_favorited: new_is_favorited,
-        'post.is_favorited': new_is_favorited,
-        'post.favorite_count': newFavoriteCount >= 0 ? newFavoriteCount : 0
-      });
-      
-      // 调用API发送请求
-      this._favoritePost(postId)
-        .then(res => {
-          if (res && res.code === 200) {
-            // 触发事件通知父组件刷新数据
-            this.triggerEvent('favorite', {
-              id: postId,
-              refreshNeeded: true
-            });
-            
-            // 如果在详情页则完整刷新状态
-            if (this.properties.detailPage) {
-              this._updateFromServer();
-            }
-          } else {
-            // 操作失败，恢复原状态
-            this.setData({
-              is_favorited: !new_is_favorited,
-              'post.is_favorited': !new_is_favorited,
-              'post.favorite_count': this.data.post.favorite_count + (!new_is_favorited ? 1 : -1)
-            });
-            this.showToast('操作失败', 'error');
-          }
-        })
-        .catch(err => {
-          console.debug('收藏请求失败', err);
-          // 恢复原状态
+      try {
+        const res = await this._favoritePost(postId);
+        
+        // 收藏成功后更新UI状态
+        if (res && res.code === 200 && res.data) {
+          // API返回的数据格式：{ is_favorited: true/false, favorite_count: 数量 }
+          const { is_favorited, favorite_count } = res.data;
+          
+          // 更新UI显示，使用typeof判断是否存在favorite_count字段
           this.setData({
-            is_favorited: !new_is_favorited,
-            'post.is_favorited': !new_is_favorited,
-            'post.favorite_count': this.data.post.favorite_count + (!new_is_favorited ? 1 : -1)
+            'post.is_favorited': !!is_favorited,
+            'post.favorite_count': typeof favorite_count === 'number' ? favorite_count : this.properties.post.favorite_count || 0
           });
-          this.showToast('网络异常', 'error');
-        })
-        .finally(() => {
-          this.setData({ isProcessing: false });
-        });
+          
+          // 输出调试信息
+          console.debug('收藏操作结果:', res.data, '，UI已更新为:', this.data.post.is_favorited, this.data.post.favorite_count);
+        }
+      } catch (err) {
+        console.error('收藏失败:', err);
+        this.showToast('收藏失败', 'error');
+      } finally {
+        this.setData({ isProcessing: false });
+      }
     },
     
     // 评论
     _onCommentTap() {
-      const postId = this.data.post?.id;
+      const postId = this.properties.post?.id;
       if (postId) {
         wx.navigateTo({ url: `/pages/post/detail/detail?id=${postId}&focus=comment` });
       }
     },
     
     // 关注
-    _onFollowTap() {
-      if (this.data.isProcessing) return;
+    async _onFollowTap() {
+      if (this.properties.isProcessing) return;
       
-      const post = this.data.post;
+      const post = this.properties.post;
       if (!post?.openid) return;
       
-      // 检查用户登录状态
-      const openid = this.getStorage('openid');
+      const openid = storage.get('openid');
       if (!openid) {
         this.showToast('请先登录', 'error');
         return;
@@ -525,71 +288,95 @@ Component({
         return;
       }
       
-      // 设置处理中状态，避免重复点击
       this.setData({ isProcessing: true });
       
-      // 预先更新UI状态，提供即时反馈
-      const new_is_following = !this.data.is_following;
-      
-      this.setData({
-        is_following: new_is_following,
-        'post.is_following': new_is_following
-      });
-      
-      // 调用API发送请求
-      this._toggleFollow(post.openid)
-        .then(res => {
-          if (res?.success) {
-            // 只在详情页面由post-item自己刷新状态
-            if (this.properties.detailPage) {
-              this._updateFromServer();
-            }
-            this.showToast(res.is_following ? '关注成功' : '已取消关注', 'success');
-            
-            // 触发事件通知父组件刷新数据
-            this.triggerEvent('follow', {
-              id: post.id,
-              authorId: post.openid,
-              is_following: new_is_following
-            });
-          } else {
-            // 操作失败，恢复原状态
-            this.setData({
-              is_following: !new_is_following,
-              'post.is_following': !new_is_following
-            });
-            this.showToast('操作失败', 'error');
-          }
-        })
-        .catch(err => {
-          // 恢复原状态
-          this.setData({
-            is_following: !new_is_following,
-            'post.is_following': !new_is_following
-          });
-          this.showToast('网络异常', 'error');
-        })
-        .finally(() => {
-          this.setData({ isProcessing: false });
+      try {
+        // 简化调用，userBehavior中的_toggleFollow会自动获取当前用户的openid
+        const res = await this._toggleFollow({
+          followed_id: post.openid
         });
+        
+        // 根据返回结果更新关注状态
+        if (res && res.code === 200 && res.data) {
+          // 直接使用API返回的is_following字段更新状态
+          const { is_following } = res.data;
+          // 更新UI状态
+          this.setData({
+            'post.is_following': !!is_following
+          });
+        }
+      } catch (err) {
+        console.error('关注失败:', err);
+        this.showToast('关注失败', 'error');
+      } finally {
+        this.setData({ isProcessing: false });
+      }
     },
     
     // 查看更多评论
     _onViewMoreComments() {
-      const postId = this.data.post?.id;
+      const postId = this.properties.post?.id;
       if (postId) {
         wx.navigateTo({ url: `/pages/post/detail/detail?id=${postId}&tab=comment` });
       }
     },
     
-    // 分享
-    _onShareTap() {
-      // 在这里可以添加分享成功后的处理逻辑
-      const postId = this.data.post?.id;
-      if (postId) {
-        // 如果需要记录分享事件，可以在这里处理
-        console.debug('分享按钮点击');
+    // 解析JSON字段
+    _parseJsonFields(post) {
+      if (!post) return;
+      
+      // 解析图片和标签
+      ['image', 'tag'].forEach(field => {
+        if (post[field] && typeof post[field] === 'string') {
+          const parsed = parseJsonField(post[field], []);
+          if (parsed.length > 0) {
+            // image -> images, tag -> tags
+            this.setData({ [`post.${field}s`]: parsed });
+          }
+        }
+      });
+    },
+    
+    // 检查内容是否需要展开按钮
+    _checkContentOverflow(content) {
+      if (!content) {
+        this.setData({ 
+          contentOverflow: false,
+          previewHeight: 60
+        });
+        return;
       }
+      
+      const contentLength = content.trim().length;
+      
+      // 设置基础高度并判断是否需要展开按钮
+      // 短内容直接适应高度，不需要展开按钮
+      // 长内容设置一个合理的初始高度，需要展开按钮
+      if (contentLength <= 50) {
+        // 短内容，设置较小的初始高度，让autoHeight生效，不显示展开按钮
+        this.setData({
+          previewHeight: 120,
+          contentOverflow: false
+        });
+      } else if (contentLength <= 150) {
+        // 中等内容，设置较小的初始高度并显示展开按钮
+        this.setData({
+          previewHeight: 160,
+          contentOverflow: true
+        });
+      } else {
+        // 长内容，设置较大的初始高度并显示展开按钮
+        const highPreviewHeight = contentLength > 300 ? 250 : 200;
+        this.setData({
+          previewHeight: highPreviewHeight,
+          contentOverflow: true
+        });
+      }
+    },
+    
+    // 空方法，用于阻止事件冒泡而不执行任何操作
+    _catchBubble() {
+      // 不执行任何操作，仅用于阻止事件冒泡
     }
   }
 }); 

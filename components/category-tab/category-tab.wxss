@@ -66,9 +66,11 @@
   opacity: 0.8;
 }
 
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  color: transparent;
+/* 隐藏滚动条 */
+.tab-container {
+  scrollbar-width: none; /* Firefox */
+}
+
+.tab-container::-webkit-scrollbar {
+  display: none; /* WebKit/Blink浏览器 */
 } 

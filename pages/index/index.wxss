@@ -16,19 +16,3 @@ page {
   padding: 0 10rpx;
   box-sizing: border-box;
 }
-
-/* 悬浮发帖按钮样式 */
-.floating-button {
-  position: fixed;
-  right: 30rpx;
-  bottom: 160rpx;
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 50%;
-  background-color: #1aad19;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(26, 173, 25, 0.4);
-  z-index: 999;
-}

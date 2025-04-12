@@ -27,6 +27,4 @@
       style="{{color ? 'color:' + color + ';' : ''}}"
     ></view>
   </block>
-  <!-- 涟漪效果 -->
-  <view wx:if="{{showRipple}}" class="ripple"></view>
 </view> 

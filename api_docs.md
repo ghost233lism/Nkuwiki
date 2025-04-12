@@ -506,18 +506,8 @@ API接口的参数类型规范如下：
 **响应**：
 
 ```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "status": "success",
-    "follow_count": 11,
-    "follower_count": 21,
-    "is_following": true
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
+{"code":200,"message":"success","data":{"success":true,"status":"followed","is_following":true},"details":{"message":"关注成功"},"timestamp":"2025-04-12T21:10:26.320996","pagination":null}
+{"code":200,"message":"success","data":{"success":true,"status":"unfollowed","is_following":false},"details":{"message":"取消关注成功"},"timestamp":"2025-04-12T21:10:01.431815","pagination":null}
 ```
 
 
@@ -904,77 +894,12 @@ API接口的参数类型规范如下：
 **响应**：
 
 ```json
-{
-  "code": 200,
-  "message": "success",
-  "details": {
-    "like_count": 6,
-    "message": "点赞成功"
-  },
-  "data": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
+{"code":200,"message":"success","data":{"success":true,"status":"liked","like_count":1,"is_liked":true},"details":{"message":"点赞成功"},"timestamp":"2025-04-12T20:56:23.008762","pagination":null}
+{"code":200,"message":"success","data":{"success":true,"status":"unliked","like_count":0,"is_liked":false},"details":{"message":"取消点赞成功"},"timestamp":"2025-04-12T20:56:14.207527","pagination":null}
+
 ```
 
-**错误响应**：当已经点赞过该帖子时
-
-```json
-{
-  "code": 400,
-  "message": "Bad request",
-  "data": null,
-  "details": {
-    "message": "已经点赞，请勿重复点赞"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 2.7 取消点赞帖子
-
-**接口**：`POST /api/wxapp/post/unlike`  
-**描述**：取消对帖子的点赞  
-**请求体**：
-```json
-{
-  "post_id": 1,
-  "openid": "用户openid"
-}
-```
-
-**响应**：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "success": true,
-    "like_count": 5,
-    "is_liked": false
-  },
-  "details": {
-    "message": "取消点赞成功"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-**错误响应**：当未点赞该帖子时
-
-```json
-{
-  "code": 400,
-  "message": "Bad request",
-  "data": null,
-  "details": {
-    "message": "未点赞，无法取消点赞"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 2.8 收藏帖子
+### 2.7 收藏帖子
 
 **接口**：`POST /api/wxapp/post/favorite`  
 **描述**：收藏帖子或取消收藏（如果已收藏）  
@@ -990,49 +915,13 @@ API接口的参数类型规范如下：
 **响应**：
 
 ```json
-{
-  "code": 200,
-  "message": "success",
-  "details": {
-    "favorite_count": 3,
-    "is_favorited": true
-  },
-  "data": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
+{"code":200,"message":"success","data":{"success":true,"status":"favorited","favorite_count":1,"is_favorited":true},"details":{"message":"收藏成功"},"timestamp":"2025-04-12T20:54:08.462333","pagination":null}
 ```
-
-### 2.9 取消收藏帖子
-
-**接口**：`POST /api/wxapp/post/unfavorite`  
-**描述**：取消收藏帖子  
-**请求体**：
 ```json
-{
-  "post_id": 1,
-  "openid": "用户openid"
-}
-```
+{"code":200,"message":"success","data":{"success":true,"status":"unfavorited","favorite_count":0,"is_favorited":false},"details":{"message":"取消收藏成功"},"timestamp":"2025-04-12T20:54:22.807428","pagination":null}
+```    
 
-**响应**：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "success": true,
-    "favorite_count": 2,
-    "is_favorited": false
-  },
-  "details": {
-    "message": "取消收藏成功"
-  },
-  "timestamp": "2023-01-01 12:00:00"
-}
-```
-
-### 4.5 获取帖子互动状态
+### 2.8 获取帖子互动状态
 
 **接口**：`GET /api/wxapp/post/status`  
 **描述**：获取用户与帖子的交互状态（是否点赞、收藏等）  
@@ -1043,20 +932,9 @@ API接口的参数类型规范如下：
 **响应**：
 
 ```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "is_liked": true,
-    "is_favorited": false,
-    "like_count": 5,
-    "favorite_count": 2,
-    "comment_count": 10
-  },
-  "details": null,
-  "timestamp": "2023-01-01 12:00:00"
-}
+{"code":200,"message":"success","data":{"20":{"exist":true,"is_liked":false,"is_favorited":false,"is_author":false,"is_following":false,"like_count":0,"favorite_count":0,"comment_count":0,"view_count":2}},"details":null,"timestamp":"2025-04-12T21:08:44.098526","pagination":null}
 ```
+
 
 ## 三、评论接口
 

@@ -57,30 +57,48 @@
   margin-left: 16rpx;
 }
 
-.edit-btn, .follow-btn {
+.edit-btn {
   min-width: 140rpx;
   height: 60rpx;
   line-height: 60rpx;
   font-size: 26rpx;
   padding: 0 20rpx;
   border-radius: 30rpx;
-}
-
-.edit-btn {
   color: #666;
   background-color: #f5f5f5;
   border: 1rpx solid #e0e0e0;
 }
 
-.follow-btn {
-  color: #fff;
-  background-color: #1890ff;
+.follow-button {
+  min-width: 60rpx;
+  max-width: 120rpx;
+  width: auto;
+  height: 52rpx;
+  line-height: 52rpx;
+  border-radius: 26rpx;
+  padding: 0 14rpx;
+  text-align: center;
+  font-size: 24rpx;
+  background-color: #e8f8ed;
+  color: #07c160;
+  border: none;
+  box-sizing: border-box;
+  margin: 0;
 }
 
-.follow-btn.followed {
-  color: #1890ff;
-  background-color: #e6f7ff;
-  border: 1rpx solid #1890ff;
+/* 覆盖按钮的默认样式 */
+.follow-button::after {
+  border: none;
+}
+
+button.follow-button {
+  margin: 0;
+  padding: 0 14rpx;
+}
+
+.follow-button.followed {
+  background-color: #f2f2f2;
+  color: #999;
 }
 
 .user-stats {

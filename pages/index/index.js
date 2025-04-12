@@ -33,12 +33,19 @@ Page({
     searchHistory: [],
     showSearchResult: false,
     isSearching: false,
-  
-    retryLastOperation: null, 
+    loading: false,
+    loadingText: '',
+    loadingType: '',
+    error: false,
+    errorText: '',
   },
 
   async onLoad() {
-    this.showLoading('加载中...', 'page');
+    this.setData({
+      loading: true,
+      loadingText: '加载中...',
+      loadingType: 'page'
+    });
     
     try {
       // 帖子加载完后再进行登录检查和通知检查
@@ -53,9 +60,14 @@ Page({
         console.debug('登录检查失败', err);
       });
     } catch (err) {
-      this.showError('加载失败，请下拉刷新重试');
+      this.setData({
+        error: true,
+        errorText: '加载失败，请下拉刷新重试'
+      });
     } finally {
-      this.hideLoading();
+      this.setData({
+        loading: false
+      });
     }
   },
   
@@ -92,17 +104,24 @@ Page({
       }
       
       // 如果有错误或超过60秒没刷新，才刷新帖子状态
-      
-      // 如果有错误或超过60秒没刷新，才刷新帖子状态
       if (this.data.error || now - lastShowTime > 60000) {
-        this.hideError();
+        this.setData({
+          error: false,
+          errorText: ''
+        });
         
-        // 延迟执行确保DOM已更新
-        setTimeout(() => {
-          this._refreshPostStatus();
-        }, 100);
+        // 获取帖子列表组件并刷新状态
+        const postList = this.selectComponent('#postList');
+        if (postList && postList.data.post && postList.data.post.length > 0) {
+          // 更新帖子状态
+          postList.updatePostsStatus(postList.data.post);
+        } else if (postList && !postList.data.loading) {
+          // 如果没有帖子且不在加载状态，则加载数据
+          postList.loadInitialData();
+        }
       }
     } catch (err) {
+      console.debug('onShow错误:', err);
     }
   },
 
@@ -139,14 +158,6 @@ Page({
     } else {
       // 点击不同分类，正常切换
       this.switchCategory(categoryId);
-    }
-  },
-    
-  // post-list组件的重试回调
-  onRetry() {
-    const postList = this.selectComponent('#postList');
-    if (postList) {
-      postList.loadInitialData();
     }
   },
 
@@ -195,56 +206,6 @@ Page({
     }).catch(err => {
     });
   },
-  // 刷新帖子状态
-  async _refreshPostStatus() {
-    try {
-      // 检查是否最近已刷新过
-      const lastRefreshTime = this.data._lastRefreshTime || 0;
-      const now = Date.now();
-      
-      // 如果60秒内已刷新过，跳过本次刷新
-      if (now - lastRefreshTime < 60000) {
-        return;
-      }
-      
-      // 更新最后刷新时间
-      this.setData({ _lastRefreshTime: now });
-      
-      // 获取帖子列表组件
-      const postList = this.selectComponent('#postList');
-      if (!postList) {
-        return;
-      }
-      
-      // 获取当前帖子列表
-      const posts = postList.data.post || [];
-      
-      // 如果帖子列表为空，检查是否需要加载数据
-      if (posts.length === 0) {
-        // 检查loading状态，如果不是正在加载，则重新加载
-        if (!postList.data.loading) {
-          // 设置post数组为响应数据中的data数组
-          postList.loadInitialData();
-        }
-        return;
-      }
-      
-      // 获取所有帖子ID
-      const postIds = posts.map(p => p.id).filter(Boolean);
-      if (postIds.length === 0) {
-        return;
-      }
-      
-      // 调用API获取帖子状态
-      const statusRes = await this._getPostStatus(postIds);
-      
-      if (statusRes && statusRes.code === 200 && statusRes.data) {
-        // 更新帖子状态
-        postList.updatePostsStatus(posts);
-      }
-    } catch (err) {
-    }
-  },
 
   // 统一处理分类切换
   switchCategory(categoryId) {
@@ -256,11 +217,13 @@ Page({
       }
     });
 
-    // 刷新帖子列表，使用平滑加载避免闪烁
+    // 刷新帖子列表，直接设置filter属性
     const postList = this.selectComponent('#postList');
     if (postList) {
-      postList.updateFilter({
-        category_id: categoryId
+      postList.setData({
+        filter: {
+          category_id: categoryId
+        }
       });
     }
   },

@@ -1,33 +1,76 @@
-<view class="btn-content {{text && !icon ? 'text-only' : ''}}" 
+<wxs module="utils">
+function getIconSize(size, floating) {
+  if (floating) {
+    if (size === 'large') return 52;
+    if (size === 'medium') return 40;
+    if (size === 'mini') return 32;
+    return 40; // 默认值
+  }
+  
+  // 非悬浮按钮的图标尺寸
+  if (size === 'large') return 48;
+  if (size === 'medium') return 38;
+  if (size === 'mini') return 32;
+  return 38;
+}
+
+function getIconColor(type, disabled) {
+  if (disabled) return '#999';
+  if (type === 'primary' || type === 'warn') return '#fff';
+  if (type === 'secondary') return '#07c160';
+  return '#333'; // 默认颜色
+}
+
+function getTextColor(type, textColor, disabled) {
+  if (disabled) return '#999';
+  if (textColor) return textColor;
+  if (type === 'primary' || type === 'warn') return '#fff';
+  if (type === 'secondary') return '#07c160';
+  return '#333';
+}
+
+module.exports = {
+  getIconSize: getIconSize,
+  getIconColor: getIconColor,
+  getTextColor: getTextColor
+};
+</wxs>
+
+<button 
+  class="btn-content {{floating ? 'floating ' + floatingPosition : ''}} {{type ? 'type-' + type : ''}} {{size ? 'size-' + size : ''}} {{shape ? shape : ''}} {{disabled ? 'disabled' : ''}}"
+  hover-class="{{!disabled ? 'button-hover' : ''}}"
+  disabled="{{disabled}}"
+  loading="{{loading}}"
+  open-type="{{openType}}"
   bindtap="onClick"
-  data-opentype="{{openType}}"
-  style="min-width:{{icon ? icon.size + 20 : 0}}rpx; {{icon ? 'height:' + icon.size + 'rpx;' : ''}}"
->
-  <view class="icon-count-wrapper">
-    <!-- 图标显示 -->
-    <block wx:if="{{icon}}">
-      <icon 
-        name="{{icon.name}}"
-        size="{{icon.size}}"
-        color="{{icon.color}}"
-        useImage="{{icon.useImage}}"
-        imageSrc="{{icon.imageSrc}}"
-      />
-    </block>
+  bindgetuserinfo="onGetUserInfo"
+  bindgetphonenumber="onGetPhoneNumber"
+  bindopensetting="onOpenSetting"
+  bindchooseavatar="onChooseAvatar">
+
+  <view class="{{floating ? 'floating-content' : 'icon-count-wrapper'}}">
+    <!-- 悬浮按钮的图标 -->
+    <icon 
+      wx:if="{{floating}}"
+      name="add" 
+      color="#ffffff" 
+      size="36"
+      class="floating-icon"
+    />
     
-    <!-- 计数显示 -->
-    <block wx:if="{{showCount && (!hideZero || count > 0)}}">
-      <!-- 文本样式 -->
-      <text class="text-count">{{count > maxCount ? maxCount + '+' : count}}</text>
-    </block>
-  </view>
-  
-  <!-- 文本显示 -->
-  <block wx:if="{{text}}">
-    <text class="btn-text {{textType ? 'text-' + textType : ''}}" 
-      style="font-size:{{textSize}}rpx; color:{{textColor || '#333'}}; {{textBackground ? 'background-color:' + textBackground + ';' : ''}} {{textBackground ? 'padding:6rpx 16rpx;' : ''}} {{textBackground ? 'border-radius:22rpx;' : ''}}"
+    <!-- 普通按钮的图标 -->
+    <icon 
+      wx:elif="{{icon}}" 
+      name="{{icon.name}}" 
+      color="{{icon.color || utils.getIconColor(type, disabled)}}" 
+      size="{{icon.size || utils.getIconSize(size, floating)}}"
+    />
+    
+    <!-- 文本内容 -->
+    <text 
+      wx:if="{{text && !floating}}" 
+      class="btn-text" 
+      style="color: {{utils.getTextColor(type, textColor, disabled)}}; font-size: {{textSize}}rpx;"
     >{{text}}</text>
-  </block>
-  
-  <slot></slot>
-</view> 
+  </view>
+</button> 
