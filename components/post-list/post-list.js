@@ -166,19 +166,19 @@ Component({
           const pagination = result.pagination || {};
           
           // 更新数据
-          this.setData({
+          await this.setData({
             post: posts,
             hasMore: pagination.has_more !== undefined ? pagination.has_more : (posts.length >= this.data.page_size),
             total: pagination.total || 0,
             total_pages: pagination.total_pages || 0,
             empty: posts.length === 0
-          }, () => {
+          }, async () => {
             // 重置状态更新时间，确保获取最新状态
             this.setData({ _lastStatusUpdateTime: 0 });
             
             // 直接在回调中更新状态
             if (posts.length > 0) {
-              this.updatePostsStatus(posts);
+              await this.updatePostsStatus(posts);
             }
             
             // 在平滑加载模式下，数据加载完成后恢复透明度

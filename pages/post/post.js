@@ -20,7 +20,6 @@ Page({
       images: [],
       isPublic: true,
       allowComment: true,
-      wikiKnowledge: false,
       category_id: 1,
       tags: []
     },
@@ -38,32 +37,8 @@ Page({
     showCustomTagInput: false,
     forceRefresh: 0,
 
-    // --- Form Rules ---
+    // --- 统一验证规则 ---
     rules: {
-      title: [
-        { required: true, message: '请输入标题' },
-        { min: 2, message: '标题至少2个字' },
-        { max: 50, message: '标题最多50个字' }
-      ],
-      content: [
-        { required: true, message: '请输入内容' },
-        { min: 10, message: '内容至少10个字' }
-      ]
-    },
-
-    // 标准模式和Markdown模式的规则
-    normalRules: {
-      title: [
-        { required: true, message: '请输入标题' },
-        { min: 2, message: '标题至少2个字' },
-        { max: 50, message: '标题最多50个字' }
-      ],
-      content: [
-        { required: true, message: '请输入内容' },
-        { min: 10, message: '内容至少10个字' }
-      ]
-    },
-    markdownRules: {
       content: [
         { required: true, message: '请输入内容' },
         { min: 10, message: '内容至少10个字' }
@@ -110,14 +85,8 @@ Page({
         icon: 'comment',
         text: '允许评论',
         iconSize: 24
-      },
-      {
-        field: 'wikiKnowledge',
-        icon: 'txt',
-        text: 'wiki小知识',
-        iconSize: 24
       }
-    ],
+    ]
   },
 
   async onLoad() {
@@ -130,8 +99,10 @@ Page({
     this.setData({
       'form.tags': [],
       tagSelected: {},
-      customTags: []
+      customTags: [],
+      canSubmit: false  // 初始状态设为false
     });
+
   },
 
   async initPage() {
@@ -146,7 +117,6 @@ Page({
       images: [],
       isPublic: true,
       allowComment: true,
-      wikiKnowledge: false,
       category_id: 1
     });
   },
@@ -158,7 +128,7 @@ Page({
     // 切换到Markdown模式
     this.setData({
       isMarkdownMode: true,
-      rules: this.data.markdownRules
+      rules: this.data.rules
     });
     
     // 验证表单
@@ -171,7 +141,7 @@ Page({
     // 切换到普通模式
     this.setData({
       isMarkdownMode: false,
-      rules: this.data.normalRules
+      rules: this.data.rules
     });
     
     // 从markdown内容中提取标题
@@ -203,23 +173,30 @@ Page({
 
   // 使用baseBehavior的validateForm方法
   validatePostForm() {
-    // 如果是Markdown模式，检查content中是否包含标题或者form.title是否有值
+    const content = this.data.form.content || '';
+    
+    // 检查内容是否为空
+    if (!content) {
+      this.setData({ canSubmit: false });
+      return false;
+    }
+    
+    // Markdown模式下自动处理标题
     if (this.data.isMarkdownMode) {
-      const content = this.data.form.content || '';
-      const hasMarkdownTitle = content.trim().match(/^#\s+.+$/m);
-      const hasFormTitle = !!this.data.form.title;
-      
-      // 如果内容不为空且（有Markdown标题或表单标题），则视为有效
-      if (content.length >= 10 && (hasMarkdownTitle || hasFormTitle)) {
-        this.setData({ canSubmit: true });
-        return true;
+      // 无需标题检查，只要有内容即可
+      this.setData({ canSubmit: true });
+      return true;
+    } else {
+      // 富文本模式需要检查标题
+      if (!this.data.form.title || this.data.form.title.length < 2) {
+        this.setData({ canSubmit: false });
+        return false;
       }
     }
     
-    // 常规验证
-    const isValid = this.validateForm(this.data.rules);
-    this.setData({ canSubmit: isValid });
-    return isValid;
+    // 验证通过，可以提交
+    this.setData({ canSubmit: true });
+    return true;
   },
   
   // 表单变更
@@ -268,6 +245,21 @@ Page({
     this.setData({
       tagSelected: newTagSelected,
       'form.tags': Object.keys(newTagSelected)
+    });
+  },
+  
+  // 显示标签输入框
+  showTagInput() {
+    this.setData({
+      showCustomTagInput: true
+    });
+  },
+  
+  // 隐藏标签输入框
+  hideTagInput() {
+    this.setData({
+      showCustomTagInput: false,
+      tagInputValue: ''
     });
   },
   
@@ -376,86 +368,65 @@ Page({
       return;
     }
 
+    // 显示加载组件
+    // const loadingComponent = this.selectComponent('#loading');
+    // if (loadingComponent) {
+    //   loadingComponent.showLoading({
+    //     text: '发布中...',
+    //     type: 'fullscreen',
+    //     mask: true
+    //   });
+    // }
+
     // 设置提交状态
     this.setData({ submitting: true });
 
     try {
       // 准备提交数据
       const formData = this.data.form;
-      let postData = {
-        content: formData.content,
+      let content = formData.content || '';
+      let title = formData.title || '无标题';
+      
+      // 处理标题
+      const hasMarkdownTitle = content.trim().match(/^#\s+(.+)$/m);
+      if (hasMarkdownTitle) {
+        // 已有标题，提取出来
+        title = hasMarkdownTitle[1].trim();
+      } else {
+        // 没有标题，添加一个
+        content = `# ${title}\n\n${content}`;
+      }
+      
+      // 构建API提交数据
+      const postData = {
+        title,
+        content,
         image: formData.images || [],
         category_id: formData.category_id || 1,
         is_public: formData.isPublic,
         allow_comment: formData.allowComment,
-        wiki_knowledge: formData.wikiKnowledge,
         tag: formData.tags || []
       };
-      
-      // 如果是Markdown模式，需要在content前面添加标题
-      if (this.data.isMarkdownMode) {
-        // 提取一个title供API使用
-        let titleForApi = formData.title || '无标题';
-        
-        // 检查content是否已有标题行
-        const titleMatch = postData.content.trim().match(/^#\s+(.+)$/m);
-        if (titleMatch && titleMatch[1]) {
-          // 如果内容中已经有标题，提取出来作为API的title参数
-          titleForApi = titleMatch[1].trim();
-        } else {
-          // 如果内容中没有标题，添加一个
-          const title = formData.title || '无标题';
-          postData.content = `# ${title}\n\n${postData.content}`;
-        }
-        
-        // 设置API需要的title参数
-        postData.title = titleForApi;
-      } else {
-        // 普通模式下，保持标题字段
-        postData.title = formData.title;
-      }
       
       // 提交帖子
       const result = await this._createPost(postData);
       
       if (result.code === 200) {
-        this._showToptips('发布成功', ToastType.SUCCESS);
+        // 显示发布成功提示
+        // wx.showToast({
+        //   title: '发布成功',
+        //   icon: 'success',
+        //   duration: 1500
+        // });
         
-        // 设置需要刷新首页帖子列表的标记
-        this.setStorage('needRefreshPosts', true);
-        
-        // 设置全局app变量，确保返回首页后立即刷新
-        const app = getApp();
-        if (app) {
-          app.globalData = app.globalData || {};
-          app.globalData.refreshPostList = true;
-        }
-        
-        // 延迟返回，等待显示成功提示
-        setTimeout(() => {
-          wx.switchTab({
-            url: '/pages/index/index',
-            success: () => {
-              // 尝试通过页面栈获取首页实例并触发刷新
-              const pages = getCurrentPages();
-              const indexPage = pages.find(p => p.route === 'pages/index/index');
-              if (indexPage) {
-                // 如果能获取到首页实例，直接调用其刷新方法
-                const postList = indexPage.selectComponent('#postList');
-                if (postList) {
-                  setTimeout(() => {
-                    postList.loadInitialData();
-                  }, 300);
-                }
-              }
-            }
-          });
-        }, 1500);
+        // 立即返回首页
+        wx.navigateBack();
       } else {
         throw new Error(result.message || '发布失败');
       }
     } catch (err) {
-      console.error('提交帖子失败:', err);
+      console.debug('提交帖子失败:', err);
+      
       this._showToptips(err.message || '发布失败，请稍后再试', ToastType.ERROR);
     } finally {
       this.setData({ submitting: false });
@@ -504,5 +475,16 @@ Page({
     } else {
       this.switchToNormalMode();
     }
-  }
+  },
+
+  // 分类选择
+  selectCategory(e) {
+    const { tab } = e.detail;
+    const categoryId = tab.category_id;
+    
+    this.setData({
+      categoryId,
+      'form.category_id': categoryId
+    });
+  },
 }); 

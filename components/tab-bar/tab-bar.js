@@ -48,7 +48,7 @@ Component({
     // 是否显示底部线条
     showLine: {
       type: Boolean,
-      value: true
+      value: false
     },
     // 是否可滚动
     scrollable: {
@@ -59,6 +59,11 @@ Component({
     equalWidth: {
       type: Boolean,
       value: false
+    },
+    // 自定义样式
+    customStyle: {
+      type: String,
+      value: ''
     }
   },
 

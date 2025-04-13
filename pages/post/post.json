@@ -8,8 +8,7 @@
     "mp-toptips": "/components/weui/toptips/toptips",
     "mp-badge": "/components/weui/badge/badge",
     "mp-dialog": "/components/weui/dialog/dialog",
-    "loading": "/components/loading/loading",
-    "button": "/components/button/button",
+    "icon": "/components/icon/icon",
     "category-tab": "/components/category-tab/category-tab",
     "tab-bar": "/components/tab-bar/tab-bar"
   }

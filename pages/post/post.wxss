@@ -1,4 +1,10 @@
-/* 页面容器 */
+/* ================= 变量定义 ================= */
+:root {
+  --setting-primary: #5853e2;
+  --setting-secondary: #6369e8;
+}
+
+/* ================= 基础布局 ================= */
 .post-container {
   display: flex;
   flex-direction: column;
@@ -7,43 +13,12 @@
   padding-bottom: 30rpx;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 8rpx 20rpx rgba(88, 83, 226, 0.5);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.4);
-  }
-}
-
-/* 为禁用状态添加注意动画 */
-@keyframes attention {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 4rpx 12rpx rgba(255, 149, 0, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 6rpx 16rpx rgba(255, 149, 0, 0.5);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 4rpx 12rpx rgba(255, 149, 0, 0.4);
-  }
-}
-
-/* 表单区域 */
+/* ================= 表单区域 ================= */
 .post-form {
-  padding: 20rpx;
+  padding: 20rpx 20rpx 10rpx;
   background-color: #fff;
   margin-top: 140rpx;
-  border-radius: 12rpx;
+  border-radius: 12rpx 12rpx 0 0;
   box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
@@ -54,243 +29,127 @@
   width: 100%;
 }
 
-.post-content {
-  width: 100%;
-  height: 300rpx;
-  font-size: 15px;
-  line-height: 1.5;
-  padding: 24rpx 0;
-}
-
-/* 图片预览 */
-.image-preview-list {
-  margin-top: 20rpx;
-}
-
-.preview-title {
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 10rpx;
-}
-
-.preview-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
-}
-
-.preview-item {
-  width: 180rpx;
-  height: 180rpx;
-  position: relative;
-  border-radius: 8rpx;
-  overflow: hidden;
-  background-color: #f8f8f8;
-}
-
-.preview-item image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* 公共部分 */
-.section-container {
+/* ================= 话题标签系统 ================= */
+.topic-section {
   background-color: #fff;
-  padding: 24rpx;
-  border-radius: 12rpx;
-  margin: 24rpx 20rpx;
+  padding: 0rpx 0 0rpx;
+  margin-top: 0;
+  border-radius: 0;
   box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
 .section-title {
   font-size: 30rpx;
   font-weight: 500;
-  margin-bottom: 24rpx;
   color: #333;
+  padding: 0 30rpx;
+  margin-bottom: 15rpx;
 }
 
-/* 标签栏样式 */
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
-  margin-bottom: 24rpx;
+  padding: 0 20rpx;
+  margin-top: 0;
+  gap: 20rpx;
 }
 
-.tag-badge {
-  background-color: #f5f5f5 !important;
-  color: #666 !important;
-  font-size: 26rpx !important;
-  font-weight: normal !important;
-  padding: 12rpx 24rpx !important;
-  border-radius: 30rpx !important;
-  margin: 0 !important;
+.tag-item,
+.tag-add-btn {
+  font-size: 28rpx;
+  padding: 12rpx 24rpx;
+  border-radius: 40rpx;
 }
 
-.tag-badge-active {
-  background-color: #5853e2 !important;
-  color: #ffffff !important;
-  font-size: 26rpx !important;
-  font-weight: 500 !important;
-  padding: 12rpx 24rpx !important;
-  border-radius: 30rpx !important;
-  margin: 0 !important;
+.tag-item {
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+.tag-item.active {
+  background-color: #f0f0ff;
+  border-color: var(--setting-primary);
 }
 
 .tag-input-container {
   display: flex;
   align-items: center;
-  border: 1px solid #eee;
-  border-radius: 30rpx;
-  padding: 8rpx 12rpx;
-  margin-top: 16rpx;
-  background: #f8f8f8;
+  padding: 20rpx 30rpx;
+  margin-top: 20rpx;
+  background-color: #f8f8f8;
 }
 
 .tag-input {
   flex: 1;
   height: 70rpx;
   font-size: 28rpx;
-  padding-left: 12rpx;
+  padding: 0 20rpx;
+  background: #fff;
+  border-radius: 8rpx;
 }
 
-.tag-add-btn {
-  padding: 8rpx 24rpx;
-  background: #5853e2;
+.tag-confirm-btn {
+  margin-left: 20rpx;
+  padding: 10rpx 30rpx;
+  background: var(--setting-primary);
   color: #fff;
-  font-size: 26rpx;
-  border-radius: 24rpx;
+  font-size: 28rpx;
+  border-radius: 8rpx;
 }
 
-.tag-tips {
-  font-size: 24rpx;
-  color: #999;
-}
-
-/* 自定义标签列表 */
-.custom-tag-list {
-  margin-top: 16rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
-
-/* 分类选择 */
-.category-section {
-  background-color: #fff;
-  padding: 24rpx;
+/* ================= 设置区域 ================= */
+.post-settings {
+  background: #fff;
   border-radius: 12rpx;
   margin: 24rpx 20rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
 }
 
-.category-list {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-}
-
-/* 底部设置 */
-.post-settings {
-  background-color: #fff;
-  padding: 24rpx;
+.setting-options {
+  background: #fff;
   border-radius: 12rpx;
-  margin: 24rpx 20rpx 100rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  margin: 0 10rpx 24rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
 }
 
 .settings-title {
   font-size: 28rpx;
+  color: #333;
   font-weight: 500;
   margin-bottom: 24rpx;
+}
+
+.setting-group,
+.setting-options {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx;
+}
+
+.setting-btn,
+.setting-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+  border-radius: 40rpx;
+  transition: all 0.2s;
+  background: #f8f8f8;
+}
+
+[class*="setting-"].active {
+  background: #f0f0ff !important;
+  border: 1px solid var(--setting-primary) !important;
+  color: var(--setting-primary);
+}
+
+.setting-text {
+  font-size: 28rpx;
   color: #333;
 }
 
-.setting-group {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  gap: 16rpx;
-  margin-top: 12rpx;
-}
-
-/* 设置按钮样式 */
-.setting-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column !important; /* 强制使用列布局 */
-  align-items: center;
-  justify-content: center;
-  padding: 24rpx 10rpx !important;
-  border-radius: 12rpx;
-  background-color: #f8f8f8 !important;
-  border: 1px solid transparent !important;
-  box-shadow: none;
-  margin: 0 !important;
-  line-height: normal !important;
-  transition: all 0.2s ease;
-}
-
-/* 按钮激活状态 */
-.setting-btn.active {
-  background-color: #f0f0ff !important;
-  border: 1px solid #5853e2 !important;
-}
-
-/* 按钮悬停状态 */
-.setting-btn-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-
-/* 按钮文本 */
-.setting-text {
-  font-size: 26rpx;
-  color: #666;
-  margin-top: 8rpx;
-}
-
-/* 激活按钮文本 */
-.setting-btn.active .setting-text {
-  color: #5853e2;
-  font-weight: 500;
-}
-
-/* Wiki小知识开关样式 */
-.wiki-item {
-  justify-content: space-between;
-  padding: 12rpx 16rpx;
-  height: 70rpx;
-  background-color: transparent;
-}
-
-.wiki-label {
-  display: flex;
-  align-items: center;
-}
-
-.wiki-label text {
-  font-size: 13px;
-  margin-left: 8rpx;
-}
-
-/* 提交按钮 */
-.submit-btn {
-  margin: 0 20rpx;
-  height: 88rpx !important;
-  font-size: 32rpx !important;
-  border-radius: 44rpx !important;
-  background: #5853e2 !important; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white !important;
-  font-weight: 500 !important;
-  box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.2);
-}
-
-/* 加载中遮罩 */
+/* ================= 加载状态 ================= */
 .loading-mask {
   position: fixed;
   top: 0;
@@ -304,35 +163,52 @@
   z-index: 1000;
 }
 
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 30rpx;
-  border-radius: 16rpx;
+/* ================= 第三方组件覆盖 ================= */
+.weui-cells {
+  margin: 0;
+  border-radius: 12rpx;
+  overflow: hidden;
 }
 
-.loading-content text {
-  color: white;
-  margin-top: 20rpx;
-  font-size: 28rpx;
+.weui-cell {
+  padding: 24rpx 30rpx !important;
+  position: relative;
 }
 
-/* 发布按钮容器 */
-.publish-btn-container {
-  padding: 20rpx;
-  margin-bottom: 30rpx;
+.weui-cell_switch .weui-cell__ft switch {
+  transform: scale(0.9);
+  margin-right: -5rpx;
 }
 
-button[text="发布"] {
-  width: 100% !important;
-  margin: 0 !important;
-  height: 88rpx !important;
-  line-height: 88rpx !important;
-  border-radius: 44rpx !important;
-  background-color: #5853e2 !important;
-  box-shadow: 0 4rpx 12rpx rgba(88, 83, 226, 0.3) !important;
+/* 在设置区域添加发布按钮专属样式 */
+button.setting-option {
+  background: var(--setting-primary) !important;
+  color: #fff !important;
+  font-weight: 500;
+  min-width: 160rpx;
+  box-shadow: 0 4rpx 16rpx rgba(88,83,226,0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+button.setting-option[type="primary"] {
+  background: var(--setting-primary) !important;
+}
+
+button.setting-option[disabled] {
+  background: #cccccc !important;
+  color: #999999 !important;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+button.setting-option:not([disabled]){
+  background:#07c160 !important;
+  color:rgb(226, 225, 225) !important;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+
+
 
 

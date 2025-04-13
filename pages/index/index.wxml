@@ -7,6 +7,7 @@
     showNotification="{{true}}"
 />
 
+
 <view class="container">
   <!-- 自定义搜索框，通过navBarHeight属性来调整位置 -->
   <search-bar

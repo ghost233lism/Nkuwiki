@@ -1,12 +1,14 @@
 <!-- 顶部导航栏 -->
 <nav-bar title="发布帖子" showBack="{{true}}" />
 
+
 <tab-bar
   tabs="{{tabTitles}}"
   activeTab="{{isMarkdownMode ? 1 : 0}}"
   equalWidth="{{true}}"
   fixed="{{true}}"
   bind:change="onModeTabChange"
+  customStyle="text-align: center;"
 />
 
 <view class="post-container">
@@ -36,82 +38,64 @@
     />
   </view>
 
-  <!-- 标签栏 -->
-  <view class="section-container">
-    <view class="section-title">选择话题</view>
+  <!-- 话题选择区域 -->
+  <view class="topic-section">
+    <!-- 标签栏 -->
     <view class="tag-list">
-      <view wx:for="{{['校园生活', '学习交流', '求助']}}" wx:key="*this" 
-            bindtap="selectTag" 
-            data-tag="{{item}}">
-        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
+      <view class="tag-item {{tagSelected['校园生活'] ? 'active' : ''}}" bindtap="selectTag" data-tag="校园生活">#校园生活</view>
+      <view class="tag-item {{tagSelected['学习交流'] ? 'active' : ''}}" bindtap="selectTag" data-tag="学习交流">#学习交流</view>
+      <view class="tag-item {{tagSelected['求助'] ? 'active' : ''}}" bindtap="selectTag" data-tag="求助">#求助</view>
+      
+      <!-- 自定义标签 -->
+      <view wx:for="{{customTags}}" wx:key="*this" 
+            class="tag-item active" 
+            bindtap="removeCustomTag" 
+            data-tag="{{item}}">#{{item}}</view>
+      
+      <!-- 添加标签按钮 -->
+      <view class="tag-add-item" bindtap="showTagInput">
+        <view class="tag-add-btn">#添加话题</view>
       </view>
     </view>
-
-    <!-- 自定义标签显示 -->
-    <view class="custom-tag-list" wx:if="{{customTags.length > 0}}">
-      <view wx:for="{{customTags}}" wx:key="*this" bindtap="removeCustomTag" data-tag="{{item}}">
-        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
-      </view>
-    </view>
-
-    <view class="tag-input-container">
+    
+    <!-- 标签输入框 -->
+    <view class="tag-input-container" wx:if="{{showCustomTagInput}}">
       <input 
         class="tag-input" 
         placeholder="输入话题名称，回车添加" 
         value="{{tagInputValue}}" 
+        focus="{{showCustomTagInput}}"
         bindinput="onTagInput" 
         bindconfirm="addTag"
+        bindblur="hideTagInput"
       />
-      <view class="tag-add-btn" bindtap="addTag">添加</view>
+      <view class="tag-confirm-btn" bindtap="addTag">添加</view>
     </view>
   </view>
 
   <!-- 分类选择 -->
-  <view class="section-container">
-    <view class="section-title">选择分类</view>
-    <category-tab
-      tabs="{{tabItems}}"
-      categoryId="{{categoryId}}"
-    />
-  </view>
+  <category-tab 
+    tabs="{{tabItems}}"
+    categoryId="{{categoryId}}"
+    bind:change="selectCategory"
+  />
 
-  <!-- 底部设置 -->
-  <view class="section-container">
-    <view class="section-title">发布设置</view>
-    <view class="setting-group">
-      <button 
-        wx:for="{{settingButtons}}" 
-        wx:key="field"
-        class="setting-btn {{form[item.field] ? 'active' : ''}}" 
-        icon="{{item.icon}}"
-        iconColor="{{form[item.field] ? '#5853e2' : '#666'}}"
-        iconSize="{{item.iconSize}}"
-        text="{{item.text}}"
-        textColor="{{form[item.field] ? '#5853e2' : '#666'}}"
-        textSize="26"
-        bindtap="onSwitchChange" 
-        data-field="{{item.field}}" 
-        data-value="{{!form[item.field]}}"
-      />
+  <!-- 底部设置选项和发布按钮放在同一行 -->
+  <view class="setting-options">
+    <view class="setting-option {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
+      <icon name="eye" color="{{form.isPublic ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
+      <text class="setting-text">公开</text>
     </view>
-  </view>
-
-  <!-- 发布按钮 -->
-  <button 
-    class="submit-btn"
-    text="发布"
-    textColor="#ffffff"
-    textSize="32"
-    disabled="{{!canSubmit || submitting}}"
-    loading="{{submitting}}"
-    bindtap="submitForm"
-  ></button>
-
-  <!-- 加载中状态 -->
-  <view class="loading-mask" wx:if="{{submitting}}">
-    <view class="loading-content">
-      <loading type="circle" color="#ffffff" />
-      <text>发布中...</text>
+    <view class="setting-option {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
+      <icon name="comment" color="{{form.allowComment ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
+      <text class="setting-text">允许评论</text>
     </view>
+    <button 
+      class="setting-option" 
+      disabled="{{!canSubmit || submitting}}"
+      loading="{{submitting}}"
+      bindtap="submitForm"
+      type="primary"
+    >{{canSubmit ? '发布' : '发布'}}</button>
   </view>
 </view> 

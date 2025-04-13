@@ -3,7 +3,7 @@
   width: 100%;
   z-index: 100;
   border-bottom: 1rpx solid #eee;
-  padding-bottom: 8rpx;
+  padding-bottom: 0;
   background-color: #fff;
 }
 
@@ -26,7 +26,7 @@
 .tab-bar {
   display: flex;
   min-width: 100%;
-  padding: 0 4rpx;
+  padding: 0;
 }
 
 /* 等宽标签栏 */
@@ -43,14 +43,28 @@
 .tab-item {
   display: inline-block;
   text-align: center;
-  padding: 24rpx 30rpx;
+  padding: 16rpx 20rpx;
   font-size: 28rpx;
   position: relative;
   transition: all 0.3s;
+  border-radius: 0;
 }
 
 .tab-item.active {
   font-weight: 500;
+  color: #07c160;
+  position: relative;
+}
+
+.tab-item.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 30%;
+  width: 40%;
+  height: 4rpx;
+  background-color: #07c160;
+  border-radius: 2rpx;
 }
 
 /* 标签内容 */
@@ -97,21 +111,18 @@
   z-index: 1;
 }
 
-/* 激活标签下划线 */
-.tab-line {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40%;
-  height: 6rpx;
-  border-radius: 3rpx;
-}
-
 /* 自定义操作按钮 */
 .tab-action {
   margin-left: 10rpx;
   font-size: 24rpx;
   color: #07c160;
   opacity: 0.8;
+}
+
+/* 标签项文本 */
+.tab-text {
+  font-size: 28rpx;
+  text-align: center;
+  display: block;
+  width: 100%;
 } 

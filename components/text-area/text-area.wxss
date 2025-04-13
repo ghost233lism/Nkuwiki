@@ -2,7 +2,7 @@
 .text-area-container {
   position: relative;
   width: 100%;
-  margin-bottom: 20rpx;
+  margin-bottom: 0;
   background: #fff;
 }
 
@@ -13,9 +13,9 @@
   padding: 20rpx;
   box-sizing: border-box;
   background: #f8f8f8;
-  border-radius: 8rpx;
   font-size: 28rpx;
   color: #333;
+  border-bottom: none;
 }
 
 /* 禁用状态 */
@@ -157,13 +157,22 @@
 
 .toolbar {
   display: flex;
-  padding: 20rpx 10;
+  padding: 15rpx 30rpx;
   border-top: 1rpx solid #eee;
   align-items: center;
-  justify-content: space-around;
-  background-color: #f8f8f8;
-  border-radius: 8rpx;
-  margin-top: 20rpx;
+  justify-content: flex-start;
+  background-color: #ffffff;
+  border-radius: 0 0 8rpx 8rpx;
+  margin-top: 2rpx;
+  margin-bottom: 0;
+}
+
+.tool-item {
+  margin-right: 40rpx;
+  padding: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tool-item.active {
@@ -172,6 +181,24 @@
 
 .tool-item.preview-only {
   margin-left: auto;
+  margin-right: 0;
+}
+
+/* 工具栏图标样式 */
+.tool-icon {
+  font-size: 36rpx;
+  font-weight: 500;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color:rgb(26, 25, 25);
+}
+
+.tool-icon-component {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes spin {
@@ -215,9 +242,6 @@
 .weui-cells:after {
   border-bottom: none; /* 隐藏底部边框 */
 }
-
-
-
 
 /* 字数统计 */
 .comment-counter {

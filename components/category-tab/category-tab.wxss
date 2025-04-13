@@ -1,12 +1,12 @@
 /* 分类导航样式 */
 .category-scroll {
   width: 100%;
-  padding: 15rpx 0 20rpx;
+  padding: 15rpx 0 0rpx;
   background-color: #fff;
   overflow: hidden;
-  margin-bottom: 16rpx;
+  margin-bottom: 0;
   /* 添加阴影和过渡效果，使外观更稳定 */
-  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.05);
+  box-shadow: none;
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;

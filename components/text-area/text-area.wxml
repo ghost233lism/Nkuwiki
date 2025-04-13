@@ -3,7 +3,7 @@
   <block wx:if="{{!showPreview && !readOnly}}">
     <textarea
       class="text-area {{markdownMode ? 'markdown-editor' : ''}}"
-      style="height: {{_height}}rpx;"
+      style="height: {{_height}}rpx; border-radius: 8rpx 8rpx 0 0;"
       placeholder="{{markdownMode ? '使用 # 作为标题 ## 作为二级标题 正文内容...' : placeholder}}"
       value="{{value}}"
       maxlength="{{maxlength}}"
@@ -27,7 +27,6 @@
     </view>
     
 
-    <!-- 使用towxml作为备选 -->
     <scroll-view 
       wx:elif="{{markdownNodes && value && value.trim() !== ''}}" 
       scroll-y="{{!fixedHeight && scroll !== false}}" 
@@ -71,7 +70,7 @@
         <text class="tool-icon">I</text>
       </view>
       <view class="tool-item" bindtap="onImageTap">
-        <text class="tool-icon">📷</text>
+        <icon name="image" size="40" color="#aaaaaa" class="tool-icon-component"></icon>
       </view>
       <view class="tool-item" bindtap="onAtTap">
         <text class="tool-icon">@</text>
@@ -80,7 +79,7 @@
     
     <!-- 预览按钮始终显示 -->
     <view class="tool-item {{showPreview ? 'active' : ''}} {{simpleToolbar ? 'preview-only' : ''}}" bindtap="togglePreview">
-      <text class="tool-icon">👁️</text>
+      <icon name="eye" size="40" color="{{showPreview ? '#07c160' : '#aaaaaa'}}" class="tool-icon-component"></icon>
     </view>
   </view>
 </view> 
