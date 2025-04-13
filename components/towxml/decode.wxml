@@ -28,7 +28,7 @@
   </block>
   <block wx:if="{{item.tag==='image'}}">
     <view style="display: {{openTyper? (isShow[i]? '' : 'none !important') : ''}};" class="h2w__imageParent">
-      <image data-data="{{item}}" class="h2w__image {{item.attrs.class}}" data="{{item.attrs.data}}" id="{{item.attrs.id}}" style="display: {{openTyper? (isShow[i]? '' : 'none !important') : ''}};{{item.attrs.style}};" catch:tap="_tap" src="{{item.attrs.src}}" mode="{{item.attrs.mode ? item.attrs.mode : 'widthFix'}}" lazy-load="{{item.attr['lazy-load']}}">
+      <image data-data="{{item}}" class="h2w__image {{item.attrs.class}}" data="{{item.attrs.data}}" id="{{item.attrs.id}}" style="display: {{openTyper? (isShow[i]? '' : 'none !important') : ''}};{{item.attrs.style}}; max-width:300rpx !important; max-height:300rpx !important;" catch:tap="_tap" src="{{item.attrs.src}}" mode="{{item.attrs.mode ? item.attrs.mode : 'widthFix'}}" lazy-load="{{item.attr['lazy-load']}}">
         <decode speed="{{speed}}" openTyper="{{openTyper}}" wx:if="{{item.children}}" nodes="{{item}}" />
       </image>
     </view>

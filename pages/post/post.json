@@ -4,12 +4,13 @@
   "backgroundColor": "#f7f9fc",
   "usingComponents": {
     "nav-bar": "/components/nav-bar/nav-bar",
+    "tab-bar": "/components/tab-bar/tab-bar",
     "text-area": "/components/text-area/text-area",
-    "mp-toptips": "/components/weui/toptips/toptips",
-    "mp-badge": "/components/weui/badge/badge",
-    "mp-dialog": "/components/weui/dialog/dialog",
+    "image-uploader": "/components/image-uploader/image-uploader",
     "icon": "/components/icon/icon",
+    "picker-field": "/components/picker-field/picker-field",
     "category-tab": "/components/category-tab/category-tab",
-    "tab-bar": "/components/tab-bar/tab-bar"
+    "input-field": "/components/input-field/input-field",
+    "mp-dialog": "/components/weui/dialog/dialog"
   }
 }

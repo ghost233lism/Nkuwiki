@@ -37,12 +37,10 @@
   </view>
   
   <!-- 悬浮发帖按钮 -->
-  <button
-    floating="{{true}}"
+  <floating-button
     type="primary"
-    shape="circle"
-    size="medium"
-    floatingPosition="bottom-right"
+    size="large"
+    position="bottom-right"
     bindtap="onCreatePost"
   />
   

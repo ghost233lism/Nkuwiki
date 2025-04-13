@@ -668,6 +668,104 @@ module.exports = Behavior({
     },
 
     /**
+     * 显示加载中提示
+     * @param {String} text 提示文本
+     * @param {String} type 加载类型，可选 'inline'、'page'、'fullscreen'
+     * @param {Boolean} mask 是否显示遮罩层
+     */
+    showLoading(text = '加载中...', type = 'inline', mask = false) {
+        this.updateState({
+            loading: true,
+            loadingText: text,
+            loadingType: type
+        });
+        
+        // 如果是全屏加载，也调用微信原生接口
+        if (type === 'fullscreen' || type === 'page') {
+            wx.showLoading({
+                title: text,
+                mask: mask
+            });
+        }
+    },
+
+    /**
+     * 隐藏加载中提示
+     */
+    hideLoading() {
+        this.updateState({
+            loading: false
+        });
+        
+        // 隐藏微信原生加载提示
+        wx.hideLoading();
+    },
+
+    /**
+     * 显示加载更多提示
+     */
+    showLoadingMore() {
+        this.updateState({
+            loadingMore: true
+        });
+    },
+
+    /**
+     * 隐藏加载更多提示
+     */
+    hideLoadingMore() {
+        this.updateState({
+            loadingMore: false
+        });
+    },
+
+    /**
+     * 显示空状态
+     * @param {String} message 空状态提示文本
+     * @param {String} type 空状态类型，可选 'default'、'search'、'network'
+     */
+    showEmpty(message = '暂无数据', type = 'default') {
+        this.updateState({
+            empty: true,
+            emptyText: message,
+            emptyType: type,
+            loading: false,
+            error: false
+        });
+    },
+
+    /**
+     * 隐藏空状态
+     */
+    hideEmpty() {
+        this.updateState({
+            empty: false
+        });
+    },
+
+    /**
+     * 显示错误状态
+     * @param {String} message 错误提示文本
+     */
+    showError(message = '出错了，请稍后再试') {
+        this.updateState({
+            error: true,
+            errorText: message,
+            loading: false,
+            empty: false
+        });
+    },
+
+    /**
+     * 隐藏错误状态
+     */
+    hideError() {
+        this.updateState({
+            error: false
+        });
+    },
+
+    /**
      * 显示模态对话框
      * @param {Object} options 配置对象, 同 wx.showModal
      * @returns {Promise<Boolean>} 用户点击确认返回 true，取消返回 false

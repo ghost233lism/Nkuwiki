@@ -84,7 +84,7 @@
   <view class="setting-options">
     <view class="setting-option {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
       <icon name="eye" color="{{form.isPublic ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
-      <text class="setting-text">公开</text>
+      <text class="setting-text">{{form.isPublic ? '公开' : '匿名'}}</text>
     </view>
     <view class="setting-option {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
       <icon name="comment" color="{{form.allowComment ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
@@ -97,5 +97,48 @@
       bindtap="submitForm"
       type="primary"
     >{{canSubmit ? '发布' : '发布'}}</button>
+  </view>
+
+  <!-- 联系方式 - 三栏布局 -->
+  <view class="contact-container" wx:if="{{form.isPublic}}">
+    <view class="contact-header">
+      <view class="contact-title">联系方式</view>
+      <view class="auto-fill-btn" bindtap="fillContactInfo">
+        <icon name="refresh" size="32" color="#07c160"></icon>
+        <text>自动填充</text>
+      </view>
+    </view>
+    <view class="contact-column">
+      <view class="contact-item">
+        <view class="contact-label">电话：</view>
+        <input 
+          class="contact-input" 
+          placeholder="手机" 
+          value="{{form.phone}}"
+          data-field="phone"
+          bindinput="onFormChange"
+        />
+      </view>
+      <view class="contact-item">
+        <view class="contact-label">微信号：</view>
+        <input 
+          class="contact-input" 
+          placeholder="微信" 
+          value="{{form.wechat}}"
+          data-field="wechat"
+          bindinput="onFormChange"
+        />
+      </view>
+      <view class="contact-item">
+        <view class="contact-label">QQ号：</view>
+        <input 
+          class="contact-input" 
+          placeholder="QQ" 
+          value="{{form.qq}}"
+          data-field="qq"
+          bindinput="onFormChange"
+        />
+      </view>
+    </view>
   </view>
 </view> 

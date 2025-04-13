@@ -48,12 +48,8 @@
   flex-shrink: 0;
   margin-right: 32rpx;
   background: linear-gradient(135deg, rgba(24, 144, 255, 0.15), rgba(54, 207, 201, 0.15));
-  border-radius: 50%;
-  padding: 24rpx;
-  box-shadow: 
-    0 8rpx 20rpx -4rpx rgba(24, 144, 255, 0.3),
-    0 0 8rpx rgba(24, 144, 255, 0.1);
-  border: 2rpx solid rgba(255, 255, 255, 0.8);
+  border-radius: 100%;
+  padding: 0rpx;
 }
 
 .text {
@@ -112,7 +108,7 @@
   font-weight: 500;
 }
 
-/* 按钮容器 - 新增 */
+/* 按钮容器 */
 .button-container {
   display: flex;
   justify-content: center;
@@ -120,7 +116,7 @@
   margin: 30rpx 0;
 }
 
-/* 登录按钮样式 - 简化为原生样式 */
+/* 登录按钮样式 */
 .login-button {
   margin: 0 !important;
   height: 88rpx !important;
@@ -132,8 +128,16 @@
   border-radius: 44rpx !important;
   min-width: 85% !important;
   padding: 0 40rpx !important;
-  white-space: nowrap !important;
-  /* 移除自定义阴影、边框和过渡效果 */
+  background-color: #07c160 !important;
+  color: #fff !important;
+  line-height: normal !important;
+  box-sizing: border-box !important;
+}
+
+/* 按钮悬停状态 */
+.button-hover {
+  background-color: #06ad56 !important;
+  opacity: 0.9 !important;
 }
 
 .login-button-icon {

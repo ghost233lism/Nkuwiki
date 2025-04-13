@@ -1,11 +1,14 @@
 <!--pages/profile/edit/edit.wxml-->
 <!-- 顶部消息提示 -->
 <mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<nav-bar 
+  showBack="{{true}}"
+  showProfile="{{false}}"
+  showNotification="{{false}}"
+  title="编辑资料"
+></nav-bar>
 
 <view class="container">
-  <!-- 导航栏 -->
-  <nav-bar nav-buttons="{{navButtons}}"></nav-bar>
-
   <!-- 内容区域 -->
   <view class="content-area">
     <cell-status
@@ -14,14 +17,24 @@
       errorMsg="{{errorMsg}}"
       bindretry="onRetry">
 
-      <!-- 头像 -->
+      <!-- 头像 - 使用icon组件替代 -->
       <view class="avatar-section">
         <button class="avatar-wrapper" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-          <image 
-            class="avatar" 
-            src="{{userInfo.avatar || defaultAvatar}}"
-            binderror="onAvatarError"
-          ></image>
+          <icon 
+            wx:if="{{userInfo.avatar}}"
+            useImage="{{true}}"
+            imageSrc="{{userInfo.avatar}}"
+            size="180"
+            class="avatar-icon"
+            binderror="onAvatarError">
+          </icon>
+          <icon 
+            wx:else
+            name="profile"
+            size="180"
+            color="#6369e8"
+            class="avatar-icon">
+          </icon>
         </button>
         <view class="avatar-hint">点击更换头像</view>
       </view>

@@ -607,10 +607,15 @@ function createApiClient(basePath, endpoints = {}) {
           // 尝试从storage获取
           const openid = storage.get('openid');
           // 如果存在，添加到请求数据
-          if (openid) {
+          if (openid && typeof openid === 'string') {
             data.openid = openid;
           }
           // 如果不存在且是必要参数，下面的必填参数验证会捕获这个错误
+        } else if (data.openid && typeof data.openid !== 'string') {
+          // 确保 openid 是字符串类型
+          console.debug('openid 参数不是字符串类型，将尝试转换');
+          // 如果是对象，尝试从 storage 获取
+          data.openid = storage.get('openid') || '';
         }
       }
       
@@ -719,9 +724,14 @@ function createStreamApiClient(basePath, endpoints = {}) {
           // 尝试从storage获取
           const openid = storage.get('openid');
           // 如果存在，添加到请求数据
-          if (openid) {
+          if (openid && typeof openid === 'string') {
             data.openid = openid;
           }
+        } else if (data.openid && typeof data.openid !== 'string') {
+          // 确保 openid 是字符串类型
+          console.debug('流式请求: openid 参数不是字符串类型，将尝试转换');
+          // 如果是对象，尝试从 storage 获取
+          data.openid = storage.get('openid') || '';
         }
       }
       

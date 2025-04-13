@@ -82,4 +82,13 @@
       <icon name="eye" size="40" color="{{showPreview ? '#07c160' : '#aaaaaa'}}" class="tool-icon-component"></icon>
     </view>
   </view>
+
+  <!-- 图片上传组件 -->
+  <image-uploader 
+    id="imageUploader"
+    max-count="9"
+    auto-upload="true"
+    silent-upload="true"
+    bind:uploadcomplete="onImageUploadComplete"
+  />
 </view> 

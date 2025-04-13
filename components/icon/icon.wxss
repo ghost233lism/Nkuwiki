@@ -3,9 +3,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
   min-width: 24px;
   min-height: 24px;
+  border-radius: 50%;
 }
 
 .icon {
@@ -18,6 +19,8 @@
   display: block;
   min-width: 24px;
   min-height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 /* 自定义图标 */
@@ -26,6 +29,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
 }
 
 /* 基础图标样式 */
@@ -33,6 +37,20 @@
   display: inline-block;
   text-align: center;
   font-weight: normal;
+}
+
+/* 方形样式类，可以通过添加square类来覆盖圆形默认样式 */
+.icon-container.square,
+.icon-image.square,
+.custom-icon.square {
+  border-radius: 0;
+}
+
+/* 圆角矩形样式类 */
+.icon-container.rounded,
+.icon-image.rounded,
+.custom-icon.rounded {
+  border-radius: 4px;
 }
 
 /* 箭头图标 */

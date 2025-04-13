@@ -37,6 +37,10 @@ Component({
     currentUserOpenid: { type: String, value: '' }
   },
 
+  data: {
+    // 已经不需要defaultAvatar，我们使用name=profile的icon替代
+  },
+
   observers: {
     'post': function(post) {
       if (!post || !post.id) return;
@@ -45,6 +49,11 @@ Component({
       this.setData({
         formattedTime: post.create_time ? formatRelativeTime(post.create_time) : ''
       });
+
+      // 处理头像
+      if (post.user && post.user.avatar && !post.avatar) {
+        post.avatar = post.user.avatar;
+      }
 
       // 解析JSON字段
       this._parseJsonFields(post);
@@ -407,6 +416,6 @@ Component({
     // 空方法，用于阻止事件冒泡而不执行任何操作
     _catchBubble() {
       // 不执行任何操作，仅用于阻止事件冒泡
-    }
+    },
   }
 }); 

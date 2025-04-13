@@ -198,4 +198,24 @@
 .confirm-btn {
   background-color: #07C160;
   color: #fff;
+}
+
+/* 上传成功图标 */
+.upload-success-icon {
+  position: absolute;
+  right: 10rpx;
+  bottom: 10rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* 已上传图片 */
+.image-item.uploaded {
+  border: 2rpx solid #07C160;
 } 

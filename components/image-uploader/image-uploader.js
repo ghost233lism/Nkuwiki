@@ -58,6 +58,12 @@ Component({
     disabled: {
       type: Boolean,
       value: false
+    },
+    
+    // 是否静默上传（不显示上传进度）
+    silentUpload: {
+      type: Boolean,
+      value: false
     }
   },
   
@@ -66,7 +72,8 @@ Component({
     uploadedImages: [], // 已上传的图片路径
     isUploading: false, // 是否正在上传
     uploadProgress: 0, // 上传进度
-    errors: [] // 上传过程中的错误
+    errors: [], // 上传过程中的错误
+    imageStatus: {} // 图片上传状态: {[localPath]: {uploaded: boolean, cloudPath: string}}
   },
   
   lifetimes: {
@@ -129,6 +136,9 @@ Component({
     async uploadImages() {
       if (this.data.isUploading || this.data.localImages.length === 0) return;
       
+      // 记录原始本地图片用于上传
+      const localImagesToUpload = [...this.data.localImages];
+      
       this.setData({
         isUploading: true,
         uploadProgress: 0,
@@ -138,14 +148,23 @@ Component({
       // 触发上传开始事件
       this.triggerEvent('uploadstart');
       
-      const totalCount = this.data.localImages.length;
+      const totalCount = localImagesToUpload.length;
       let successCount = 0;
-      const uploadedImages = [...this.data.uploadedImages];
+      // 创建云存储链接映射
+      const imageStatus = {...this.data.imageStatus};
+      const cloudUrls = [];
       const newErrors = [];
       
       // 逐个上传图片
-      for (let i = 0; i < this.data.localImages.length; i++) {
-        const tempFilePath = this.data.localImages[i];
+      for (let i = 0; i < localImagesToUpload.length; i++) {
+        const tempFilePath = localImagesToUpload[i];
+        
+        // 已上传的图片跳过
+        if (imageStatus[tempFilePath] && imageStatus[tempFilePath].uploaded) {
+          cloudUrls.push(imageStatus[tempFilePath].cloudPath);
+          successCount++;
+          continue;
+        }
         
         try {
           // 更新进度
@@ -162,10 +181,9 @@ Component({
             });
             if (compressRes && compressRes.tempFilePath) {
               compressedPath = compressRes.tempFilePath;
-              console.debug('图片压缩成功');
             }
           } catch (compressErr) {
-            console.debug('图片压缩失败，使用原图:', compressErr);
+            // 压缩失败继续使用原图
           }
           
           // 获取openid用于构建云存储路径
@@ -185,10 +203,6 @@ Component({
           
           while (retryCount < maxRetries && !uploadResult) {
             try {
-              if (retryCount > 0) {
-                console.debug(`上传重试第${retryCount}次`);
-              }
-              
               // 设置上传超时
               uploadResult = await Promise.race([
                 wx.cloud.uploadFile({
@@ -201,7 +215,6 @@ Component({
               ]);
               
             } catch (uploadErr) {
-              console.debug(`上传失败 (${retryCount + 1}/${maxRetries}):`, uploadErr);
               retryCount++;
               
               if (retryCount >= maxRetries) {
@@ -217,8 +230,12 @@ Component({
             throw new Error('云存储返回结果格式错误');
           }
           
-          // 上传成功，添加到已上传列表
-          uploadedImages.push(uploadResult.fileID);
+          // 上传成功，记录状态和云存储路径
+          imageStatus[tempFilePath] = {
+            uploaded: true,
+            cloudPath: uploadResult.fileID
+          };
+          cloudUrls.push(uploadResult.fileID);
           successCount++;
           
         } catch (err) {
@@ -227,17 +244,21 @@ Component({
             file: tempFilePath,
             message: err.message || '上传失败'
           });
-          console.debug('上传图片失败:', err);
+          // 标记上传失败
+          imageStatus[tempFilePath] = {
+            uploaded: false,
+            error: err.message || '上传失败'
+          };
         }
       }
       
-      // 更新组件状态
+      // 更新组件状态 - 不删除本地图片，只更新状态和已上传图片列表
       this.setData({
         isUploading: false,
         uploadProgress: 100,
-        uploadedImages,
-        localImages: [], // 清空本地图片
-        errors: newErrors
+        errors: newErrors,
+        imageStatus,
+        uploadedImages: cloudUrls
       });
       
       // 触发上传完成事件
@@ -246,7 +267,7 @@ Component({
         successCount,
         totalCount,
         errors: newErrors,
-        images: uploadedImages
+        images: cloudUrls
       });
     },
     
@@ -255,23 +276,59 @@ Component({
       const { index, type } = e.currentTarget.dataset;
       
       if (type === 'local') {
+        // 获取要删除的图片路径
+        const localImage = this.data.localImages[index];
+        
+        // 复制状态对象
+        const imageStatus = {...this.data.imageStatus};
+        const wasUploaded = imageStatus[localImage] && imageStatus[localImage].uploaded;
+        let cloudPath = null;
+        
+        // 保存可能已上传的云路径
+        if (wasUploaded) {
+          cloudPath = imageStatus[localImage].cloudPath;
+        }
+        
+        // 从状态中删除
+        if (imageStatus[localImage]) {
+          delete imageStatus[localImage];
+        }
+        
         // 删除本地图片
         const localImages = [...this.data.localImages];
         localImages.splice(index, 1);
-        this.setData({ localImages });
+        
+        // 同时从已上传列表中删除
+        let uploadedImages = [...this.data.uploadedImages];
+        if (wasUploaded && cloudPath) {
+          uploadedImages = uploadedImages.filter(url => url !== cloudPath);
+        }
+        
+        this.setData({ 
+          localImages,
+          imageStatus,
+          uploadedImages
+        });
+        
+        // 触发删除事件
+        this.triggerEvent('delete', {
+          index,
+          type,
+          images: this.getAllImages()
+        });
       } else {
-        // 删除已上传图片
+        // 删除已上传图片 (应该不会再运行到这里，保留兼容)
         const uploadedImages = [...this.data.uploadedImages];
         uploadedImages.splice(index, 1);
         this.setData({ uploadedImages });
+        
+        // 触发删除事件
+        this.triggerEvent('delete', {
+          index,
+          type,
+          images: this.getAllImages()
+        });
       }
-      
-      // 触发删除事件
-      this.triggerEvent('delete', {
-        index,
-        type,
-        images: this.getAllImages()
-      });
     },
     
     // 预览图片
@@ -294,7 +351,19 @@ Component({
     
     // 获取所有图片（已上传的和本地的）
     getAllImages() {
-      return [...this.data.uploadedImages, ...this.data.localImages];
+      // 优先返回云存储图片路径，没有则返回本地路径
+      const allImages = [];
+      const {localImages, imageStatus} = this.data;
+      
+      for (const img of localImages) {
+        if (imageStatus[img] && imageStatus[img].uploaded) {
+          allImages.push(imageStatus[img].cloudPath);
+        } else {
+          allImages.push(img);
+        }
+      }
+      
+      return [...this.data.uploadedImages, ...allImages];
     },
     
     // 获取图片总数
@@ -307,7 +376,8 @@ Component({
       this.setData({
         localImages: [],
         uploadedImages: [],
-        errors: []
+        errors: [],
+        imageStatus: {}
       });
       
       // 触发清空事件
@@ -317,6 +387,27 @@ Component({
     // 获取已上传的图片URL列表
     getUploadedImageUrls() {
       return this.data.uploadedImages;
+    },
+    
+    // 删除本地图片
+    onLocalImageDelete(e) {
+      const index = e.currentTarget.dataset.index;
+      const localImages = [...this.data.localImages];
+      localImages.splice(index, 1);
+      
+      // 同时移除对应的错误信息
+      const errors = [...this.data.errors];
+      errors.splice(index, 1);
+      
+      this.setData({
+        localImages,
+        errors
+      });
+      
+      this.triggerEvent('delete', {
+        index,
+        type: 'local'
+      });
     }
   }
 }); 

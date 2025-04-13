@@ -2,11 +2,7 @@ Component({
   properties: {
     icon: {
       type: String,
-      value: 'edit'
-    },
-    text: {
-      type: String,
-      value: ''
+      value: 'add'
     },
     type: {
       type: String,

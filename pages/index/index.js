@@ -74,6 +74,7 @@ Page({
   async onShow() {
     try {
       // 不管时间间隔，始终刷新帖子状态，确保从任何页面返回时数据一致
+      console.log('刷新帖子');
       const postList = this.selectComponent('#postList');
       if (postList) {
         setTimeout(async () => {

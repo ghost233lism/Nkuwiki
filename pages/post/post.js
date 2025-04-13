@@ -6,6 +6,7 @@ Page({
     behaviors.baseBehavior,
     behaviors.postBehavior,
     behaviors.authBehavior,
+    behaviors.userBehavior,
     behaviors.weuiBehavior
   ],
 
@@ -21,7 +22,10 @@ Page({
       isPublic: true,
       allowComment: true,
       category_id: 1,
-      tags: []
+      tags: [],
+      phone: '',
+      wechat: '',
+      qq: ''
     },
     categoryId: 1,  
     tabItems:  [
@@ -117,7 +121,10 @@ Page({
       images: [],
       isPublic: true,
       allowComment: true,
-      category_id: 1
+      category_id: 1,
+      phone: '',
+      wechat: '',
+      qq: ''
     });
   },
 
@@ -216,6 +223,30 @@ Page({
                   e.detail.value;
     
     this.setFormField(field, value);
+    
+    // 如果是切换公开/匿名状态，且设为匿名，则清空联系方式
+    if (field === 'isPublic' && !value) {
+      // 保存旧的联系方式，用于再次切换回公开时恢复
+      this.setData({
+        _tempContactInfo: {
+          phone: this.data.form.phone || '',
+          wechat: this.data.form.wechat || '',
+          qq: this.data.form.qq || ''
+        },
+        'form.phone': '',
+        'form.wechat': '',
+        'form.qq': ''
+      });
+    } 
+    // 如果是从匿名切换到公开，尝试恢复之前的联系方式
+    else if (field === 'isPublic' && value && this.data._tempContactInfo) {
+      this.setData({
+        'form.phone': this.data._tempContactInfo.phone || '',
+        'form.wechat': this.data._tempContactInfo.wechat || '',
+        'form.qq': this.data._tempContactInfo.qq || ''
+      });
+    }
+    
     this.validatePostForm();
   },
 
@@ -368,15 +399,6 @@ Page({
       return;
     }
 
-    // 显示加载组件
-    // const loadingComponent = this.selectComponent('#loading');
-    // if (loadingComponent) {
-    //   loadingComponent.showLoading({
-    //     text: '发布中...',
-    //     type: 'fullscreen',
-    //     mask: true
-    //   });
-    // }
 
     // 设置提交状态
     this.setData({ submitting: true });
@@ -408,17 +430,22 @@ Page({
         tag: formData.tags || []
       };
       
+      // 只有在公开模式下才添加联系方式
+      if (formData.isPublic) {
+        postData.phone = formData.phone || '';
+        postData.wechat = formData.wechat || '';
+        postData.qq = formData.qq || '';
+      } else {
+        // 匿名模式下设置为匿名用户
+        // postData.anonymous = true;  // 设置匿名标志
+        postData.nickname = '匿名用户';  // 设置昵称为匿名用户
+        postData.avatar = '';  // 清空头像
+      }
+      
       // 提交帖子
       const result = await this._createPost(postData);
       
       if (result.code === 200) {
-        // 显示发布成功提示
-        // wx.showToast({
-        //   title: '发布成功',
-        //   icon: 'success',
-        //   duration: 1500
-        // });
-        
         // 立即返回首页
         wx.navigateBack();
       } else {
@@ -486,5 +513,51 @@ Page({
       categoryId,
       'form.category_id': categoryId
     });
+  },
+
+  // 添加自动获取联系方式的方法
+  async fillContactInfo() {
+    try {
+      // 显示加载状态
+      wx.showLoading({
+        title: '获取中...',
+        mask: true
+      });
+      
+      // 使用authBehavior中的_getUserInfo方法获取用户信息
+      const userInfo = await this._getUserInfo(true);
+      
+      if (userInfo) {
+        // 提取联系方式信息
+        const phone = userInfo.phone || '';
+        const wechat = userInfo.wechatId || '';
+        const qq = userInfo.qqId || '';
+        
+        // 更新表单数据
+        this.setData({
+          'form.phone': phone,
+          'form.wechat': wechat,
+          'form.qq': qq
+        });
+        
+        wx.showToast({
+          title: '获取成功',
+          icon: 'success'
+        });
+      } else {
+        wx.showToast({
+          title: '获取失败',
+          icon: 'none'
+        });
+      }
+    } catch (err) {
+      console.error('获取联系方式失败:', err);
+      wx.showToast({
+        title: '获取失败',
+        icon: 'none'
+      });
+    } finally {
+      wx.hideLoading();
+    }
   },
 }); 

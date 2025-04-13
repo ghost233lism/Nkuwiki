@@ -132,7 +132,7 @@ Component({
       return {
         ...user,
         nickname: user.nickname || user.nickName || '未知用户',
-        avatar: user.avatar || user.avatarUrl || '/icons/avatar1.png',
+        avatar: user.avatar || user.avatarUrl || '',  // 设置为空时将使用默认图标
         bio: user.bio || user.signature || '',
         // 合并统计数据
         post_count: stats?.posts || user.post_count || 0,
@@ -246,11 +246,13 @@ Component({
       this.setData({ formattedUser });
     },
     
-    // 头像加载失败
+    // 头像加载错误
     onAvatarError() {
-      const formattedUser = { ...this.data.formattedUser };
-      formattedUser.avatar = '/icons/avatar1.png';
-      this.setData({ formattedUser });
+      if (this.data.formattedUser) {
+        const formattedUser = {...this.data.formattedUser};
+        formattedUser.avatar = '';  // 设置为空，使用name=profile的图标作为默认值
+        this.setData({ formattedUser });
+      }
     },
 
     // 重试加载

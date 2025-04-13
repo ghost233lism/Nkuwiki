@@ -21,6 +21,8 @@
 
 /* 互动元素的z-index需要高于覆盖层 */
 .author-avatar,
+.avatar-container,
+.avatar-icon,
 .author-name,
 .follow-button,
 .tag-item,
@@ -54,12 +56,28 @@
   justify-content: flex-start;
 }
 
-.author-avatar {
+/* 新的头像容器样式 */
+.avatar-container {
   width: 80rpx;
   height: 80rpx;
+  margin-right: 16rpx;
+  position: relative;
   border-radius: 50%;
-  margin-right: 10rpx;
-  background-color: #f5f5f5;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  border: 2rpx solid #f5f5f5;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 头像图标样式 */
+.avatar-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .post-info {

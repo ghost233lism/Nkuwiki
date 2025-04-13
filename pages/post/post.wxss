@@ -97,6 +97,71 @@
   border-radius: 8rpx;
 }
 
+/* ================= 联系方式区域 ================= */
+.contact-container {
+  background-color: #fff;
+  margin: 0 10rpx 24rpx;
+  border-radius: 0 0 12rpx 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  padding: 24rpx;
+  margin-top: -1px;
+}
+
+.contact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.contact-title {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.auto-fill-btn {
+  display: flex;
+  align-items: center;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  color: #07c160;
+}
+
+.auto-fill-btn text {
+  margin-left: 8rpx;
+}
+
+.contact-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.contact-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.contact-label {
+  font-size: 28rpx;
+  color: #333;
+  min-width: 120rpx;
+}
+
+.contact-input {
+  height: 80rpx;
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  background-color: #f9f9f9;
+  box-sizing: border-box;
+  flex: 1;
+}
+
 /* ================= 设置区域 ================= */
 .post-settings {
   background: #fff;
@@ -107,9 +172,10 @@
 
 .setting-options {
   background: #fff;
-  border-radius: 12rpx;
-  margin: 0 10rpx 24rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  border-radius: 12rpx 12rpx 0 0;
+  margin: 0 10rpx 0;
+  box-shadow: none;
+  border-bottom: none;
 }
 
 .settings-title {
