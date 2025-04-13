@@ -107,7 +107,7 @@
               hover-class="button-hover" 
               size="mini" 
               catchtap="_onCommentTap">
-        <image class="action-icon" src="/icons/comment.png" mode="aspectFit"></image>
+        <image class="action-icon" src="/icons/{{!post.comment_count ? 'comment' : 'comment-active'}}.png" mode="aspectFit"></image>
         <text class="action-count" wx:if="{{post.comment_count > 0}}">{{post.comment_count}}</text>
       </button>
       
