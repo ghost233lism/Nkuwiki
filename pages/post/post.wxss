@@ -214,7 +214,6 @@
   gap: 16rpx;
   margin-top: 12rpx;
 }
-
 /* 设置按钮样式 */
 .setting-btn {
   flex: 1;
@@ -281,11 +280,11 @@
   height: 88rpx !important;
   font-size: 32rpx !important;
   border-radius: 44rpx !important;
-  background: #5853e2 !important; 
+  background: #5853e8 !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white !important;
+  color: #5860e9 !important;
   font-weight: 500 !important;
   box-shadow: 0 6rpx 16rpx rgba(88, 83, 226, 0.2);
 }

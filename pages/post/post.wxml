@@ -89,8 +89,8 @@
         text="{{item.text}}"
         textColor="{{form[item.field] ? '#5853e2' : '#666'}}"
         textSize="26"
-        bindtap="onSwitchChange" 
-        data-field="{{item.field}}" 
+        bindtap="onSwitchChange"
+        data-field="{{item.field}}"
         data-value="{{!form[item.field]}}"
       />
     </view>
@@ -100,7 +100,7 @@
   <button 
     class="submit-btn"
     text="发布"
-    textColor="#ffffff"
+    textColor="#000000"
     textSize="32"
     disabled="{{!canSubmit || submitting}}"
     loading="{{submitting}}"
