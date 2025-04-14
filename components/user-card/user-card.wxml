@@ -10,12 +10,21 @@
   <view class="user-card" wx:if="{{formattedUser}}">
     <view class="user-info">
       <view class="user-avatar" bindtap="onTapUser">
-        <image 
-          class="avatar" 
-          src="{{formattedUser.avatar}}" 
-          mode="aspectFill" 
-          binderror="onAvatarError"
-        ></image>
+        <icon 
+          wx:if="{{formattedUser.avatar}}"
+          useImage="{{true}}"
+          imageSrc="{{formattedUser.avatar}}"
+          size="120"
+          class="avatar-icon"
+          binderror="onAvatarError">
+        </icon>
+        <icon 
+          wx:else
+          name="profile"
+          size="120"
+          color="#6369e8"
+          class="avatar-icon">
+        </icon>
       </view>
       <view class="user-details" bindtap="onTapUser">
         <view class="user-name">{{formattedUser.nickname}}</view>

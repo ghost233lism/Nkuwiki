@@ -15,14 +15,33 @@
 .user-avatar {
   flex-shrink: 0;
   margin-right: 20rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f6f6f6;
+  border: 1px solid #f0f0f0;
 }
 
+/* 旧的头像样式 - 保留以兼容 */
 .avatar {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
   background-color: #f6f6f6;
   border: 1px solid #f0f0f0;
+}
+
+/* 新的头像图标样式 */
+.avatar-icon {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .user-details {

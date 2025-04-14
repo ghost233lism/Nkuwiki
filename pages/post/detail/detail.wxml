@@ -8,9 +8,8 @@
 <!-- 帖子详情 -->
 <post-item 
   post="{{postDetail}}" 
-  class="post-detail"
-  detail-page="{{true}}"
-  show-action="{{true}}"
+  detailPage="{{true}}"
+  showAction="{{true}}"
   bind:postDeleted="onPostDeleted">
 </post-item>
 

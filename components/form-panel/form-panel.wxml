@@ -62,11 +62,10 @@
   </block>
 </view> 
 <!-- 提交按钮 -->
-<button
-  icon="none"
-  text="{{submitText}}"
-  textSize="34"
-  textBackground="#07c160"
-  bind:tap="handleSubmit"
-  showCount="{{false}}"
-></button>
+<view class="button-wrapper">
+  <button
+    class="submit-button"
+    type="primary"
+    bindtap="handleSubmit"
+  >{{submitText}}</button>
+</view>

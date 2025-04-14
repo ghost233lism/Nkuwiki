@@ -1,13 +1,13 @@
 <view 
-  class="icon-container {{extClass}}"
+  class="icon-container {{class}} {{shape ? shape : ''}}"
   bindtap="handleTap"
   style="font-size: {{sizeNumber}}px;"
 >
   <!-- 使用图片模式 -->
-  <block wx:if="{{useImage}}">
+  <block wx:if="{{_useImage}}">
     <image 
-      class="icon icon-image"
-      src="{{imageSrc}}" 
+      class="icon icon-image {{shape ? shape : ''}}"
+      src="{{_imageSrc}}" 
       mode="aspectFit"
       style="width: {{size}}rpx; height: {{size}}rpx; {{color ? 'filter: drop-shadow(0 0 0 ' + color + ');' : ''}}"
     ></image>
@@ -20,11 +20,13 @@
       color="{{color}}"
     ></icon>
   </block>
-  <!-- 使用自定义图标 -->
-  <block wx:elif="{{icon}}">
-    <view 
-      class="icon custom-icon icon-{{icon}} size-{{sizeNumber}} {{outline ? 'outline' : ''}}" 
-      style="{{color ? 'color:' + color + ';' : ''}}"
-    ></view>
+  <!-- 使用自定义图标时也使用image元素 -->
+  <block wx:else>
+    <image 
+      class="icon icon-image"
+      src="{{_imageSrc}}" 
+      mode="aspectFit"
+      style="width: {{size}}rpx; height: {{size}}rpx; {{color ? 'filter: drop-shadow(0 0 0 ' + color + ');' : ''}}"
+    ></image>
   </block>
 </view> 

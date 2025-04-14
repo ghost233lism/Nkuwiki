@@ -199,4 +199,37 @@
 /* 最后一个field-list不需要底部间距 */
 .field-list:last-child {
   margin-bottom: 0;
+}
+
+/* 按钮居中容器 */
+.button-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 30rpx 0 40rpx;
+}
+
+/* 提交按钮样式 */
+.submit-button {
+  width: 85% !important;
+  height: 88rpx !important;
+  font-size: 34rpx !important;
+  font-weight: 500 !important;
+  border-radius: 44rpx !important;
+  background-color: #07c160 !important;
+  color: #fff !important;
+  line-height: 88rpx !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.25) !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: 2rpx !important;
+}
+
+/* 提交按钮悬停态 */
+.submit-button.button-hover {
+  background-color: #06ad56 !important;
+  opacity: 0.9 !important;
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 8rpx rgba(7, 193, 96, 0.2) !important;
 } 

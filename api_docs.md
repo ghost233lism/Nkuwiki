@@ -230,6 +230,8 @@ API接口的参数类型规范如下：
   "birthday": "2004-06-28",           // 可选，生日
   "wechatId": "微信号",                // 可选，微信号
   "qqId": "QQ号",                      // 可选，QQ号
+  "phone": "手机号",                   // 可选，手机号
+  "university": "大学",                // 可选，大学
   "extra": {                          // 可选，扩展字段
     "school": "南开大学"
   }
@@ -257,6 +259,8 @@ API接口的参数类型规范如下：
     "birthday": "2004-06-28",
     "wechatId": "微信号",
     "qqId": "QQ号",
+    "phone": "手机号",
+    "university": "大学",
     "token_count": 100,
     "like_count": 10,
     "favorite_count": 5,
@@ -296,6 +300,8 @@ API接口的参数类型规范如下：
     "birthday": null,
     "wechatId": null,
     "qqId": null,
+    "phone": null,
+    "university": null,
     "token_count": 0,
     "like_count": 0,
     "favorite_count": 0,
@@ -343,6 +349,8 @@ API接口的参数类型规范如下：
     "birthday": "2004-06-28",
     "wechatId": "微信号",
     "qqId": "QQ号",
+    "phone": "手机号",
+    "university": "大学",
     "token_count": 0,
     "like_count": 0,
     "favorite_count": 0,
@@ -392,6 +400,8 @@ API接口的参数类型规范如下：
       "birthday": "2004-06-28",
       "wechatId": "微信号",
       "qqId": "QQ号",
+      "phone": "手机号",
+      "university": "大学",
       "token_count": 0,
       "like_count": 0,
       "favorite_count": 0,
@@ -441,6 +451,8 @@ API接口的参数类型规范如下：
   "birthday": "2004-06-28",           // 可选，生日
   "wechatId": "微信号",               // 可选，微信号
   "qqId": "QQ号",                     // 可选，QQ号
+  "phone": "手机号",                  // 可选，手机号
+  "university": "大学",               // 可选，大学
   "status": 1,                        // 可选，用户状态：1-正常, 0-禁用
   "extra": {                          // 可选，扩展字段
     "school": "南开大学",
@@ -470,6 +482,8 @@ API接口的参数类型规范如下：
     "birthday": "2004-06-28",
     "wechatId": "微信号",
     "qqId": "QQ号",
+    "phone": "手机号",
+    "university": "大学",
     "token_count": 100,
     "like_count": 10,
     "favorite_count": 5,
@@ -535,7 +549,7 @@ API接口的参数类型规范如下：
 
 ### 1.7 获取用户关注列表
 
-**接口**：`GET /api/wxapp/user/followings`  
+**接口**：`GET /api/wxapp/user/following`  
 **描述**：获取用户关注的所有用户  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
@@ -578,7 +592,7 @@ API接口的参数类型规范如下：
 
 ### 1.8 获取用户粉丝列表
 
-**接口**：`GET /api/wxapp/user/followers`  
+**接口**：`GET /api/wxapp/user/follower`  
 **描述**：获取关注该用户的所有用户  
 **参数**：
 - `openid` - 查询参数，用户openid（必填）
@@ -632,8 +646,8 @@ API接口的参数类型规范如下：
   "openid": "发布用户openid", // 必填
   "title": "帖子标题", // 必填
   "content": "帖子内容", // 必填
-  "images": ["图片URL1", "图片URL2"], // 可选
-  "tags": ["标签1", "标签2"], // 可选
+  "image": ["图片URL1", "图片URL2"], // 可选
+  "tag": ["标签1", "标签2"], // 可选
   "category_id": 1, // 可选，默认为0
   "location": { // 可选
     "latitude": 39.12345,
@@ -641,6 +655,9 @@ API接口的参数类型规范如下：
     "name": "位置名称",
     "address": "详细地址"
   },
+  "phone": "手机号", // 可选
+  "wechatId": "微信号", // 可选
+  "qqId": "QQ号", // 可选
   "nickname": "用户昵称", // 可选，如不提供则从用户表获取
   "avatar": "用户头像URL" // 可选，如不提供则从用户表获取
 }
@@ -666,6 +683,9 @@ API接口的参数类型规范如下：
       "name": "位置名称",
       "address": "详细地址"
     },
+    "phone": "手机号",
+    "wechatId": "微信号",
+    "qqId": "QQ号",
     "nickname": "用户昵称",
     "avatar": "用户头像URL",
     "view_count": 0,
@@ -708,6 +728,9 @@ API接口的参数类型规范如下：
     "tag": ["标签1", "标签2"],
     "category_id": 1,
     "location": "位置信息",
+    "phone": "手机号",
+    "wechatId": "微信号",
+    "qqId": "QQ号",
     "nickname": "用户昵称",
     "avatar": "用户头像URL",
     "view_count": 1,
@@ -811,7 +834,10 @@ API接口的参数类型规范如下：
   "title": "更新后的标题", // 可选，帖子标题
   "category_id": 2, // 可选，整数类型，分类ID
   "image": ["图片URL1","图片URL2"], // 可选，图片URL数组
-  "tag": ["标签1","标签2"] // 可选，标签数组
+  "tag": ["标签1","标签2"], // 可选，标签数组
+  "phone": "手机号", // 可选
+  "wechatId": "微信号", // 可选
+  "qqId": "QQ号" // 可选
 }
 ```
 
@@ -835,6 +861,9 @@ API接口的参数类型规范如下：
       "name": "位置名称",
       "address": "详细地址"
     },
+    "phone": "手机号",
+    "wechatId": "微信号",
+    "qqId": "QQ号",
     "nickname": "用户昵称", 
     "avatar": "用户头像URL",
     "view_count": 10,

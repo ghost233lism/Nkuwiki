@@ -60,12 +60,10 @@
 
   <!-- 提交按钮 -->
   <button 
-    text="提交反馈"
-    textSize="32"
-    textColor="#ffffff"
-    textBackground="#07c160"
+    class="submit-button"
+    type="primary"
     disabled="{{!content || submitting}}"
     loading="{{submitting}}"
-    bind:tap="submitFeedback"
-  ></button>
+    bindtap="submitFeedback"
+  >提交反馈</button>
 </view> 

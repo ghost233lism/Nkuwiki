@@ -73,52 +73,13 @@ Page({
   
   async onShow() {
     try {
-      // 检查是否需要刷新，避免重复请求
-      const lastShowTime = this.data.lastShowTime || 0;
-      const now = Date.now();
-      
-      // 设置最近显示时间
-      this.updateState({ lastShowTime: now });
-      
-      // 检查全局变量是否需要刷新
-      const app = getApp();
-      const refreshFromGlobal = app && app.globalData && app.globalData.refreshPostList;
-      
-      // 检查是否刚发布了新帖子或全局变量标记了需要刷新
-      const needRefreshPosts = this.getStorage('needRefreshPosts') || refreshFromGlobal;
-      if (needRefreshPosts) {
-        // 清除标记
-        this.setStorage('needRefreshPosts', false);
-        if (refreshFromGlobal) {
-          app.globalData.refreshPostList = false;
-        }
-        
-        // 刷新帖子列表
-        const postList = this.selectComponent('#postList');
-        if (postList) {
-          setTimeout(() => {
-            postList.loadInitialData();
-          }, 200);
-        }
-        return;
-      }
-      
-      // 如果有错误或超过60秒没刷新，才刷新帖子状态
-      if (this.data.error || now - lastShowTime > 60000) {
-        this.setData({
-          error: false,
-          errorText: ''
-        });
-        
-        // 获取帖子列表组件并刷新状态
-        const postList = this.selectComponent('#postList');
-        if (postList && postList.data.post && postList.data.post.length > 0) {
-          // 更新帖子状态
-          postList.updatePostsStatus(postList.data.post);
-        } else if (postList && !postList.data.loading) {
-          // 如果没有帖子且不在加载状态，则加载数据
-          postList.loadInitialData();
-        }
+      // 不管时间间隔，始终刷新帖子状态，确保从任何页面返回时数据一致
+      console.log('刷新帖子');
+      const postList = this.selectComponent('#postList');
+      if (postList) {
+        setTimeout(async () => {
+          await postList.refresh();
+        }, 200);
       }
     } catch (err) {
       console.debug('onShow错误:', err);

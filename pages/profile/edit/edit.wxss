@@ -10,6 +10,7 @@ page {
 
 .content-area {
   padding: 0 20rpx;
+  margin-top: 100rpx;
 }
 
 /* 头像编辑区域 */
@@ -30,16 +31,28 @@ page {
   border-radius: 50% !important;
   overflow: hidden !important;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .avatar-wrapper:after {
   border: none !important;
 }
 
+/* 旧的头像样式 - 保留以兼容 */
 .avatar {
   width: 180rpx;
   height: 180rpx;
   border-radius: 50%;
+}
+
+/* 新的头像图标样式 */
+.avatar-icon {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .avatar-hint {

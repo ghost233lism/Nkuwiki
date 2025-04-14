@@ -5,7 +5,23 @@
   
   <view class="post-header">
     <view class="post-header-left">
-      <image class="author-avatar" src="{{post.user.avatar || post.avatar || defaultAvatar}}" catchtap="_onAvatarTap" mode="aspectFill"></image>
+      <!-- 修改头像展示方式，使用更新后的icon组件并根据是否有avatar决定展示方式 -->
+      <view class="avatar-container" catchtap="_onAvatarTap">
+        <icon 
+          wx:if="{{post.avatar}}"
+          useImage="{{true}}"
+          imageSrc="{{post.avatar}}"
+          size="80"
+          class="avatar-icon">
+        </icon>
+        <icon 
+          wx:else
+          name="profile"
+          size="80"
+          color="#6369e8"
+          class="avatar-icon">
+        </icon>
+      </view>
       <view class="post-info">
         <view class="author-name" catchtap="_onAuthorTap">{{post.user.nickname || post.nickname || '未知用户'}}</view>
         <view wx:if="{{post.user.bio || post.bio}}" class="author-bio">{{post.user.bio || post.bio}}</view>
@@ -35,8 +51,7 @@
           height="{{contentExpanded ? 900 : (previewHeight > 0 ? previewHeight : 120)}}"
           autoHeight="{{!contentExpanded && !detailPage}}"
           showToolbar="{{false}}"
-          scroll="{{false}}"
-          fixedHeight="{{contentExpanded || detailPage}}"
+          scroll="{{true}}"
         ></text-area>
         
         <!-- 展开全文按钮 - 移到这里确保一定会显示 -->
@@ -52,7 +67,7 @@
     <view wx:elif="{{detailPage}}" class="empty-content-notice">
       <view class="empty-content-text">暂无内容</view>
     </view>
-    
+    <!-- 
     <view wx:if="{{post.images && post.images.length > 0}}" 
           class="post-images {{post.images.length === 1 ? 'single-image' : (post.images.length === 2 ? 'double-image' : 'multi-image')}}">
       <block wx:for="{{post.images}}" wx:key="*this">
@@ -61,7 +76,7 @@
                catchtap="_onImageTap"></image>
       </block>
       <view wx:if="{{post.images.length > 3}}" class="image-count">+{{post.images.length - 3}}</view>
-    </view>
+    </view>-->
   </view>
 
   <!-- 标签移到正文下方，按钮上方 -->

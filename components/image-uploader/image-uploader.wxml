@@ -1,32 +1,5 @@
 <view class="image-uploader">
-  <!-- 已上传的图片 -->
-  <view wx:if="{{uploadedImages.length > 0}}" class="image-list">
-    <view 
-      wx:for="{{uploadedImages}}" 
-      wx:key="index" 
-      class="image-item"
-      style="width: {{width}}; height: {{height}};"
-    >
-      <image 
-        src="{{item}}" 
-        mode="aspectFill" 
-        style="width: 100%; height: 100%;"
-        bindtap="previewImage"
-        data-index="{{index}}"
-        data-type="uploaded"
-      ></image>
-      <view 
-        class="delete-btn" 
-        catchtap="deleteImage" 
-        data-index="{{index}}"
-        data-type="uploaded"
-      >
-        <icon name="close" size="28"></icon>
-      </view>
-    </view>
-  </view>
-  
-  <!-- 本地待上传的图片 -->
+  <!-- 仅显示本地图片列表，无论是否已上传 -->
   <view wx:if="{{localImages.length > 0}}" class="image-list">
     <view 
       wx:for="{{localImages}}" 
@@ -50,6 +23,11 @@
       >
         <icon name="close" size="28"></icon>
       </view>
+      <!-- 上传成功标记注释掉，隐藏绿色对勾
+      <view wx:if="{{imageStatus[item] && imageStatus[item].uploaded}}" class="upload-success-icon">
+        <icon name="success" size="28" color="#07C160"></icon>
+      </view>
+      -->
     </view>
   </view>
   
@@ -65,7 +43,7 @@
   </view>
   
   <!-- 上传进度 -->
-  <view wx:if="{{isUploading}}" class="upload-progress">
+  <view wx:if="{{isUploading && !silentUpload}}" class="upload-progress">
     <progress percent="{{uploadProgress}}" stroke-width="4" color="#07C160" active></progress>
     <text>正在上传 {{uploadProgress}}%</text>
   </view>

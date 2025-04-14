@@ -8,7 +8,7 @@
     style="background-color: {{bgColor}};">
     
     <!-- 标准标签栏 -->
-    <view class="tab-bar {{equalWidth ? 'equal-width' : ''}}">
+    <view class="tab-bar {{equalWidth ? 'equal-width' : ''}}" style="{{customStyle}}">
       <!-- 使用自定义标签 -->
       <block wx:if="{{useCustomTabs}}">
         <view 
@@ -17,7 +17,7 @@
           class="tab-item {{activeTab === index ? 'active' : ''}} {{item.class || ''}}"
           bind:tap="onTabChange"
           data-index="{{index}}"
-          style="color: {{activeTab === index ? (item.activeColor || activeColor) : (item.color || textColor)}}; {{item.style || ''}}"
+          style="color: {{activeTab === index ? (item.activeColor || activeColor) : (item.color || textColor)}}; {{activeTab === index ? 'background-color: #f0f9f0;' : ''}} {{item.style || ''}}"
         >
           <!-- 内容插槽（图标+文本） -->
           <view class="tab-content">
@@ -32,13 +32,6 @@
             <view wx:if="{{item.badge}}" class="tab-badge">{{item.badge}}</view>
             <view wx:elif="{{item.dot}}" class="tab-dot"></view>
           </view>
-          
-          <!-- 底部线条 -->
-          <view 
-            class="tab-line" 
-            wx:if="{{showLine && activeTab === index}}"
-            style="background-color: {{item.activeColor || activeColor}};"
-          ></view>
           
           <!-- 自定义事件按钮 -->
           <view 
@@ -62,12 +55,7 @@
           data-index="{{index}}"
           style="color: {{activeTab === index ? activeColor : textColor}};"
         >
-          <text>{{item}}</text>
-          <view 
-            class="tab-line" 
-            wx:if="{{showLine && activeTab === index}}"
-            style="background-color: {{activeColor}};"
-          ></view>
+          <text class="tab-text">{{item}}</text>
         </view>
       </block>
     </view>

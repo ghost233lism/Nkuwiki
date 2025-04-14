@@ -91,12 +91,23 @@
 }
 
 /* 自定义button样式 */
-button {
+.submit-button {
   width: 90% !important;
   height: 88rpx !important;
   margin: 60rpx auto !important;
+  font-size: 32rpx !important;
+  border-radius: 44rpx !important;
+  background-color: #07c160 !important;
+  color: #ffffff !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  border-radius: 44rpx !important;
+  font-weight: 500 !important;
+  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.2) !important;
+}
+
+/* 按钮悬停状态 */
+.submit-button.button-hover {
+  background-color: #06ad56 !important;
+  opacity: 0.9;
 }

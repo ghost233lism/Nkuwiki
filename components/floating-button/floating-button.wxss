@@ -1,63 +1,95 @@
+/* 悬浮按钮主样式 */
 .floating-button {
   position: fixed;
+  z-index: 100;
+  border-radius: 50%;
+  box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  border: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
-  z-index: 100;
-  transition: all 0.3s ease;
+  line-height: 1;
+  box-sizing: border-box;
+  
+  /* 默认尺寸 - medium */
+  width: 100rpx;
+  height: 100rpx;
 }
 
-.floating-button.bottom-right {
-  right: 32rpx;
-  bottom: 32rpx;
+/* 大号按钮 */
+.floating-button.size-large {
+  width: 100rpx;
+  height: 100rpx;
 }
 
-.floating-button.bottom-left {
-  left: 32rpx;
-  bottom: 32rpx;
-}
-
-.floating-button.large {
-  width: 110rpx;
-  height: 110rpx;
-}
-
-.floating-button.small {
+/* 小号按钮 */
+.floating-button.size-mini {
   width: 80rpx;
   height: 80rpx;
 }
 
-.floating-button.primary {
-  background-color: #07C160;
-  color: #ffffff;
+/* 确保图标居中 */
+.floating-button icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 40rpx !important;
+  height: 40rpx !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
 }
 
-.floating-button.default {
-  background-color: #ffffff;
-  color: #333333;
-}
-
-.floating-button.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
+/* 悬浮按钮悬停效果 */
 .button-hover {
   transform: scale(0.95);
   opacity: 0.9;
 }
 
-.floating-button-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+/* 按钮类型样式 */
+.floating-button.type-primary {
+  background: #07c160;
+  color: #ffffff;
 }
 
-.floating-button-text {
-  font-size: 24rpx;
-  margin-top: 4rpx;
-  line-height: 1;
-} 
+.floating-button.type-secondary {
+  background: #ffffff;
+  color: #333333;
+}
+
+.floating-button.type-warn {
+  background: #fa5151;
+  color: #ffffff;
+}
+
+/* 禁用状态 */
+.floating-button.disabled {
+  background-color: #f2f2f2;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+/* 位置 */
+.top-left {
+  top: 30rpx;
+  left: 30rpx;
+}
+
+.top-right {
+  top: 30rpx;
+  right: 30rpx;
+}
+
+.bottom-left {
+  bottom: 150rpx;
+  left: 30rpx;
+}
+
+.bottom-right {
+  bottom: 150rpx;
+  right: 30rpx;
+}

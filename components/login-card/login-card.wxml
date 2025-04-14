@@ -2,7 +2,7 @@
   <view class="content">
     <view class="header">
       <view class="avatar">
-        <icon icon="user" size="96"></icon>
+        <icon name="profile" size="96"></icon>
       </view>
       <view class="text">
         <view class="title">登录后体验更多功能</view>
@@ -12,7 +12,7 @@
 
     <view class="features">
       <view class="feature-item" wx:for="{{features}}" wx:key="text">
-        <icon icon="{{item.icon}}" size="48"></icon>
+        <icon name="{{item.icon}}" size="48"></icon>
         <text>{{item.text}}</text>
       </view>
     </view>

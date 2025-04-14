@@ -1,8 +1,8 @@
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 0 20rpx 0;
+  gap: 0px;
+  padding: 10rpx 20rpx 0rpx 20rpx;
   transition: opacity 0.3s ease;
   will-change: transform, opacity;
 }

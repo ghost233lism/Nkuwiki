@@ -362,7 +362,12 @@
 }
 
 .h2w__main .h2w__image {
-    height:auto; vertical-align:middle;
+    height:auto; 
+    vertical-align:middle;
+    max-width: 300rpx !important; /* 限制最大宽度 */
+    width: auto; /* 允许自动宽度 */
+    margin: 10rpx 0; /* 垂直间距 */
+    display: inline-block; /* 确保图片可见 */
 }
 
 .h2w__main .h2w__image {

@@ -7,7 +7,6 @@
     "text-area": "/components/text-area/text-area",
     "picker-field": "/components/picker-field/picker-field",
     "input-field": "/components/input-field/input-field",
-    "button": "/components/button/button",
     "nav-bar": "/components/nav-bar/nav-bar"
   }
 } 

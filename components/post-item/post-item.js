@@ -1,7 +1,7 @@
 const baseBehavior = require('../../behaviors/baseBehavior');
 const postBehavior = require('../../behaviors/postBehavior');
 const userBehavior = require('../../behaviors/userBehavior');
-const { formatRelativeTime, parseJsonField, storage } = require('../../utils/util.js');
+const { formatRelativeTime, parseJsonField, storage, post } = require('../../utils/util.js');
 
 Component({
   behaviors: [baseBehavior, postBehavior, userBehavior],
@@ -33,8 +33,12 @@ Component({
     contentOverflow: { type: Boolean, value: false },
     formattedTime: { type: String, value: '' },
     isMarkdown: { type: Boolean, value: true },
-    previewHeight: { type: Number, value: 60 },
+    previewHeight: { type: Number, value: 120 },
     currentUserOpenid: { type: String, value: '' }
+  },
+
+  data: {
+    // 已经不需要defaultAvatar，我们使用name=profile的icon替代
   },
 
   observers: {
@@ -46,37 +50,45 @@ Component({
         formattedTime: post.create_time ? formatRelativeTime(post.create_time) : ''
       });
 
+      // 处理头像
+      if (post.user && post.user.avatar && !post.avatar) {
+        post.avatar = post.user.avatar;
+      }
+
       // 解析JSON字段
       this._parseJsonFields(post);
       
-      // 检查内容是否需要展开按钮
-      this._checkContentOverflow(post.content);
+      if(!this.properties.detailPage){
+        // 检查内容是否需要展开按钮
+        this.checkContentOverflow();
+      }
     },
     
-    'detailPage': function(isDetailPage) {
-      if (isDetailPage) {
+    'detailPage': function(detailPage) {
+      if (detailPage) {
         this.setData({ contentExpanded: true });
       }
     }
   },
 
   lifetimes: {
-    ready() {
+    async ready() {
       this.setData({ currentUserOpenid: storage.get('openid') });
-      
       // 只在详情页面时刷新状态
       if (this.properties.detailPage) {
-        this._updateFromServer();
+        await this.getPostDetail(this.properties.post.id);
+        await this.updatePostStatus();
       }
-      
-      // 检查内容是否溢出
-      this.checkContentOverflow();
+      else{
+        // 检查内容是否溢出
+        this.checkContentOverflow();
+      }
     }
   },
 
   methods: {
     // 从服务器更新帖子状态
-    async _updateFromServer() {
+    async updatePostStatus() {
       if (!this.properties.post?.id) return;
       
       try {
@@ -88,16 +100,39 @@ Component({
           const res = await this._getPostStatus(postId);
           
           if (res?.code === 200 && res.data) {
-            // 更新状态数据，按照API文档中的规范解构
-            const { is_liked, is_favorited, is_following, like_count, favorite_count, comment_count } = res.data;
+            // 返回的数据结构是：{ "postId1": {状态1}, "postId2": {状态2}, ... }
+            // 需要根据当前帖子ID获取对应状态
+            const postStatus = res.data[postId];
             
-            this.setData({
-              'post.is_liked': !!is_liked,
-              'post.is_favorited': !!is_favorited,
-              'post.is_following': !!is_following,
-              'post.like_count': like_count || 0,
-              'post.favorite_count': favorite_count || 0,
-              'post.comment_count': comment_count || 0
+            if (!postStatus) {
+              console.debug('找不到该帖子的状态:', postId);
+              return;
+            }
+            // 更新状态数据，按照API文档中的规范解构
+            const { 
+              is_liked, 
+              is_favorited, 
+              is_following, 
+              like_count, 
+              favorite_count, 
+              comment_count,
+              view_count
+            } = postStatus;
+
+            const updatedPost = {...this.data.post};
+            updatedPost.is_liked = !!is_liked;
+            updatedPost.is_favorited = !!is_favorited;
+            updatedPost.is_following = !!is_following;
+            updatedPost.like_count = like_count || 0;
+            updatedPost.favorite_count = favorite_count || 0;
+            updatedPost.comment_count = comment_count || 0;
+            if (view_count !== undefined) {
+              updatedPost.view_count = view_count || 0;
+            }
+            // 更新整个post对象
+            this.setData({ post: updatedPost }, () => {
+              // 在回调中打印日志，确保数据更新完成
+              console.debug('更新帖子状态成功 [ID:' + postId + ']');
             });
           }
         }
@@ -105,7 +140,23 @@ Component({
         console.debug('获取帖子状态失败:', err);
       }
     },
-    
+
+    async getPostDetail(postId) {
+      try {
+        const res = await this._getPostDetail(postId);
+        if (res.code === 200 && res.data) {
+          this.setData({
+            post: res.data,
+          });
+        } else {
+          throw new Error('获取帖子详情失败');
+        }
+      } catch (err) {
+        console.debug('[加载帖子详情失败]', err);
+        throw err;
+      }
+    },
+   
     // 检查内容是否超出
     checkContentOverflow() {
       // 详情页始终展开
@@ -116,13 +167,38 @@ Component({
       
       const content = this.properties.post?.content;
       if (!content) {
-        this.setData({ contentOverflow: false });
+        this.setData({ 
+          contentOverflow: false,
+          previewHeight: 60
+        });
         return;
       }
       
-      const textLength = content.trim().length;
-      // 长度超过50，但不要对短于20的内容显示展开按钮
-      this.setData({ contentOverflow: textLength > 50 && textLength >= 20 });
+      const contentLength = content.trim().length;
+      
+      // 设置基础高度并判断是否需要展开按钮
+      // 短内容直接适应高度，不需要展开按钮
+      // 长内容设置一个合理的初始高度，需要展开按钮
+      if (contentLength <= 50) {
+        // 短内容，设置较小的初始高度，让autoHeight生效，不显示展开按钮
+        this.setData({
+          previewHeight: 120,
+          contentOverflow: false
+        });
+      } else if (contentLength <= 150) {
+        // 中等内容，设置较小的初始高度并显示展开按钮
+        this.setData({
+          previewHeight: 160,
+          contentOverflow: true
+        });
+      } else {
+        // 长内容，设置较大的初始高度并显示展开按钮
+        const highPreviewHeight = contentLength > 300 ? 250 : 200;
+        this.setData({
+          previewHeight: highPreviewHeight,
+          contentOverflow: true
+        });
+      }
     },
     
     // 展开/收起内容
@@ -337,46 +413,9 @@ Component({
       });
     },
     
-    // 检查内容是否需要展开按钮
-    _checkContentOverflow(content) {
-      if (!content) {
-        this.setData({ 
-          contentOverflow: false,
-          previewHeight: 60
-        });
-        return;
-      }
-      
-      const contentLength = content.trim().length;
-      
-      // 设置基础高度并判断是否需要展开按钮
-      // 短内容直接适应高度，不需要展开按钮
-      // 长内容设置一个合理的初始高度，需要展开按钮
-      if (contentLength <= 50) {
-        // 短内容，设置较小的初始高度，让autoHeight生效，不显示展开按钮
-        this.setData({
-          previewHeight: 120,
-          contentOverflow: false
-        });
-      } else if (contentLength <= 150) {
-        // 中等内容，设置较小的初始高度并显示展开按钮
-        this.setData({
-          previewHeight: 160,
-          contentOverflow: true
-        });
-      } else {
-        // 长内容，设置较大的初始高度并显示展开按钮
-        const highPreviewHeight = contentLength > 300 ? 250 : 200;
-        this.setData({
-          previewHeight: highPreviewHeight,
-          contentOverflow: true
-        });
-      }
-    },
-    
     // 空方法，用于阻止事件冒泡而不执行任何操作
     _catchBubble() {
       // 不执行任何操作，仅用于阻止事件冒泡
-    }
+    },
   }
 }); 
