@@ -16,8 +16,9 @@
 
 /* 通知列表样式 */
 .notification-list {
-  height: calc(100vh - 220rpx);  /* 减去导航栏和标签栏的高度 */
+  height: calc(100vh - 110rpx);  /* 减去顶部内边距 */
   padding: 0 20rpx;
+  box-sizing: border-box;
 }
 
 .notification-item {
