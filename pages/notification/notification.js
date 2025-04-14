@@ -122,7 +122,8 @@ Page({
       }
       
       // 格式化通知显示
-      const notificationList = Array.isArray(result.data) ? result.data : [];
+      const notificationList = Array.isArray(result.data.list) ? result.data.list : [];
+      //const notificationList = result.data.list;
       const pagination = result.pagination || {};
       
       const formattedList = notificationList.map(item => ({
