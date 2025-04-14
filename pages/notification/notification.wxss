@@ -4,7 +4,7 @@
   flex-direction: column;
   height: 100vh;
   background: #f7f9fc;
-  padding-top: 110rpx; /* 添加顶部内边距，避免被导航栏和标签栏遮挡 */
+  padding-top: 150rpx; /* 增加顶部内边距 */
   box-sizing: border-box;
 }
 
@@ -16,7 +16,7 @@
 
 /* 通知列表样式 */
 .notification-list {
-  height: calc(100vh - 110rpx);  /* 减去顶部内边距 */
+  height: calc(100vh - 150rpx);  /* 减去顶部内边距 */
   padding: 0 20rpx;
   box-sizing: border-box;
 }
