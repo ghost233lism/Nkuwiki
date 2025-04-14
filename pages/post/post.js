@@ -94,7 +94,18 @@ Page({
   },
 
   async onLoad() {
-    await this.initPage();
+    // 打印当前页面栈
+    const pages = getCurrentPages();
+    console.debug('发帖页面 onLoad - 当前页面栈:', pages.map(p => p.route || p.__route__));
+    
+    // 移除触摸监听，改用物理按钮返回监听
+    // wx.onTouchMove(this.handleTouchMove);
+    
+    // 监听物理按钮返回事件
+    wx.onBackPress(this.handleBackPress);
+    
+    // 初始化页面
+    this.initPage();
     
     // 初始化上传组件
     this.initUploader();
@@ -106,7 +117,48 @@ Page({
       customTags: [],
       canSubmit: false  // 初始状态设为false
     });
-
+  },
+  
+  // 处理物理返回按钮
+  handleBackPress() {
+    console.debug('拦截到物理返回按钮');
+    
+    // 返回到首页
+    wx.switchTab({
+      url: '/pages/index/index',
+      success: (res) => {
+        console.debug('成功返回首页', res);
+      },
+      fail: (err) => {
+        console.error('返回首页失败:', err);
+        // switchTab失败时尝试reLaunch
+        wx.reLaunch({
+          url: '/pages/index/index'
+        });
+      }
+    });
+    
+    // 返回true表示已处理返回事件
+    return true;
+  },
+  
+  onShow() {
+    // 打印当前页面栈
+    const pages = getCurrentPages();
+    console.debug('发帖页面 onShow - 当前页面栈:', pages.map(p => p.route || p.__route__));
+  },
+  
+  onHide() {
+    console.debug('发帖页面 onHide');
+  },
+  
+  onUnload() {
+    console.debug('发帖页面 onUnload');
+    // 移除触摸监听
+    // wx.offTouchMove(this.handleTouchMove);
+    
+    // 移除物理返回按钮监听
+    wx.offBackPress(this.handleBackPress);
   },
 
   async initPage() {
@@ -446,8 +498,25 @@ Page({
       const result = await this._createPost(postData);
       
       if (result.code === 200) {
-        // 立即返回首页
-        wx.navigateBack();
+        // 发布成功，直接返回首页
+        wx.switchTab({
+          url: '/pages/index/index',
+          success: () => {
+            console.debug('发布成功，已返回首页');
+            // 发送成功提示
+            wx.showToast({
+              title: '发布成功',
+              icon: 'success'
+            });
+          },
+          fail: (err) => {
+            console.error('返回首页失败:', err);
+            // 如果switchTab失败，尝试reLaunch
+            wx.reLaunch({
+              url: '/pages/index/index'
+            });
+          }
+        });
       } else {
         throw new Error(result.message || '发布失败');
       }
@@ -509,10 +578,27 @@ Page({
     const { tab } = e.detail;
     const categoryId = tab.category_id;
     
-    this.setData({
-      categoryId,
-      'form.category_id': categoryId
-    });
+    // 在发帖页面，必须选择一个分类，忽略取消选择的情况
+    if (categoryId === 0) {
+      console.debug('发帖页面不允许取消选择分类');
+      return;
+    }
+    
+    // 避免重复设置相同分类
+    if (categoryId === this.data.categoryId) {
+      console.debug('阻止重复设置相同分类:', categoryId);
+      return;
+    }
+    
+    console.debug('设置分类:', categoryId);
+    
+    // 使用setTimeout微延迟，避免可能的渲染问题
+    setTimeout(() => {
+      this.setData({
+        categoryId,
+        'form.category_id': categoryId
+      });
+    }, 10);
   },
 
   // 添加自动获取联系方式的方法

@@ -129,8 +129,11 @@ Component({
             if (view_count !== undefined) {
               updatedPost.view_count = view_count || 0;
             }
-            // 更新整个post对象
-            this.setData({ post: updatedPost }, () => {
+            // 更新整个post对象，不显示加载状态
+            this.setData({ 
+              post: updatedPost,
+              isProcessing: false
+            }, () => {
               // 在回调中打印日志，确保数据更新完成
               console.debug('更新帖子状态成功 [ID:' + postId + ']');
             });
@@ -138,6 +141,8 @@ Component({
         }
       } catch (err) {
         console.debug('获取帖子状态失败:', err);
+        // 确保错误时也取消加载状态
+        this.setData({ isProcessing: false });
       }
     },
 
@@ -147,12 +152,15 @@ Component({
         if (res.code === 200 && res.data) {
           this.setData({
             post: res.data,
+            isProcessing: false
           });
         } else {
           throw new Error('获取帖子详情失败');
         }
       } catch (err) {
         console.debug('[加载帖子详情失败]', err);
+        // 确保错误时也取消加载状态
+        this.setData({ isProcessing: false });
         throw err;
       }
     },
