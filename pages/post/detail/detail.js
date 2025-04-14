@@ -14,6 +14,7 @@ Page({
     loadError: '',
     postDetail: null,
     postId: '',
+    commentId: '',
   
     // 顶部提示
     toptips: {
@@ -33,19 +34,22 @@ Page({
   onLoad(options) {
     // 从页面参数中获取帖子ID
     const postId = options.id;
+    const commentId = options.comment_id; // 获取评论ID参数
     
     // 获取状态栏高度 - 使用新API替代已废弃的getSystemInfoSync
     try {
       const windowInfo = wx.getWindowInfo();
       this.setData({
         statusBarHeight: windowInfo.statusBarHeight,
-        postId: postId
+        postId: postId,
+        commentId: commentId // 保存评论ID
       });
     } catch (err) {
-      console.error('获取窗口信息失败:', err);
+      console.debug('获取窗口信息失败:', err);
       this.setData({
         statusBarHeight: 20, // 默认状态栏高度
-        postId: postId
+        postId: postId,
+        commentId: commentId // 保存评论ID
       });
     }
     
@@ -54,7 +58,14 @@ Page({
   },
   
   onReady() {
-
+    // 如果有评论ID参数，等待页面准备好后定位到指定评论
+    const { commentId } = this.data;
+    if (commentId) {
+      // 给评论列表一些时间加载数据
+      setTimeout(() => {
+        this.scrollToComment(commentId);
+      }, 1000);
+    }
   },
   
   onShow() {
@@ -151,6 +162,16 @@ Page({
     const pageStatus = this.getPageStatus();
     if (pageStatus) {
       pageStatus.showError(message);
+    }
+  },
+
+  // 滚动到指定评论的方法
+  scrollToComment(commentId) {
+    // 获取评论列表组件实例
+    const commentList = this.selectComponent('#commentList');
+    if (commentList) {
+      // 调用评论列表组件的方法，定位到指定评论
+      commentList.locateComment(commentId);
     }
   },
 

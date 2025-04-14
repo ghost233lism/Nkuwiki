@@ -148,6 +148,96 @@ Component({
       this.triggerEvent('loadmore');
     },
     
+    // 定位到指定评论
+    locateComment(commentId) {
+      if (!commentId) return;
+      
+      // 在当前评论列表中查找指定评论
+      const targetIndex = this.data.comments.findIndex(comment => comment.id == commentId);
+      
+      if (targetIndex >= 0) {
+        // 如果找到评论，滚动到该评论位置
+        this.highlightAndScrollToComment(targetIndex);
+      } else {
+        // 如果没找到，可能在后续页，先重置列表然后加载所有评论直到找到指定评论
+        this.loadCommentUntilFound(commentId);
+      }
+    },
+    
+    // 高亮并滚动到指定评论
+    highlightAndScrollToComment(index) {
+      // 临时添加高亮类
+      const comments = [...this.data.comments];
+      comments[index] = { ...comments[index], highlighted: true };
+      
+      this.setData({ comments }, () => {
+        // 使用选择器查询评论元素位置
+        const query = this.createSelectorQuery();
+        query.select(`.comment-item-${comments[index].id}`).boundingClientRect();
+        query.selectViewport().scrollOffset();
+        query.exec(res => {
+          if (res && res[0]) {
+            const commentElem = res[0];
+            const scrollTop = res[1].scrollTop;
+            
+            // 计算目标滚动位置，留一些顶部空间
+            const targetScrollTop = commentElem.top + scrollTop - 100;
+            
+            // 滚动到指定位置
+            wx.pageScrollTo({
+              scrollTop: targetScrollTop,
+              duration: 300
+            });
+            
+            // 添加高亮效果
+            wx.createSelectorQuery()
+              .select(`.comment-item-${comments[index].id}`)
+              .fields({ node: true, size: true }, function (res) {
+                if (res && res.node) {
+                  res.node.addClass('highlighted');
+                  // 3秒后移除高亮
+                  setTimeout(() => {
+                    res.node.removeClass('highlighted');
+                  }, 3000);
+                }
+              })
+              .exec();
+          }
+        });
+      });
+    },
+    
+    // 逐页加载直到找到指定评论
+    loadCommentUntilFound(commentId) {
+      // 重置分页并重新加载
+      this.resetPagination();
+      
+      // 递归函数，不断加载更多直到找到评论
+      const loadAndFind = () => {
+        this.loadComments().then(() => {
+          // 检查是否找到评论
+          const index = this.data.comments.findIndex(c => c.id == commentId);
+          
+          if (index >= 0) {
+            // 找到了，高亮并滚动到指定位置
+            this.highlightAndScrollToComment(index);
+          } else if (this.data.hasMore) {
+            // 还有更多评论，继续加载
+            this.setData({ page: this.data.page + 1 }, () => {
+              loadAndFind();
+            });
+          } else {
+            // 加载完所有评论仍未找到
+            this.showToast('未找到指定评论', 'error');
+          }
+        }).catch(() => {
+          this.showToast('加载评论失败', 'error');
+        });
+      };
+      
+      loadAndFind();
+    },
+    
     // 点赞评论
     handleLike(e) {
       const { id, index } = e.currentTarget.dataset;

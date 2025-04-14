@@ -29,7 +29,7 @@
 
   <!-- 评论列表 -->
   <view class="comment-list" wx:elif="{{comments && comments.length > 0}}">
-    <view class="comment-item" wx:for="{{comments}}" wx:key="id">
+    <view class="comment-item comment-item-{{item.id}} {{item.highlighted ? 'highlighted' : ''}}" wx:for="{{comments}}" wx:key="id">
       <!-- 用户头像 -->
       <view class="comment-user">
         <image 

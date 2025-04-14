@@ -120,6 +120,22 @@
   display: flex;
   padding: 24rpx 0;
   border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.3s ease;
+}
+
+/* 高亮样式 */
+.comment-item.highlighted {
+  background-color: rgba(103, 128, 255, 0.1);
+  border-radius: 8rpx;
+  padding: 24rpx 12rpx;
+  position: relative;
+  animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0% { background-color: rgba(103, 128, 255, 0.1); }
+  50% { background-color: rgba(103, 128, 255, 0.2); }
+  100% { background-color: rgba(103, 128, 255, 0.1); }
 }
 
 /* 用户头像 */
