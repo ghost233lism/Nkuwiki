@@ -55,11 +55,19 @@ Component({
       if (!openid) return;
       
       wx.navigateTo({
-        url: `/pages/profile/profile?id=${openid}`,
-        fail: () => {
-          storage.set('temp_profile_openid', openid);
-          wx.redirectTo({
-            url: `/pages/profile/profile?id=${openid}`
+        url: `/pages/index/user-profile/user-profile?openid=${openid}`,
+        fail: (err) => {
+          console.error('跳转到用户资料页面失败:', err);
+          // 尝试备用路径
+          wx.navigateTo({
+            url: `/pages/profile/profile?id=${openid}&from=comment`,
+            fail: (subErr) => {
+              console.error('备用路径跳转也失败:', subErr);
+              // 最后尝试redirectTo
+              wx.redirectTo({
+                url: `/pages/profile/profile?id=${openid}&from=comment`
+              });
+            }
           });
         }
       });

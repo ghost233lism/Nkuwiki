@@ -217,14 +217,18 @@ Component({
       if (openid) {
         console.debug('头像点击跳转，openid:', openid);
         
-        // 将openid存入缓存，防止URL参数失效时作为备用
-        storage.set('temp_profile_openid', openid);
-        
-        // 使用reLaunch跳转到profile页面，直接在URL中传递openid参数
-        wx.reLaunch({
-          url: `/pages/profile/profile?openid=${openid}`,
+        // 直接跳转到user-profile页面，不再使用temp_profile_openid
+        wx.navigateTo({
+          url: `/pages/index/user-profile/user-profile?openid=${openid}`,
           fail: (err) => {
-            console.error('跳转到个人主页失败:', err);
+            console.error('跳转到用户资料页面失败:', err);
+            // 尝试备用路径
+            wx.navigateTo({
+              url: `/pages/profile/profile?id=${openid}&from=post`,
+              fail: (subErr) => {
+                console.error('备用路径跳转也失败:', subErr);
+              }
+            });
           }
         });
       }

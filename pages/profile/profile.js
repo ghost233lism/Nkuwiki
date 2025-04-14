@@ -63,15 +63,21 @@ Page({
     // 状态栏高度
     statusBarHeight: 0,
     // 用户详情页相关数据
-    otherUserInfo: null
+    otherUserInfo: null,
+    isFromExternalView: false
   },
 
   async onLoad(options) {
     const targetOpenid = options.openid || options.id;
     const currentOpenid = storage.get('openid');
-    this.setData({ openid: currentOpenid || '' });
+    const isFromExternalView = options.from === 'post' || options.from === 'card' || options.from === 'comment';
+    
+    this.setData({ 
+      openid: currentOpenid || '',
+      isFromExternalView: isFromExternalView
+    });
 
-    console.debug('Profile页面加载，目标openid:', targetOpenid, '当前用户openid:', currentOpenid);
+    console.debug('Profile页面加载，目标openid:', targetOpenid, '当前用户openid:', currentOpenid, '来源:', options.from);
 
     if (targetOpenid && targetOpenid !== currentOpenid) {
       // 查看其他用户的个人资料
@@ -83,6 +89,11 @@ Page({
   },
 
   async onShow() {
+    // 如果是从外部视图进入（如点击他人头像），则不通过temp_profile_openid改变当前页面
+    if (this.data.isFromExternalView) {
+      return;
+    }
+    
     // 检查是否有从其他页面传入的临时openid
     try {
       const tempOpenid = this.getStorage('temp_profile_openid');
