@@ -396,14 +396,11 @@ Component({
               }
             });
             return; // 重要：添加return防止执行下面的代码
-          } else if (button.url) {
-            wx.navigateTo({
-              url: button.url
-            });
           } else {
-            // 其他页面使用常规返回
-            wx.navigateBack();
-          }
+              // 其他页面使用常规返回
+              wx.navigateBack();
+            }
+          
           break;
           
         case 'home':

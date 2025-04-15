@@ -35,6 +35,8 @@
       bindimagetap="showImageUploader"
       bindpreviewchange="onPreviewChange"
       binderror="_showToptips"
+      bind:image-insert="onImageInsert"
+      bind:image-delete="onImageDelete"
     />
   </view>
 

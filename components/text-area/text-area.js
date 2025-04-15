@@ -376,8 +376,6 @@ Component({
         let imageContent = '';
         const newImages = [...this.data.uploadedImages]; // 保留已有图片，避免闪烁
         
-        // 在Markdown模式下，不清空已有图片标记，只处理新图片
-        
         // 处理每张新上传的图片
         for (let i = 0; i < images.length; i++) {
           const url = images[i];
@@ -394,7 +392,7 @@ Component({
           // 添加到新图片列表
           newImages.push(imgObj);
           
-          // 仅在Markdown模式下才向内容中添加图片标记
+          // 根据模式添加图片标记到内容中
           if (this.properties.markdownMode) {
             // Markdown模式：使用标准Markdown图片语法
             imageContent += `\n![](${url})\n`;
@@ -412,8 +410,8 @@ Component({
           imageKey: `image_${Date.now()}`
         });
         
-        // 仅在Markdown模式下更新内容
-        if (this.properties.markdownMode) {
+        // 仅在Markdown模式下更新内容，富文本模式通过event传递给父组件处理
+        if (this.properties.markdownMode && imageContent) {
           // 插入新的图片内容
           const newContent = content.slice(0, insertPosition) + imageContent + content.slice(insertPosition);
           
