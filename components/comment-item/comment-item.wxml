@@ -31,23 +31,21 @@
           <image class="content-image" src="{{item}}" mode="aspectFill" bindtap="onPreviewImage" data-current="{{item}}"></image>
         </block>
       </view>
-      
-      <!-- 底部操作区 -->
-      <view class="action-bar">
-        <view class="action-left">
-          <text class="time">{{formattedComment.create_time_formatted}}</text>
-        </view>
-        <view class="action-right">
-          <view class="action-icon {{formattedComment.isLiked ? 'liked' : ''}}" bindtap="onTapLike">
-            <icon name="{{formattedComment.isLiked ? 'like-active' : 'like'}}" size="20" color="{{formattedComment.isLiked ? '#ff6b6b' : '#666'}}"></icon>
-          </view>
-          <view class="action-icon" bindtap="onTapReply">
-            <icon name="comment" size="20" color="#666"></icon>
-          </view>
-          <view wx:if="{{formattedComment.isOwner}}" class="action-icon" bindtap="onTapDelete">
-            <icon name="delete" size="20" color="#666"></icon>
-          </view>
-        </view>
+    </view>
+  </view>
+  
+  <!-- 底部操作区 - 移到外层，与post-item保持一致 -->
+  <view class="action-bar">
+    <text class="time">{{formattedComment.create_time_formatted}}</text>
+    <view class="action-buttons">
+      <view class="action-icon {{formattedComment.isLiked ? 'liked' : ''}}" bindtap="onTapLike">
+        <icon name="{{formattedComment.isLiked ? 'like-active' : 'like'}}" size="20" color="{{formattedComment.isLiked ? '#ff6b6b' : '#666'}}"></icon>
+      </view>
+      <view class="action-icon" bindtap="onTapReply">
+        <icon name="comment" size="20" color="#666"></icon>
+      </view>
+      <view wx:if="{{formattedComment.isOwner}}" class="action-icon" bindtap="onTapDelete">
+        <icon name="clear" size="20" color="#666"></icon>
       </view>
     </view>
   </view>

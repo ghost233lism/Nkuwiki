@@ -7,6 +7,7 @@
 .comment-header {
   display: flex;
   align-items: flex-start;
+  margin-bottom: 10rpx;
 }
 
 /* 头像容器样式，从post-item复制 */
@@ -71,29 +72,28 @@
   background-color: #f0f0f0;
 }
 
+/* 底部操作区样式，与post-item保持一致 */
 .action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.action-left {
-  flex: 1;
+  margin-left: 76rpx; /* 与内容左对齐 */
 }
 
 .time {
   font-size: 24rpx;
   color: #999;
+  flex: 1;
 }
 
-.action-right {
+.action-buttons {
   display: flex;
   align-items: center;
 }
 
 .action-icon {
-  padding: 4rpx 10rpx;
-  margin-left: 20rpx;
+  padding: 4rpx;
+  margin-left: 30rpx;
   display: inline-flex;
   align-items: center;
 }
