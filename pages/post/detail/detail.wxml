@@ -1,13 +1,14 @@
 <!-- 帖子详情页 -->
 <nav-bar 
-  title="{{postData.post.title || '帖子详情'}}"
+  title="{{postDetail.data.title}}"
   showBack="{{true}}"
 />
+
 <view class="post-container">
 
 <!-- 帖子详情 -->
 <post-item 
-  post="{{postDetail}}" 
+  post="{{postDetail.data}}" 
   detailPage="{{true}}"
   showAction="{{true}}"
   bind:postDeleted="onPostDeleted">
@@ -17,11 +18,9 @@
 <comment-list 
   id="commentList"
   class="comment-list-container"
-  post-id="{{postDetail.id}}">
+  postId="{{postId}}">
 </comment-list>
 
-  <!-- 底部安全区域，为输入框腾出空间 -->
-  <view class="bottom-safe-area" style="height: 70px;"></view>
 </view>
 
 <!-- WEUI组件 -->

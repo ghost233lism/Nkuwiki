@@ -1,9 +1,6 @@
 const behaviors = require('../../behaviors/index');
 
 Component({
-  /**
-   * 组件的属性列表
-   */
   behaviors: [
     behaviors.baseBehavior,
     behaviors.commentBehavior,
@@ -69,6 +66,11 @@ Component({
       if (this.properties.postId) {
         this.loadComments();
       }
+    },
+
+    ready() {
+      // 打印调试日志，用于检查组件状态
+      console.debug('评论组件就绪，初始输入内容:', this.data.commentText);
     }
   },
 
@@ -92,12 +94,12 @@ Component({
           if (result) {
             const { list: comments, total, has_more } = result;
             
-            // 格式化评论数据
-            const formattedComments = comments && comments.length ? comments.map(comment => this._formatCommentData(comment)) : [];
+            // 直接使用原始评论数据，由comment-item组件处理格式化
+            const commentList = comments && comments.length ? comments : [];
             
             // 更新评论列表和分页信息
             this.setData({
-              comments: this.data.page === 1 ? formattedComments : [...this.data.comments, ...formattedComments],
+              comments: this.data.page === 1 ? commentList : [...this.data.comments, ...commentList],
               hasMore: has_more,
               total: total || 0
             });
@@ -238,163 +240,87 @@ Component({
       loadAndFind();
     },
     
-    // 点赞评论
-    handleLike(e) {
-      const { id, index } = e.currentTarget.dataset;
-      const comment = this.data.comments[index];
-      
-      if (!comment) return;
-      
-      const isLiked = comment.isLiked;
-      
-      // 调用评论行为中的点赞/取消点赞方法
-      this._toggleCommentLike(id)
-        .then(result => {
-          if (!result) throw new Error('操作失败');
-          
-          // 更新评论点赞状态
-          const comments = [...this.data.comments];
-          comments[index] = {
-            ...comment,
-            isLiked: result.status === 'liked',
-            like_count: result.like_count || comment.like_count || 0
-          };
-          
-          this.setData({ comments });
-          this.showToast(result.status === 'liked' ? '已点赞' : '已取消点赞', 'success');
-        })
-        .catch(error => {
-          this.showToast('操作失败: ' + (error.message || '未知错误'), 'error');
-        });
-    },
-    
-    // 格式化评论数据
-    _formatCommentData(comment) {
-      if (!comment) return null;
-      
-      // 格式化时间
-      const createTime = comment.create_time ? new Date(comment.create_time) : new Date();
-      const now = new Date();
-      
-      // 计算相对时间
-      const diffMinutes = Math.floor((now - createTime) / (1000 * 60));
-      let relativeTime = '';
-      
-      if (diffMinutes < 1) {
-        relativeTime = '刚刚';
-      } else if (diffMinutes < 60) {
-        relativeTime = `${diffMinutes}分钟前`;
-      } else if (diffMinutes < 24 * 60) {
-        relativeTime = `${Math.floor(diffMinutes / 60)}小时前`;
-      } else if (diffMinutes < 30 * 24 * 60) {
-        relativeTime = `${Math.floor(diffMinutes / (24 * 60))}天前`;
-      } else {
-        // 超过30天显示具体日期
-        const year = createTime.getFullYear();
-        const month = createTime.getMonth() + 1;
-        const day = createTime.getDate();
-        relativeTime = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
-      }
-      
-      // 处理图片字段 - 将字符串转换为数组
-      let imageArray = [];
-      if (comment.image) {
-        try {
-          // 如果是字符串，尝试解析为JSON
-          if (typeof comment.image === 'string') {
-            const parsed = JSON.parse(comment.image);
-            imageArray = Array.isArray(parsed) ? parsed : [];
-          } 
-          // 如果已经是数组，直接使用
-          else if (Array.isArray(comment.image)) {
-            imageArray = comment.image;
-          }
-        } catch (e) {
-          imageArray = [];
-        }
-      }
-      
-      return {
-        ...comment,
-        image: imageArray,
-        relativeTime,
-        // 检查是否是当前用户的评论
-        isOwner: this.data.currentUserOpenid && comment.openid === this.data.currentUserOpenid
-      };
-    },
-    
-    // 回复评论
+    // 处理回复评论
     handleReply(e) {
-      // 先检查登录状态
-      if (!this._checkLogin()) return;
+      if (this.data.isSubmitting) return;
       
-      const { id, index } = e.currentTarget.dataset;
-      // 获取完整的评论对象
-      const comment = this.data.comments[index];
-      if (!comment) return;
+      const { commentId, nickname } = e.detail;
       
-      const replyPrefix = comment.nickname ? `回复 @${comment.nickname}: ` : '';
-      
-      // 设置回复状态
       this.setData({
-        commentText: replyPrefix,
-        commentFocus: true,
         replyTo: {
-          commentId: id,
-          nickname: comment.nickname
-        }
+          commentId,
+          nickname,
+        },
+        commentFocus: true
       });
     },
     
-    // 删除评论
+    // 处理点赞评论
+    handleLike(e) {
+      const { id } = e.detail;
+      
+      // 检查登录状态
+      if (!this._checkLogin()) return;
+      
+      // 更新评论点赞状态
+      this._toggleCommentLike(id)
+        .then(res => {
+          console.debug('点赞结果:', res);
+          
+          // 重新加载评论列表以获取更新后的点赞状态
+          this.refresh();
+        })
+        .catch(err => {
+          console.error('点赞失败:', err);
+          this.showToast('点赞失败，请稍后重试', 'error');
+        });
+    },
+    
+    // 处理删除评论
     handleDelete(e) {
-      const { id, index } = e.currentTarget.dataset;
+      const { id } = e.detail;
       
-      // 调试日志，确认事件触发
-      console.debug('handleDelete 被调用:', id, index);
+      // 找到要删除的评论所在位置
+      const index = this.data.comments.findIndex(comment => comment.id == id);
+      if (index === -1) return;
       
-      try {
-        // 直接调用删除逻辑，不使用 showModal
-        console.debug('开始删除评论:', id);
-        console.debug('评论ID类型:', typeof id);
-        
-        // 检查openid是否存在
-        const openid = this.getStorage('openid');
-        console.debug('当前用户openid:', openid);
-        
-        // 调用评论行为中的删除评论方法
-        this._deleteComment(id)
-          .then(success => {
-            console.debug('删除评论结果:', success);
-            
-            if (!success) throw new Error('删除失败');
-            
-            // 更新评论列表
-            const comments = [...this.data.comments];
-            comments.splice(index, 1);
+      wx.showModal({
+        title: '确认删除',
+        content: '确定要删除这条评论吗？',
+        confirmText: '删除',
+        confirmColor: '#ff4d4f',
+        success: (res) => {
+          if (res.confirm) {
+            // 先移除本地数据再发起请求
+            const newComments = [...this.data.comments];
+            newComments.splice(index, 1);
             
             this.setData({ 
-              comments,
+              comments: newComments,
               total: Math.max(0, this.data.total - 1)
             });
             
-            this.showToast('删除成功', 'success');
-            
-            // 通知父组件更新评论计数
-            this.triggerEvent('delete', { 
-              id, 
-              index,
-              postId: Number(this.properties.postId)
-            });
-          })
-          .catch(error => {
-            console.error('删除评论失败:', error);
-            this.showToast('删除失败: ' + (error.message || '未知错误'), 'error');
-          });
-      } catch (error) {
-        console.error('删除评论处理过程出错:', error);
-        this.showToast('操作失败，请稍后再试', 'error');
-      }
+            // 发起删除请求
+            this._deleteComment(id)
+              .then(() => {
+                this.showToast('删除成功', 'success');
+                
+                // 通知父组件更新评论计数
+                this.triggerEvent('commentDeleted', {
+                  postId: this.properties.postId,
+                  commentId: id
+                });
+              })
+              .catch(err => {
+                console.error('删除评论失败:', err);
+                this.showToast('删除失败，请稍后重试', 'error');
+                
+                // 恢复删除的评论
+                this.refresh();
+              });
+          }
+        }
+      });
     },
     
     // 查看更多回复
@@ -403,10 +329,20 @@ Component({
       this.triggerEvent('viewreplies', { commentId });
     },
     
-    // 跳转到用户主页
+    // 处理用户点击
     goToUserProfile(e) {
-      const { userId } = e.currentTarget.dataset;
-      this.triggerEvent('usertap', { userId });
+      const { userId } = e.detail;
+      if (!userId) return;
+      
+      wx.navigateTo({
+        url: `/pages/profile/profile?id=${userId}`,
+        fail: () => {
+          this.setStorage('temp_profile_id', userId);
+          wx.switchTab({
+            url: `/pages/profile/profile`
+          });
+        }
+      });
     },
     
     // 预览评论图片

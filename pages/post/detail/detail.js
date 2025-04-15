@@ -31,30 +31,36 @@ Page({
     }
   },
 
-  onLoad(options) {
+  async onLoad(options) {
     // 从页面参数中获取帖子ID
     const postId = options.id;
-    const commentId = options.comment_id; // 获取评论ID参数
+    this.setData({
+      postId: postId
+    });
+    if(options.commentId){
+      this.setData({
+        commentId: options.commentId
+      });
+    }
     
-    // 获取状态栏高度 - 使用新API替代已废弃的getSystemInfoSync
     try {
       const windowInfo = wx.getWindowInfo();
       this.setData({
         statusBarHeight: windowInfo.statusBarHeight,
-        postId: postId,
-        commentId: commentId // 保存评论ID
       });
     } catch (err) {
-      console.debug('获取窗口信息失败:', err);
       this.setData({
         statusBarHeight: 20, // 默认状态栏高度
-        postId: postId,
-        commentId: commentId // 保存评论ID
       });
     }
-    
-    // 加载帖子详情
-    this.loadPostDetail();
+    this.setData({
+      isPostLoading: true,
+    });
+    const postDetail = await this._getPostDetail(postId);
+    this.setData({
+      postDetail: postDetail,
+      isPostLoading: false,
+    });
   },
   
   onReady() {
@@ -72,26 +78,7 @@ Page({
 
   },
 
-  // 加载帖子详情
-  loadPostDetail() {
-    const { postId } = this.data;
-    if (!postId) {
-      this.setData({
-        isPostLoading: false,
-        loadError: '帖子ID为空'
-      });
-      return;
-    }
-    // 显示加载状态
-    this.setData({ 
-      postDetail: {
-        id: postId
-      },
-      isPostLoading: true,
-      loadError: ''
-    });
-  },
-  
+
   
   // 显示顶部提示
   showToptips(msg, type = 'error') {

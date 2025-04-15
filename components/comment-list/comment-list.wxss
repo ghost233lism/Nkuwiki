@@ -446,11 +446,14 @@
   background-color: #dddddd;
   color: #888888;
   font-size: 14px;
+  transition: all 0.3s ease;
 }
 
 .submit-btn.active {
   background-color: #07c160;
   color: #ffffff;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(7, 193, 96, 0.2);
 }
 
 /* 错误状态 - TO BE DELETED */
