@@ -80,19 +80,10 @@
       </view>
       
       <!-- 发送按钮 -->
-      <view 
-        wx:if="{{!commentText || !commentText.trim()}}"
-        class="submit-btn" 
-        bindtap="submitComment"
-        data-disabled="true">
-        <text>发送</text>
-      </view>
-      <view 
-        wx:else
-        class="submit-btn active" 
-        style="background-color: #07c160; color: #ffffff; font-weight: 500;"
-        bindtap="submitComment"
-        data-disabled="{{isSubmitting}}">
+      <view
+              class="submit-btn {{commentText.length ? 'active' : ''}}"
+              bindtap="submitComment"
+              data-disabled="{{!commentText.trim() || isSubmitting}}">
         <text>发送</text>
       </view>
     </view>
