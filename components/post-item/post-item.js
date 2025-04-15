@@ -76,6 +76,11 @@ Component({
       this.setData({ currentUserOpenid: storage.get('openid') });
       // 只在详情页面时刷新状态
       if (this.properties.detailPage) {
+        // 添加防御性检查，避免post为null时产生错误
+        if (!this.properties.post || !this.properties.post.id) {
+          console.debug('帖子数据尚未加载，等待父组件提供数据');
+          return;
+        }
         await this.getPostDetail(this.properties.post.id);
         await this.updatePostStatus();
       }

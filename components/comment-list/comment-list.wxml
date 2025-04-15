@@ -27,42 +27,54 @@
     <view class="empty-text">暂无评论，快来抢沙发吧</view>
   </view>
 
-  <!-- 评论列表 -->
-  <view class="comment-list" wx:elif="{{comments && comments.length > 0}}">
-    <comment-item 
-      wx:for="{{comments}}" 
-      wx:key="id"
-      comment="{{item}}"
-      bind:reply="handleReply"
-      bind:like="handleLike"
-      bind:delete="handleDelete"
-      bind:user="goToUserProfile"
-      class="comment-item comment-item-{{item.id}} {{item.highlighted ? 'highlighted' : ''}}"
-    ></comment-item>
-  </view>
-
-  <!-- 加载更多 -->
-  <view class="load-more" wx:if="{{hasMore}}" bindtap="loadMore">
-    <view wx:if="{{loading}}" class="loading-more">
-      <view class="loading-spinner small"></view>
-      <text>加载中...</text>
+  <!-- 使用scroll-view替换普通view，启用滚动 -->
+  <scroll-view 
+    scroll-y="{{true}}"
+    class="comment-scroll"
+    wx:elif="{{comments && comments.length > 0}}">
+    <view class="comment-list">
+      <comment-item 
+        wx:for="{{comments}}" 
+        wx:key="id"
+        comment="{{item}}"
+        bind:reply="handleReply"
+        bind:replyToReply="handleReplyToReply"
+        bind:like="handleLike"
+        bind:delete="handleDelete"
+        bind:deleteReply="handleDeleteReply"
+        bind:user="goToUserProfile"
+        bind:viewReplies="handleViewReplies"
+        bind:viewSubReplies="handleViewSubReplies"
+        class="comment-item comment-item-{{item.id}} {{item.highlighted ? 'highlighted' : ''}}"
+      ></comment-item>
     </view>
-    <view wx:else class="load-more-text">
-      <text>加载更多</text>
-    </view>
-  </view>
 
-  <!-- 到底提示 -->
-  <view class="end-text" wx:elif="{{comments.length > 0}}">
-    <text>已经到底了</text>
-  </view>
+    <!-- 加载更多 -->
+    <view class="load-more" wx:if="{{hasMore}}" bindtap="loadMore">
+      <view wx:if="{{loading}}" class="loading-more">
+        <view class="loading-spinner small"></view>
+        <text>加载中...</text>
+      </view>
+      <view wx:else class="load-more-text">
+        <text>加载更多</text>
+      </view>
+    </view>
+
+    <!-- 到底提示 -->
+    <view class="end-text" wx:if="{{!hasMore && comments.length > 0}}">
+      <text>已经到底了</text>
+    </view>
+    
+    <!-- 底部留白，防止输入框遮挡内容 -->
+    <view class="bottom-padding"></view>
+  </scroll-view>
   
   <!-- 评论输入区域 -->
   <view class="comment-input-area">
     <view class="comment-input-container">
       <input 
         class="comment-input" 
-        placeholder="{{replyTo ? '回复 @' + replyTo.nickname : '写评论...'}}" 
+        placeholder="{{replyToComment ? (replyToReply ? '回复 @' + replyToReply.nickname : '回复 @' + replyToComment.nickname) : '写评论...'}}" 
         value="{{commentText}}"
         focus="{{commentFocus}}"
         bindfocus="onCommentFocus"
@@ -74,14 +86,14 @@
       <!-- 取消回复按钮，仅在回复模式下显示 -->
       <view 
         class="cancel-reply-btn" 
-        wx:if="{{replyTo}}"
+        wx:if="{{replyToComment}}"
         bindtap="cancelReply">
         <icon name="close" size="16"></icon>
       </view>
       
       <!-- 发送按钮 -->
       <view 
-        wx:if="{{!commentText || !commentText.trim()}}"
+        wx:if="{{!commentText || commentText.trim() === ''}}"
         class="submit-btn" 
         bindtap="submitComment"
         data-disabled="true">

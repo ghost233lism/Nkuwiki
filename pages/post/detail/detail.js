@@ -53,15 +53,9 @@ Page({
         statusBarHeight: 20, // 默认状态栏高度
       });
     }
-    this.setData({
-      isPostLoading: true,
-    });
-    const postDetail = await this._getPostDetail(postId);
-    this.setData({
-      postDetail: postDetail,
-      isPostLoading: false,
-    });
     
+    // 加载帖子详情
+    await this.loadPostDetail();
   },
   
   onReady() {
@@ -160,6 +154,35 @@ Page({
     if (commentList) {
       // 调用评论列表组件的方法，定位到指定评论
       commentList.locateComment(commentId);
+    }
+  },
+
+  // 加载帖子详情
+  async loadPostDetail() {
+    const { postId } = this.data;
+    if (!postId) {
+      this.setData({ 
+        loadError: '帖子ID不存在',
+        isPostLoading: false 
+      });
+      return;
+    }
+    
+    this.setData({ isPostLoading: true, loadError: '' });
+    
+    try {
+      const postDetail = await this._getPostDetail(postId);
+      this.setData({
+        postDetail: postDetail,
+        isPostLoading: false
+      });
+      console.log('postDetail', postDetail);
+    } catch (err) {
+      console.error('加载帖子详情失败:', err);
+      this.setData({ 
+        loadError: '加载失败，请重试',
+        isPostLoading: false 
+      });
     }
   },
 
