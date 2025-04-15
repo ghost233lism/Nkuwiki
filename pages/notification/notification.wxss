@@ -121,8 +121,8 @@
 
 .mark-all-btn {
   width: 100%;
-  height: 80rpx;
-  line-height: 80rpx;
+  height: 90rpx;
+  line-height: 60rpx;
   text-align: center;
   background: #07c160;
   color: #fff;
