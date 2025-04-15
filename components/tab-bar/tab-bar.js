@@ -43,12 +43,12 @@ Component({
     // 固定在顶部时的导航栏高度（用于定位）
     navBarHeight: {
       type: Number,
-      value: 0
+      value: 92
     },
     // 是否显示底部线条
     showLine: {
       type: Boolean,
-      value: true
+      value: false
     },
     // 是否可滚动
     scrollable: {
@@ -59,6 +59,11 @@ Component({
     equalWidth: {
       type: Boolean,
       value: false
+    },
+    // 自定义样式
+    customStyle: {
+      type: String,
+      value: ''
     }
   },
 

@@ -1,5 +1,5 @@
 const behaviors = require('../../behaviors/index');
-const { getAboutInfo, getOpenID } = require('../../utils/util');
+const { storage, getAboutInfo, getOpenID } = require('../../utils/util');
 // 常量配置
 const MENU_CONFIG = {
   SETTINGS: {
@@ -63,49 +63,116 @@ Page({
     // 状态栏高度
     statusBarHeight: 0,
     // 用户详情页相关数据
-    userId: '',
     otherUserInfo: null
   },
 
-  async onLoad() {
-    // 获取系统信息设置状态栏高度
-    try {
-      // 使用新API替代已废弃的getSystemInfoSync
-      const windowInfo = wx.getWindowInfo();
-      this.setData({
-        statusBarHeight: windowInfo.statusBarHeight || 0
-      });
-    } catch (err) {}
-    
-    // 准备菜单数据
-    await this.processMenuItems();
-    
-    // 加载用户数据
-    await this.syncUserAndInitPage();
+  async onLoad(options) {
+    const targetOpenid = options.openid || options.id;
+    const currentOpenid = storage.get('openid');
+    this.setData({ openid: currentOpenid || '' });
+
+    console.debug('Profile页面加载，目标openid:', targetOpenid, '当前用户openid:', currentOpenid);
+
+    if (targetOpenid && targetOpenid !== currentOpenid) {
+      // 查看其他用户的个人资料
+      await this.syncUserAndInitPage(targetOpenid);
+    } else {
+      // 查看自己的个人资料
+      await this.syncUserAndInitPage();
+    }
   },
 
   async onShow() {
+    // 检查是否有从其他页面传入的临时openid
+    try {
+      const tempOpenid = this.getStorage('temp_profile_openid');
+      const currentOpenid = storage.get('openid');
+      
+      if (tempOpenid && tempOpenid !== currentOpenid) {
+        console.debug('检测到临时openid:', tempOpenid, '当前用户openid:', currentOpenid);
+        
+        // 清除临时openid，避免反复加载
+        this.setStorage('temp_profile_openid', null);
+        
+        // 加载目标用户资料
+        await this.syncUserAndInitPage(tempOpenid);
+        return;
+      }
+    } catch (err) {
+      console.debug('读取临时openid失败:', err);
+    }
+    
     // 只检查通知状态，用户信息由user-card组件自行检查刷新
     this.checkUnreadNotifications();
   },
 
   async onPullDownRefresh() {
     this.setData({ refreshing: true });
-    await this.syncUserAndInitPage();
+    
+    // 获取当前显示的用户openid
+    const currentUserInfo = this.data.userInfo;
+    const targetOpenid = currentUserInfo ? currentUserInfo.openid : null;
+    
+    // 刷新用户资料
+    await this.syncUserAndInitPage(targetOpenid);
+    
     wx.stopPullDownRefresh();
     this.setData({ refreshing: false });
   },
 
   // 同步用户并初始化页面
-  async syncUserAndInitPage() {
+  async syncUserAndInitPage(targetOpenid) {
     this.setData({ loading: true, error: false });
     
     try {
-      // 获取openid
-      const openid = await getOpenID();
-      this.setData({ openid: openid || '' });
+      // 获取当前用户openid
+      const currentOpenid = await getOpenID();
+      this.setData({ openid: currentOpenid || '' });
       
-      if (!openid) {
+      // 查看目标用户资料
+      if (targetOpenid && targetOpenid !== currentOpenid) {
+        console.debug('获取目标用户资料:', targetOpenid);
+        const profileRes = await this._getUserProfileByOpenid(targetOpenid);
+        
+        if (profileRes && profileRes.id) {
+          // 获取当前用户与目标用户的关注状态
+          try {
+            const statusRes = await this._getUserStatusByOpenid(targetOpenid);
+            if (statusRes) {
+              // 合并关注状态到用户信息中
+              profileRes.isFollowed = statusRes.is_following || false;
+            }
+          } catch (err) {
+            console.debug('获取关注状态失败:', err);
+          }
+          
+          // 更新页面数据
+          this.setData({
+            userInfo: profileRes,
+            stats: {
+              posts: profileRes.post_count || 0,
+              likes: profileRes.like_count || 0,
+              favorites: profileRes.favorite_count || 0,
+              comments: profileRes.comment_count || 0
+            },
+            loading: false
+          });
+          
+          // 处理菜单项 - 查看他人主页时保留设置菜单
+          this.processMenuItems();
+        } else {
+          // 获取目标用户失败，显示错误信息
+          this.setData({ 
+            loading: false,
+            error: true,
+            errorMsg: '获取用户资料失败'
+          });
+        }
+        return; // 直接返回，不再执行后续代码
+      }
+      
+      // 以下代码只在查看自己的主页时执行
+      if (!currentOpenid) {
         this.setData({ 
           userInfo: null, 
           loading: false 
@@ -141,6 +208,7 @@ Page({
           loading: false
         });
         
+        // 处理菜单项 - 只在查看自己的主页时显示设置菜单
         this.processMenuItems();
         
         // 检查未读通知
@@ -167,6 +235,7 @@ Page({
         });
       }
     } catch (err) {
+      console.debug('同步用户信息失败:', err);
       // 异常不清除登录状态，可能是网络问题
       this.setData({ 
         loading: false,
@@ -256,13 +325,6 @@ Page({
     if (!this.data.userInfo) return;
     this.navigateTo('/pages/profile/edit/edit');
   },
-
-  
-  // 页面重试
-  onRetry() {
-    this.syncUserAndInitPage();
-  },
-
   // 处理菜单项点击路由
   _routeMenuItem(item) {
     if (!item) return;
@@ -278,5 +340,5 @@ Page({
     if (item.path) {
       this.navigateTo(item.path);
     }
-  }
+  },
 });

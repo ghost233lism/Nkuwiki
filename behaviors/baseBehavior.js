@@ -61,7 +61,6 @@ module.exports = Behavior({
      */
     attached() {
       // 初始化通用数据
-      this.getCurrentOpenid();
     },
     /**
      * Behavior实例在组件布局完成后执行
@@ -163,9 +162,6 @@ module.exports = Behavior({
     success: false,
     successText: '操作成功',
 
-    // 用户标识
-    currentOpenid: '',
-
     // 分页状态
     page: 1,
     page_size: 20,
@@ -197,85 +193,6 @@ module.exports = Behavior({
       } else {
         this.setData(stateUpdate);
       }
-    },
-
-    // 初始化或更新currentOpenid
-    getCurrentOpenid(forceRefresh = false) {
-      const openid = this.getStorage('openid');
-      if (forceRefresh || !this.data.currentOpenid) {
-        this.updateState({ currentOpenid: openid || '' });
-      }
-      return openid || '';
-    },
-
-    // 加载状态
-    showLoading(text = '加载中...', type = 'inline', options = {}) {
-      const loadingData = { 
-        loading: true, 
-        loadingText: text, 
-        loadingType: type 
-      };
-      
-      // 合并其他选项
-      if (options.mask !== undefined) loadingData.loadingMask = options.mask;
-      if (options.color !== undefined) loadingData.loadingColor = options.color;
-      if (options.size !== undefined) loadingData.loadingSize = options.size;
-      
-      this.updateState(loadingData);
-      
-      // 如果有loading组件实例，直接调用它的方法
-      const loadingComp = this.selectComponent && this.selectComponent('.loading-component');
-      if (loadingComp) {
-        loadingComp.showLoading({
-          text, 
-          type,
-          mask: options.mask,
-          color: options.color,
-          size: options.size
-        });
-      }
-    },
-    hideLoading() {
-      this.updateState({ loading: false });
-      
-      // 如果有loading组件实例，直接调用它的方法
-      const loadingComp = this.selectComponent && this.selectComponent('.loading-component');
-      if (loadingComp) {
-        loadingComp.hideLoading();
-      }
-    },
-
-    // 错误状态
-    showError(text = '出错了，请稍后再试') {
-      this.updateState({ error: true, errorText: text });
-    },
-    hideError() {
-      this.updateState({ error: false });
-    },
-
-    // 空状态
-    showEmpty(text = '暂无数据', type = 'default') {
-      this.updateState({ empty: true, emptyText: text, emptyType: type });
-    },
-    hideEmpty() {
-      this.updateState({ empty: false });
-    },
-
-    // 成功状态
-    showSuccess(text = '操作成功') {
-      this.updateState({ success: true, successText: text });
-      setTimeout(() => { this.hideSuccess(); }, 1500);
-    },
-    hideSuccess() {
-      this.updateState({ success: false });
-    },
-
-    // 加载更多状态
-    showLoadingMore() {
-      this.updateState({ loadingMore: true });
-    },
-    hideLoadingMore() {
-      this.updateState({ loadingMore: false });
     },
 
     // ==================== 数据获取与分页 ====================
@@ -599,93 +516,130 @@ module.exports = Behavior({
 
     navigateTo(url, params) { 
       try {
-        console.debug('从页面跳转到:', url);
-        return nav.navigateTo(url, params)
-          .catch(err => {
-            console.error('页面跳转失败:', err);
-            // 显示错误提示
-            ui.showToast('页面跳转失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
-            throw err;
-          });
+        if (params) {
+          const query = Object.entries(params)
+            .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+            .join('&')
+          url += (url.includes('?') ? '&' : '?') + query
+        }
+        console.debug('从页面跳转到:', url)
+        return new Promise((resolve, reject) => {
+          wx.navigateTo({
+            url,
+            success: resolve,
+            fail: err => {
+              console.error('页面跳转失败:', err)
+              ui.showToast('页面跳转失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR })
+              reject(err)
+            }
+          })
+        })
       } catch (e) {
-        console.error('页面跳转异常:', e);
-        return Promise.reject(e);
+        console.error('页面跳转异常:', e)
+        return Promise.reject(e)
       }
     },
     
     redirectTo(url, params) { 
       try {
-        console.debug('从页面重定向到:', url);
-        return nav.redirectTo(url, params)
-          .catch(err => {
-            console.error('页面重定向失败:', err);
-            ui.showToast('页面重定向失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
-            throw err;
-          });
+        if (params) {
+          const query = Object.entries(params)
+            .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+            .join('&')
+          url += (url.includes('?') ? '&' : '?') + query
+        }
+        console.debug('从页面重定向到:', url)
+        return new Promise((resolve, reject) => {
+          wx.redirectTo({
+            url,
+            success: resolve,
+            fail: err => {
+              console.error('页面重定向失败:', err)
+              ui.showToast('页面重定向失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR })
+              reject(err)
+            }
+          })
+        })
       } catch (e) {
-        console.error('页面重定向异常:', e);
-        return Promise.reject(e);
+        console.error('页面重定向异常:', e)
+        return Promise.reject(e)
       }
     },
     
     navigateBack(delta = 1) { 
       try {
-        console.debug('页面返回', delta, '层');
-        return nav.navigateBack(delta)
-          .catch(err => {
-            console.error('页面返回失败:', err);
-            // 返回失败时，可以尝试跳转到首页
-            if (delta > 1) {
-              console.debug('尝试直接返回首页');
-              return this.switchTab('/pages/index/index');
+        console.debug('页面返回', delta, '层')
+        return new Promise((resolve, reject) => {
+          wx.navigateBack({
+            delta,
+            success: resolve,
+            fail: err => {
+              console.error('页面返回失败:', err)
+              // 返回失败时，可以尝试跳转到首页
+              if (delta > 1) {
+                console.debug('尝试直接返回首页')
+                return this.switchTab('/pages/index/index')
+              }
+              reject(err)
             }
-            throw err;
-          });
+          })
+        })
       } catch (e) {
-        console.error('页面返回异常:', e);
-        return Promise.reject(e);
+        console.error('页面返回异常:', e)
+        return Promise.reject(e)
       }
     },
     
     reLaunch(url, params) { 
       try {
-        console.debug('重启并跳转到:', url);
         // 如果url是对象，且有url属性，则提取出来
         if (typeof url === 'object' && url.url) {
-          console.debug('将对象转换为url字符串:', url);
-          const urlStr = url.url;
-          return nav.reLaunch(urlStr)
-            .catch(err => {
-              console.error('重启跳转失败:', err);
-              ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
-              throw err;
-            });
+          console.debug('将对象转换为url字符串:', url)
+          url = url.url
+        }
+
+        if (params) {
+          const query = Object.entries(params)
+            .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+            .join('&')
+          url += (url.includes('?') ? '&' : '?') + query
         }
         
-        return nav.reLaunch(url)
-          .catch(err => {
-            console.error('重启跳转失败:', err);
-            ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
-            throw err;
-          });
+        console.debug('重启并跳转到:', url)
+        return new Promise((resolve, reject) => {
+          wx.reLaunch({
+            url,
+            success: resolve,
+            fail: err => {
+              console.error('重启跳转失败:', err)
+              ui.showToast('应用重启失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR })
+              reject(err)
+            }
+          })
+        })
       } catch (e) {
-        console.error('重启跳转异常:', e);
-        return Promise.reject(e);
+        console.error('重启跳转异常:', e)
+        return Promise.reject(e)
       }
     },
     
     switchTab(url) { 
       try {
-        console.debug('切换到标签页:', url);
-        return nav.switchTab(url)
-          .catch(err => {
-            console.error('切换标签页失败:', err);
-            ui.showToast('切换标签失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR });
-            throw err;
-          });
+        console.debug('切换到标签页:', url)
+        return new Promise((resolve, reject) => {
+          wx.switchTab({
+            url,
+            success: resolve,
+            fail: err => {
+              console.error('切换标签页失败:', err)
+              ui.showToast('切换标签失败: ' + (err.errMsg || '未知错误'), { type: ToastType.ERROR })
+              reject(err)
+            }
+          })
+        })
       } catch (e) {
-        console.error('切换标签页异常:', e);
-        return Promise.reject(e);
+        console.error('切换标签页异常:', e)
+        return Promise.reject(e)
       }
     },
 
@@ -711,6 +665,104 @@ module.exports = Behavior({
     // 隐藏 Toast/Loading
     hideToast() {
         ui.hideToast();
+    },
+
+    /**
+     * 显示加载中提示
+     * @param {String} text 提示文本
+     * @param {String} type 加载类型，可选 'inline'、'page'、'fullscreen'
+     * @param {Boolean} mask 是否显示遮罩层
+     */
+    showLoading(text = '加载中...', type = 'inline', mask = false) {
+        this.updateState({
+            loading: true,
+            loadingText: text,
+            loadingType: type
+        });
+        
+        // 如果是全屏加载，也调用微信原生接口
+        if (type === 'fullscreen' || type === 'page') {
+            wx.showLoading({
+                title: text,
+                mask: mask
+            });
+        }
+    },
+
+    /**
+     * 隐藏加载中提示
+     */
+    hideLoading() {
+        this.updateState({
+            loading: false
+        });
+        
+        // 隐藏微信原生加载提示
+        wx.hideLoading();
+    },
+
+    /**
+     * 显示加载更多提示
+     */
+    showLoadingMore() {
+        this.updateState({
+            loadingMore: true
+        });
+    },
+
+    /**
+     * 隐藏加载更多提示
+     */
+    hideLoadingMore() {
+        this.updateState({
+            loadingMore: false
+        });
+    },
+
+    /**
+     * 显示空状态
+     * @param {String} message 空状态提示文本
+     * @param {String} type 空状态类型，可选 'default'、'search'、'network'
+     */
+    showEmpty(message = '暂无数据', type = 'default') {
+        this.updateState({
+            empty: true,
+            emptyText: message,
+            emptyType: type,
+            loading: false,
+            error: false
+        });
+    },
+
+    /**
+     * 隐藏空状态
+     */
+    hideEmpty() {
+        this.updateState({
+            empty: false
+        });
+    },
+
+    /**
+     * 显示错误状态
+     * @param {String} message 错误提示文本
+     */
+    showError(message = '出错了，请稍后再试') {
+        this.updateState({
+            error: true,
+            errorText: message,
+            loading: false,
+            empty: false
+        });
+    },
+
+    /**
+     * 隐藏错误状态
+     */
+    hideError() {
+        this.updateState({
+            error: false
+        });
     },
 
     /**

@@ -1,5 +1,5 @@
 // pages/profile/edit/edit.js
-const { ui, ToastType } = require('../../../utils/util');
+const { ui, ToastType, storage } = require('../../../utils/util');
 const behaviors = require('../../../behaviors/index');
 
 Page({
@@ -10,12 +10,6 @@ Page({
   ],
 
   data: {
-    navButtons: [
-      {
-        type: 'back',
-        text: '返回'
-      }
-    ],
     userInfo: null,
     loading: true,
     error: false,
@@ -23,7 +17,6 @@ Page({
     toptipsShow: false,
     toptipsMsg: '',
     toptipsType: 'info',
-    defaultAvatar: '/assets/images/default-avatar.png',
     formSubmitting: false,
     // 选择器数据
     ranges: {
@@ -67,6 +60,7 @@ Page({
         type: 'input',
         name: 'wechatId',
         label: '微信号',
+        maxlength: 20,
         placeholder: '选填',
         group: 'contact'
       },
@@ -74,13 +68,16 @@ Page({
         type: 'input',
         name: 'qqId',
         label: 'QQ号',
+        maxlength: 20,
         placeholder: '选填',
+        required: true,
         group: 'contact'
       },
       {
         type: 'input',
         name: 'phone',
         label: '手机号',
+        maxlength: 20,
         placeholder: '选填',
         group: 'contact'
       },
@@ -103,11 +100,6 @@ Page({
       const userInfo = await this._getUserInfo(true);
       
       if (userInfo) {
-        // 确保头像不为空
-        if (!userInfo.avatar) {
-          userInfo.avatar = this.data.defaultAvatar;
-        }
-        
         this.setData({ 
           userInfo: userInfo,
           loading: false 
@@ -175,10 +167,13 @@ Page({
         }
       });
       
-      // 添加调试日志，确保nickname和bio字段被正确设置
+      // 添加调试日志，检查联系方式字段
       console.debug('用户数据映射到表单:', 
         `nickname=${this.data.userInfo.nickname || '空'}`, 
         `bio=${this.data.userInfo.bio || '空'}`,
+        `wechatId=${this.data.userInfo.wechatId || '空'}`, 
+        `qqId=${this.data.userInfo.qqId || '空'}`,
+        `phone=${this.data.userInfo.phone || '空'}`,
         `country=${this.data.userInfo.country || '空'}`,
         `city=${this.data.userInfo.city || '空'}`
       );
@@ -217,7 +212,7 @@ Page({
       // 创建更新数据对象
       const updateData = {};
       const fields = [
-        'nickname', 'bio', 'wechatId', 'qqId'
+        'nickname', 'bio', 'wechatId', 'qqId', 'phone'
       ];
       
       // 添加基本字段
@@ -239,7 +234,7 @@ Page({
       }
 
       // 如果头像已更新，也添加到更新数据中
-      if (this.data.userInfo && this.data.userInfo.avatar !== this.data.defaultAvatar) {
+      if (this.data.userInfo && this.data.userInfo.avatar) {
         updateData.avatar = this.data.userInfo.avatar;
       }
 

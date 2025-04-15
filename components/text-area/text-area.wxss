@@ -2,7 +2,7 @@
 .text-area-container {
   position: relative;
   width: 100%;
-  margin-bottom: 20rpx;
+  margin-bottom: 0;
   background: #fff;
 }
 
@@ -13,9 +13,9 @@
   padding: 20rpx;
   box-sizing: border-box;
   background: #f8f8f8;
-  border-radius: 8rpx;
   font-size: 28rpx;
   color: #333;
+  border-bottom: none;
 }
 
 /* 禁用状态 */
@@ -109,7 +109,7 @@
 
 .markdown-content .code {
   font-family: monospace;
-  background: #f5f5f5;
+  background: #f8f8f8;
   padding: 4rpx 8rpx;
   border-radius: 4rpx;
   font-size: 26rpx;
@@ -117,7 +117,7 @@
 }
 
 .markdown-content .pre-block {
-  background: #f5f5f5;
+  background: #f8f8f8;
   padding: 20rpx;
   border-radius: 8rpx;
   overflow-x: auto;
@@ -141,7 +141,7 @@
   justify-content: center;
   color: #999;
   font-size: 28rpx;
-  background: #f9f9f9;
+  background: #f8f8f8;
   border-radius: 8rpx;
   min-height: 60rpx;
   padding: 10rpx 0;
@@ -157,15 +157,19 @@
 
 .toolbar {
   display: flex;
-  align-items: center;
-  padding: 10rpx 20rpx;
-  background: #f9f9f9;
+  padding: 15rpx 30rpx;
   border-top: 1rpx solid #eee;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #ffffff;
+  border-radius: 0 0 8rpx 8rpx;
+  margin-top: 2rpx;
+  margin-bottom: 0;
 }
 
 .tool-item {
-  flex: 0 0 auto;
-  padding: 10rpx 20rpx;
+  margin-right: 40rpx;
+  padding: 6rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,50 +181,29 @@
 
 .tool-item.preview-only {
   margin-left: auto;
+  margin-right: 0;
 }
 
+/* 工具栏图标样式 */
 .tool-icon {
-  font-size: 32rpx;
-}
-
-/* 加载状态 */
-.loading-container {
-  width: 100%;
+  font-size: 36rpx;
+  font-weight: 500;
+  line-height: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f9f9f9;
-  border-radius: 8rpx;
+  color:rgb(26, 25, 25);
 }
 
-.loading-icon {
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: 50%;
-  border: 6rpx solid rgba(0, 0, 0, 0.1);
-  border-top-color: #07c160;
-  animation: spin 1s infinite linear;
-}
-
-.loading-text {
-  margin-top: 20rpx;
-  font-size: 28rpx;
-  color: #999;
+.tool-icon-component {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* 调试信息 */
-.debug-info {
-  padding: 4rpx 10rpx;
-  background: #f5f5f5;
-  font-size: 24rpx;
-  color: #999;
-  border-top: 1rpx solid #eee;
 }
 
 /* 禁止滚动的样式 */
@@ -260,57 +243,6 @@
   border-bottom: none; /* 隐藏底部边框 */
 }
 
-/* 评论框外部容器 */
-.comment-area {
-  border-radius: 8rpx;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* 修改评论框焦点时的样式 */
-.weui-textarea-focused {
-  background-color: #f8f8f8;
-}
-
-/* 评论框 */
-.weui-textarea {
-  background-color: #f5f5f5;
-  padding: 16rpx;
-  border-radius: 8rpx;
-  min-height: 80rpx;
-  width: auto;
-}
-
-/* placeholder颜色 */
-.weui-textarea-placeholder {
-  color: #999;
-}
-
-/* 按钮区样式 */
-.comment-btn-area {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16rpx 0;
-}
-
-/* 发送按钮 */
-.comment-send-btn {
-  background: #07c160;
-  color: #fff;
-  font-size: 28rpx;
-  line-height: 1.8;
-  padding: 8rpx 24rpx;
-  border-radius: 6rpx;
-  flex-shrink: 0;
-}
-
-/* 禁用发送按钮 */
-.comment-send-btn-disabled {
-  background: #ccc;
-}
-
 /* 字数统计 */
 .comment-counter {
   color: #888;
@@ -323,17 +255,28 @@
   color: #e64340;
 }
 
-/* 回复提示区域 */
-.reply-tip {
+
+.image-number {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #fff;
   font-size: 24rpx;
-  color: #888;
-  padding: 8rpx 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  text-align: center;
+  padding: 4rpx 0;
 }
 
-/* 取消回复按钮 */
-.cancel-reply {
-  color: #07c160;
-} 
+.delete-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 0 0 8rpx;
+}

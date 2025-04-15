@@ -1,22 +1,19 @@
 <!-- 顶部标题栏和标签栏 -->
-
-<view class="container">
-  <!-- 导航栏 -->
-  <nav-bar
+<!-- 导航栏 -->
+<nav-bar
     title="我的内容"
     show-back="{{true}}"
-  />
+/>
   
-  <!-- 标签栏 -->
-  <tab-bar 
-    tabs="{{tabTitles}}" 
-    activeTab="{{tabIndex}}" 
-    bind:change="switchTab"
-    equalWidth="{{true}}"
-    fixed="{{true}}"
-    navBarHeight="{{navBarHeight}}"
-  />
-  
+<!-- 标签栏 -->
+<tab-bar 
+  tabs="{{tabTitles}}" 
+  activeTab="{{tabIndex}}" 
+  bind:change="switchTab"
+  equalWidth="{{true}}"
+  fixed="{{true}}"
+/>
+<view class="container">
   <!-- 内容区域 -->
   <view class="content-area">
     <!-- 我的帖子 -->

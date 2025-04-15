@@ -105,7 +105,7 @@ module.exports = Behavior({
             showCancel: true
           });
           if (res.confirm) {
-            nav.navigateTo('/pages/login/login');
+            this.navigateTo('/pages/login/login');
           }
         } catch (modalErr) {
           throw modalErr;
@@ -145,7 +145,7 @@ module.exports = Behavior({
         duration: 2000
       });
       storage.set('isLoggedIn', false);
-      nav.switchTab('/pages/index/index');
+      this.switchTab('/pages/index/index');
     }
   }
 }); 

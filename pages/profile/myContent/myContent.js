@@ -11,11 +11,7 @@ Page({
   data: {
     tabIndex: 0,
     tabTitles: ['帖子', '获赞', '收藏', '关注', '粉丝', '评论'],
-    navButtons: [{
-      type: 'back',
-      text: '返回'
-    }],
-    navBarHeight: 45, // 默认导航栏高度
+  
     // 筛选条件
     postFilter: {}, // 帖子筛选条件
     likeFilter: {}, // 获赞筛选条件
@@ -47,21 +43,6 @@ Page({
   },
 
   async onLoad(options) {
-    // 获取设备信息和状态栏高度
-    try {
-      const systemInfo = wx.getSystemInfoSync();
-      const statusBarHeight = systemInfo.statusBarHeight;
-      // 根据状态栏高度推算导航栏高度
-      // iPhone等设备状态栏高度大约为44px，Android设备约为48px
-      const calculatedHeight = statusBarHeight + (systemInfo.platform === 'ios' ? 44 : 48);
-      
-      this.setData({
-        navBarHeight: calculatedHeight
-      });
-    } catch (e) {
-      console.debug('获取系统信息失败', e);
-    }
-
     // 获取登录信息
     const userInfo = await this._getUserInfo();
     if (!userInfo?.openid) {

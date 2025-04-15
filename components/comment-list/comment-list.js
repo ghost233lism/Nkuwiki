@@ -349,7 +349,7 @@ Component({
     // 评论输入事件
     onCommentInput(e) {
       this.setData({
-        commentText: e.detail.value
+        commentText: e.detail.value.trimStart()
       });
     },
     

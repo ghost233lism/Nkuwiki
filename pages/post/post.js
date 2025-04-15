@@ -1,24 +1,19 @@
 const { ToastType } = require('../../utils/util');
 const behaviors = require('../../behaviors/index');
 
-// 常量配置
-const CATEGORIES = [
-  { id: 1, name: '学习交流', tag: 'study' },
-  { id: 2, name: '校园生活', tag: 'life' },
-  { id: 3, name: '就业创业', tag: 'job' },
-  { id: 4, name: '社团活动', tag: 'club' },
-  { id: 5, name: '失物招领', tag: 'lost' }
-];
-
 Page({
   behaviors: [
     behaviors.baseBehavior,
     behaviors.postBehavior,
     behaviors.authBehavior,
+    behaviors.userBehavior,
     behaviors.weuiBehavior
   ],
 
   data: {
+    tabIndex: 0,
+    tabTitles: ['富文本模式', 'Markdown'],
+  
     // --- Form Data ---
     form: {
       title: '',
@@ -26,56 +21,33 @@ Page({
       images: [],
       isPublic: true,
       allowComment: true,
-      wikiKnowledge: false,
       category_id: 1,
-      tags: []
+      tags: [],
+      phone: '',
+      wechat: '',
+      qq: ''
     },
-
-    // 导航按钮配置
-    navButtons: [
-      {type: "back", show: true}
-    ],
-
+    categoryId: 1,  
+    tabItems:  [
+      { category_id: 1, tag:'study', text: '学习交流' },
+      { category_id: 2, tag:'life', text: '校园生活' },
+      { category_id: 3, tag:'job', text: '就业创业' },
+      { category_id: 4, tag:'club', text: '社团活动' },
+      { category_id: 5, tag:'lost', text: '失物招领' }
+    ],  
     tagInputValue: '',
     tagSelected: {}, // 用于标记标签选中状态
     customTags: [], // 自定义标签列表
     showCustomTagInput: false,
     forceRefresh: 0,
 
-    // --- Form Rules ---
+    // --- 统一验证规则 ---
     rules: {
-      title: [
-        { required: true, message: '请输入标题' },
-        { min: 2, message: '标题至少2个字' },
-        { max: 50, message: '标题最多50个字' }
-      ],
       content: [
         { required: true, message: '请输入内容' },
         { min: 10, message: '内容至少10个字' }
       ]
     },
-
-    // 标准模式和Markdown模式的规则
-    normalRules: {
-      title: [
-        { required: true, message: '请输入标题' },
-        { min: 2, message: '标题至少2个字' },
-        { max: 50, message: '标题最多50个字' }
-      ],
-      content: [
-        { required: true, message: '请输入内容' },
-        { min: 10, message: '内容至少10个字' }
-      ]
-    },
-    markdownRules: {
-      content: [
-        { required: true, message: '请输入内容' },
-        { min: 10, message: '内容至少10个字' }
-      ]
-    },
-
-    categories: CATEGORIES,
-    categoryIndex: 0,
 
     // --- UI State ---
     canSubmit: false,
@@ -102,7 +74,23 @@ Page({
     dialogButtons: [],
 
     // Markdown预览状态
-    showMarkdownPreview: false
+    showMarkdownPreview: false,
+
+    // 设置按钮配置
+    settingButtons: [
+      {
+        field: 'isPublic',
+        icon: 'eye',
+        text: '公开',
+        iconSize: 24
+      },
+      {
+        field: 'allowComment',
+        icon: 'comment',
+        text: '允许评论',
+        iconSize: 24
+      }
+    ]
   },
 
   async onLoad() {
@@ -115,8 +103,10 @@ Page({
     this.setData({
       'form.tags': [],
       tagSelected: {},
-      customTags: []
+      customTags: [],
+      canSubmit: false  // 初始状态设为false
     });
+
   },
 
   async initPage() {
@@ -131,8 +121,10 @@ Page({
       images: [],
       isPublic: true,
       allowComment: true,
-      wikiKnowledge: false,
-      category_id: 1
+      category_id: 1,
+      phone: '',
+      wechat: '',
+      qq: ''
     });
   },
 
@@ -143,7 +135,7 @@ Page({
     // 切换到Markdown模式
     this.setData({
       isMarkdownMode: true,
-      rules: this.data.markdownRules
+      rules: this.data.rules
     });
     
     // 验证表单
@@ -156,7 +148,7 @@ Page({
     // 切换到普通模式
     this.setData({
       isMarkdownMode: false,
-      rules: this.data.normalRules
+      rules: this.data.rules
     });
     
     // 从markdown内容中提取标题
@@ -188,23 +180,30 @@ Page({
 
   // 使用baseBehavior的validateForm方法
   validatePostForm() {
-    // 如果是Markdown模式，检查content中是否包含标题或者form.title是否有值
+    const content = this.data.form.content || '';
+    
+    // 检查内容是否为空
+    if (!content) {
+      this.setData({ canSubmit: false });
+      return false;
+    }
+    
+    // Markdown模式下自动处理标题
     if (this.data.isMarkdownMode) {
-      const content = this.data.form.content || '';
-      const hasMarkdownTitle = content.trim().match(/^#\s+.+$/m);
-      const hasFormTitle = !!this.data.form.title;
-      
-      // 如果内容不为空且（有Markdown标题或表单标题），则视为有效
-      if (content.length >= 10 && (hasMarkdownTitle || hasFormTitle)) {
-        this.setData({ canSubmit: true });
-        return true;
+      // 无需标题检查，只要有内容即可
+      this.setData({ canSubmit: true });
+      return true;
+    } else {
+      // 富文本模式需要检查标题
+      if (!this.data.form.title || this.data.form.title.length < 2) {
+        this.setData({ canSubmit: false });
+        return false;
       }
     }
     
-    // 常规验证
-    const isValid = this.validateForm(this.data.rules);
-    this.setData({ canSubmit: isValid });
-    return isValid;
+    // 验证通过，可以提交
+    this.setData({ canSubmit: true });
+    return true;
   },
   
   // 表单变更
@@ -224,43 +223,31 @@ Page({
                   e.detail.value;
     
     this.setFormField(field, value);
-    this.validatePostForm();
-  },
-
-  // 分类选择
-  onTopicSelect(e) {
-    const { category } = e.currentTarget.dataset;
-    const categoryId = parseInt(category);
     
-    // 找到对应分类的索引
-    const categoryIndex = this.data.categories.findIndex(item => item.id === categoryId);
-    if (categoryIndex !== -1) {
-      this.updateState({ categoryIndex });
+    // 如果是切换公开/匿名状态，且设为匿名，则清空联系方式
+    if (field === 'isPublic' && !value) {
+      // 保存旧的联系方式，用于再次切换回公开时恢复
+      this.setData({
+        _tempContactInfo: {
+          phone: this.data.form.phone || '',
+          wechat: this.data.form.wechat || '',
+          qq: this.data.form.qq || ''
+        },
+        'form.phone': '',
+        'form.wechat': '',
+        'form.qq': ''
+      });
+    } 
+    // 如果是从匿名切换到公开，尝试恢复之前的联系方式
+    else if (field === 'isPublic' && value && this.data._tempContactInfo) {
+      this.setData({
+        'form.phone': this.data._tempContactInfo.phone || '',
+        'form.wechat': this.data._tempContactInfo.wechat || '',
+        'form.qq': this.data._tempContactInfo.qq || ''
+      });
     }
     
-    this.setFormField('category_id', categoryId);
     this.validatePostForm();
-  },
-
-  // 返回上一页
-  navigateBack() {
-    // 返回上一页
-    wx.navigateBack({
-      delta: 1,
-      fail: () => {
-        wx.switchTab({
-          url: '/pages/index/index'
-        });
-      }
-    });
-  },
-
-  // 处理导航栏按钮点击
-  onNavButtonTap(e) {
-    const { type } = e.detail;
-    if (type === 'publish') {
-      this.submitForm();
-    }
   },
 
   // 标签相关方法
@@ -289,6 +276,21 @@ Page({
     this.setData({
       tagSelected: newTagSelected,
       'form.tags': Object.keys(newTagSelected)
+    });
+  },
+  
+  // 显示标签输入框
+  showTagInput() {
+    this.setData({
+      showCustomTagInput: true
+    });
+  },
+  
+  // 隐藏标签输入框
+  hideTagInput() {
+    this.setData({
+      showCustomTagInput: false,
+      tagInputValue: ''
     });
   },
   
@@ -397,86 +399,61 @@ Page({
       return;
     }
 
+
     // 设置提交状态
     this.setData({ submitting: true });
 
     try {
       // 准备提交数据
       const formData = this.data.form;
-      let postData = {
-        content: formData.content,
+      let content = formData.content || '';
+      let title = formData.title || '无标题';
+      
+      // 处理标题
+      const hasMarkdownTitle = content.trim().match(/^#\s+(.+)$/m);
+      if (hasMarkdownTitle) {
+        // 已有标题，提取出来
+        title = hasMarkdownTitle[1].trim();
+      } else {
+        // 没有标题，添加一个
+        content = `# ${title}\n\n${content}`;
+      }
+      
+      // 构建API提交数据
+      const postData = {
+        title,
+        content,
         image: formData.images || [],
         category_id: formData.category_id || 1,
         is_public: formData.isPublic,
         allow_comment: formData.allowComment,
-        wiki_knowledge: formData.wikiKnowledge,
         tag: formData.tags || []
       };
       
-      // 如果是Markdown模式，需要在content前面添加标题
-      if (this.data.isMarkdownMode) {
-        // 提取一个title供API使用
-        let titleForApi = formData.title || '无标题';
-        
-        // 检查content是否已有标题行
-        const titleMatch = postData.content.trim().match(/^#\s+(.+)$/m);
-        if (titleMatch && titleMatch[1]) {
-          // 如果内容中已经有标题，提取出来作为API的title参数
-          titleForApi = titleMatch[1].trim();
-        } else {
-          // 如果内容中没有标题，添加一个
-          const title = formData.title || '无标题';
-          postData.content = `# ${title}\n\n${postData.content}`;
-        }
-        
-        // 设置API需要的title参数
-        postData.title = titleForApi;
+      // 只有在公开模式下才添加联系方式
+      if (formData.isPublic) {
+        postData.phone = formData.phone || '';
+        postData.wechat = formData.wechat || '';
+        postData.qq = formData.qq || '';
       } else {
-        // 普通模式下，保持标题字段
-        postData.title = formData.title;
+        // 匿名模式下设置为匿名用户
+        // postData.anonymous = true;  // 设置匿名标志
+        postData.nickname = '匿名用户';  // 设置昵称为匿名用户
+        postData.avatar = '';  // 清空头像
       }
       
       // 提交帖子
       const result = await this._createPost(postData);
       
       if (result.code === 200) {
-        this._showToptips('发布成功', ToastType.SUCCESS);
-        
-        // 设置需要刷新首页帖子列表的标记
-        this.setStorage('needRefreshPosts', true);
-        
-        // 设置全局app变量，确保返回首页后立即刷新
-        const app = getApp();
-        if (app) {
-          app.globalData = app.globalData || {};
-          app.globalData.refreshPostList = true;
-        }
-        
-        // 延迟返回，等待显示成功提示
-        setTimeout(() => {
-          wx.switchTab({
-            url: '/pages/index/index',
-            success: () => {
-              // 尝试通过页面栈获取首页实例并触发刷新
-              const pages = getCurrentPages();
-              const indexPage = pages.find(p => p.route === 'pages/index/index');
-              if (indexPage) {
-                // 如果能获取到首页实例，直接调用其刷新方法
-                const postList = indexPage.selectComponent('#postList');
-                if (postList) {
-                  setTimeout(() => {
-                    postList.loadInitialData();
-                  }, 300);
-                }
-              }
-            }
-          });
-        }, 1500);
+        // 立即返回首页
+        wx.navigateBack();
       } else {
         throw new Error(result.message || '发布失败');
       }
     } catch (err) {
-      console.error('提交帖子失败:', err);
+      console.debug('提交帖子失败:', err);
+      
       this._showToptips(err.message || '发布失败，请稍后再试', ToastType.ERROR);
     } finally {
       this.setData({ submitting: false });
@@ -513,5 +490,74 @@ Page({
     this.setData(newData, () => {
       this.validatePostForm();
     });
-  }
+  },
+
+  // 处理模式Tab切换事件
+  onModeTabChange(e) {
+    const { index } = e.detail;
+    
+    // index为1表示Markdown模式，0表示富文本模式
+    if (index === 1) {
+      this.switchToMarkdownMode();
+    } else {
+      this.switchToNormalMode();
+    }
+  },
+
+  // 分类选择
+  selectCategory(e) {
+    const { tab } = e.detail;
+    const categoryId = tab.category_id;
+    
+    this.setData({
+      categoryId,
+      'form.category_id': categoryId
+    });
+  },
+
+  // 添加自动获取联系方式的方法
+  async fillContactInfo() {
+    try {
+      // 显示加载状态
+      wx.showLoading({
+        title: '获取中...',
+        mask: true
+      });
+      
+      // 使用authBehavior中的_getUserInfo方法获取用户信息
+      const userInfo = await this._getUserInfo(true);
+      
+      if (userInfo) {
+        // 提取联系方式信息
+        const phone = userInfo.phone || '';
+        const wechat = userInfo.wechatId || '';
+        const qq = userInfo.qqId || '';
+        
+        // 更新表单数据
+        this.setData({
+          'form.phone': phone,
+          'form.wechat': wechat,
+          'form.qq': qq
+        });
+        
+        wx.showToast({
+          title: '获取成功',
+          icon: 'success'
+        });
+      } else {
+        wx.showToast({
+          title: '获取失败',
+          icon: 'none'
+        });
+      }
+    } catch (err) {
+      console.error('获取联系方式失败:', err);
+      wx.showToast({
+        title: '获取失败',
+        icon: 'none'
+      });
+    } finally {
+      wx.hideLoading();
+    }
+  },
 }); 

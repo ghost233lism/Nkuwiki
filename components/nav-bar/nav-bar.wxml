@@ -1,5 +1,26 @@
-<view class="nav-bar {{showShadow ? 'with-shadow' : ''}}" style="padding-top: {{statusBarHeight}}px; background-color: {{bgColor}};">
-  <view class="nav-content" style="height: {{navBarHeight}}px;">
+<!-- 添加WXS模块来计算样式 -->
+<wxs module="navbarUtil">
+  function getStyle(statusBarHeight, bgColor) {
+    return 'padding-top: ' + statusBarHeight + 'px; background-color: ' + bgColor + ';';
+  }
+  
+  function getContentStyle(navBarHeight) {
+    return 'height: ' + navBarHeight + 'px;';
+  }
+  
+  function getPlaceholderStyle(navBarHeight) {
+    return 'height: ' + navBarHeight + 'px;';
+  }
+  
+  module.exports = {
+    getStyle: getStyle,
+    getContentStyle: getContentStyle,
+    getPlaceholderStyle: getPlaceholderStyle
+  };
+</wxs>
+
+<view class="nav-bar {{showShadow ? 'with-shadow' : ''}}" style="{{navbarUtil.getStyle(statusBarHeight, bgColor)}}">
+  <view class="nav-content" style="{{navbarUtil.getContentStyle(navBarHeight)}}">
     <!-- 左侧按钮区域 -->
     <view class="left-area">
       <block wx:for="{{buttons}}" wx:key="type">
@@ -41,4 +62,4 @@
 </view>
 
 <!-- 占位元素，使用更小的高度避免过多空白 -->
-<view style="height: {{navBarHeight}}px;"></view> 
+<view style="{{navbarUtil.getPlaceholderStyle(navBarHeight)}}"></view> 

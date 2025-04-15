@@ -1,10 +1,8 @@
 {
   "component": true,
   "usingComponents": {
-    "icon": "/components/icon/icon",
     "mp-badge": "/components/weui/badge/badge",
     "text-area": "/components/text-area/text-area",
-    "button": "/components/button/button",
-    "action-bar": "/components/action-bar/action-bar"
+    "icon": "/components/icon/icon"
   }
 } 

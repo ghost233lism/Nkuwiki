@@ -1,30 +1,42 @@
+.search-bar-container {
+  width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
 .search-bar {
   display: flex;
   align-items: center;
-  padding: 16rpx;
+  height: 80rpx;
+  padding: 0 20rpx;
   background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .search-input {
   flex: 1;
   display: flex;
   align-items: center;
-  height: 72rpx;
-  border-radius: 36rpx;
-  padding: 0 24rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  padding: 0 20rpx;
+  background-color: #f5f5f5;
 }
 
 .input {
   flex: 1;
-  height: 72rpx;
-  line-height: 72rpx;
+  height: 64rpx;
+  line-height: 64rpx;
   font-size: 28rpx;
-  color: #333333;
-  padding: 0 16rpx;
+  margin: 0 10rpx;
+  color: #333;
 }
 
 .placeholder {
-  color: #999999;
+  color: #999;
 }
 
 .clear-icon {
@@ -32,7 +44,77 @@
 }
 
 .action {
-  padding: 0 24rpx;
+  width: 100rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  text-align: center;
+  color: #1aad19;
   font-size: 28rpx;
-  color: #333333;
-} 
+}
+
+/* 选择框样式 */
+.selector-container {
+  position: absolute;
+  width: calc(100% - 40rpx);
+  z-index: 100;
+  background-color: #fff;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-top: 10rpx;
+  left: 20rpx;
+  top: 80rpx;
+}
+
+.selector-options {
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.selector-option {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.selector-option.selected {
+  background-color: #e6f7ff;
+  border-left: 4rpx solid #1aad19;
+}
+
+.option-icon {
+  margin-right: 16rpx;
+}
+
+.option-text {
+  font-size: 32rpx;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.option-value {
+  font-size: 28rpx;
+  color: #666;
+  margin-left: 12rpx;
+  font-weight: bold;
+}
+
+.prefix-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 38rpx;
+  padding: 4rpx 12rpx;
+  background-color: #f0f5ff;
+  color: #3366cc;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  margin-right: 10rpx;
+  font-weight: 500;
+}
+
+.input-with-prefix {
+  flex: 1;
+  width: auto;
+}

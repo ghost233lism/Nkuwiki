@@ -1,28 +1,85 @@
-<view class="search-bar">
-  <view class="search-input" style="background-color: {{backgroundColor}}">
-    <icon name="search" size="32" color="#999999" />
-    <input
-      class="input"
-      value="{{inputValue}}"
-      placeholder="{{placeholder}}"
-      placeholder-class="placeholder"
-      focus="{{focus}}"
-      bindinput="onInput"
-      bindfocus="onFocus"
-      bindblur="onBlur"
-      bindconfirm="onConfirm"
-      confirm-type="search"
-    />
-    <icon
-      wx:if="{{inputValue.length > 0}}"
-      name="close"
-      size="32"
-      color="#999999"
-      class="clear-icon"
-      bindtap="onClear"
-    />
+<!-- 添加WXS模块用于计算样式 -->
+<wxs module="searchUtil">
+  function getContainerStyle(navBarHeight) {
+    return navBarHeight ? 'margin-top:' + navBarHeight + 'px;' : '';
+  }
+  
+  function getInputStyle(bgColor) {
+    return 'background-color: ' + bgColor;
+  }
+  
+  module.exports = {
+    getContainerStyle: getContainerStyle,
+    getInputStyle: getInputStyle
+  };
+</wxs>
+
+<view class="search-bar-container" style="{{searchUtil.getContainerStyle(navBarHeight)}}">
+  <view class="search-bar">
+    <view class="search-input" style="{{searchUtil.getInputStyle(backgroundColor)}}">
+      <icon name="search" size="32" color="#999999" />
+      <block wx:if="{{hasSelected && selectedType}}">
+        <view class="prefix-tag">@{{selectedType}}</view>
+        <input
+          class="input input-with-prefix"
+          value="{{userInput}}"
+          placeholder="{{placeholder}}"
+          placeholder-class="placeholder"
+          focus="{{focus}}"
+          bindinput="onInputWithPrefix"
+          bindfocus="onFocus"
+          bindblur="onBlur"
+          bindconfirm="onConfirm"
+          bindkeyboardheightchange="onKeyboardHeightChange"
+          confirm-type="search"
+        />
+      </block>
+      <block wx:else>
+        <input
+          class="input"
+          value="{{inputValue}}"
+          placeholder="{{placeholder}}"
+          placeholder-class="placeholder"
+          focus="{{focus}}"
+          bindinput="onInput"
+          bindfocus="onFocus"
+          bindblur="onBlur"
+          bindconfirm="onConfirm"
+          bindkeyboardheightchange="onKeyboardHeightChange"
+          confirm-type="search"
+        />
+      </block>
+      <icon
+        wx:if="{{inputValue.length > 0}}"
+        name="close"
+        size="32"
+        color="#999999"
+        class="clear-icon"
+        bindtap="onClear"
+      />
+    </view>
+    <view wx:if="{{showAction}}" class="action" bindtap="onAction">
+      {{actionText}}
+    </view>
   </view>
-  <view wx:if="{{showAction}}" class="action" bindtap="onAction">
-    {{actionText}}
+  <view class="selector-container" wx:if="{{showSelector && selectorOptions.length > 0 && !hasSelected}}">
+    <view class="selector-options">
+      <view 
+        class="selector-option {{selectedOption === index ? 'selected' : ''}}" 
+        wx:for="{{selectorOptions}}" 
+        wx:key="index" 
+        data-option="{{item}}"
+        data-index="{{index}}"
+        bindtap="onSelectOption"
+      >
+        <view class="option-icon">
+          <icon name="{{item.icon || 'search'}}" size="32" />
+        </view>
+        <view class="option-text">
+          {{item.text}}
+          <text wx:if="{{item.value}}" class="option-value">{{item.value}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 </view> 

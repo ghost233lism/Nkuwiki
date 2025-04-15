@@ -12,6 +12,7 @@
     "post-list": "/components/post-list/post-list",
     "icon": "/components/icon/icon",
     "search-bar": "/components/search-bar/search-bar",
-    "source-list": "/components/source-list/source-list"
+    "source-list": "/components/source-list/source-list",
+    "text-area": "/components/text-area/text-area"  
   }
 }

@@ -148,7 +148,7 @@
       
       <!-- 发送按钮 -->
       <view 
-        class="submit-btn {{commentText.trim() ? 'active' : ''}}" 
+        class="submit-btn {{commentText.length ? 'active' : ''}}"
         bindtap="submitComment"
         data-disabled="{{!commentText.trim() || isSubmitting}}">
         <text>发送</text>

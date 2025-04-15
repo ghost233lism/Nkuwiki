@@ -10,7 +10,7 @@
 
   <!-- 开发中提示 -->
   <view class="developing-container">
-    <icon name="develop" size="80" color="#cccccc"></icon>
+    <icon name="code" size="80" color="#cccccc"></icon>
     <view class="developing-text">功能开发中</view>
     <view class="developing-subtext">敬请期待更多精彩内容</view>
   </view>

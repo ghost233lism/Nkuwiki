@@ -1,51 +1,47 @@
 <!-- index.wxml -->
+<!-- 自定义导航栏，放在页面容器之外 -->
+<nav-bar 
+    title="nkuwiki"
+    showBack="{{false}}"
+    showAvatar="{{true}}"
+    showNotification="{{true}}"
+/>
+
 
 <view class="container">
-  <!-- 自定义导航栏 -->
-  <nav-bar 
-      title="nkuwiki"
-      showBack="{{false}}"
-      showAvatar="{{true}}"
-      showNotification="{{true}}"
-  ></nav-bar>
+  <!-- 自定义搜索框，通过navBarHeight属性来调整位置 -->
   <search-bar
-			value="{{searchValue}}"
-			placeholder="搜索校园知识"
-			focus="{{false}}"
-			show-action="{{true}}"
-			action-text="搜索"
-			bindinput="onSearchInput"
-			bindclear="clearSearch"
-			bindconfirm="search"
-			bindaction="search"
-		/>
-  <!-- 自定义水平布局分类导航 -->
-  <view class="category-scroll">
-    <view class="category-list">
-      <view 
-        class="category-item {{categoryId === item.category_id ? 'active' : ''}}" 
-        wx:for="{{navItems}}" 
-        wx:key="category_id" 
-        data-index="{{item.category_id}}"
-        bindtap="onTabChange"
-      >
-        <icon name="{{item.tag}}" size="60" color="{{categoryId === item.category_id ? '#1aad19' : '#666666'}}"></icon>
-        <text class="category-text">{{item.text}}</text>
-      </view>
-    </view>
-  </view>
+    value="{{searchValue}}"
+    placeholder="搜索校园知识"
+    focus="{{false}}"
+    show-action="{{true}}"
+    action-text="搜索"
+    bindinput="onSearchInput"
+    bindclear="clearSearch"
+    bindconfirm="search"
+    bindaction="search"
+  />
+
+  <category-tab
+    tabs="{{tabItems}}"
+    categoryId="{{categoryId}}"
+    bind:change="onCategoryTabChange"
+  />
 
   <!-- 内容列表 - 使用post-list组件 -->
   <view class="post-list-container">
     <post-list 
       id="postList"
       filter="{{filter}}"
-      bind:retry="onRetry"
     />
   </view>
   
   <!-- 悬浮发帖按钮 -->
-  <view class="floating-button" bindtap="onCreatePost">
-    <icon name="add" size="56" color="#ffffff"></icon>
-  </view>
+  <floating-button
+    type="primary"
+    size="large"
+    position="bottom-right"
+    bindtap="onCreatePost"
+  />
+  
 </view>

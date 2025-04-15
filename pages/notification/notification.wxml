@@ -1,4 +1,3 @@
-<view class="container">
   <!-- 导航栏 -->
   <nav-bar
     title="消息通知"
@@ -12,8 +11,9 @@
     bind:change="onTabChange"
     equalWidth="{{true}}"
     fixed="{{true}}"
-    navBarHeight="{{navBarHeight}}"
   />
+<view class="container">
+
   
   <!-- 页面状态 -->
   <loading wx:if="{{loading}}" show="{{true}}" type="inline" text="加载中..." />

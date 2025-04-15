@@ -14,7 +14,7 @@
     <user-card
       userInfo="{{userInfo}}"
       stats="{{stats}}"
-      isCurrentUser="{{true}}"
+      isCurrentUser="{{userInfo && userInfo.openid === openid}}"
       currentUserOpenid="{{openid}}"
       loading="{{loading}}"
       error="{{error}}"

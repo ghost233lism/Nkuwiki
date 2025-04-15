@@ -1,6 +1,6 @@
 /**
  * 图标组件
- * 完全自定义实现的图标组件，避免依赖weui-miniprogram
+ * 完全自定义实现的图标组件
  */
 Component({
   properties: {
@@ -15,16 +15,10 @@ Component({
       type: String,
       value: ''
     },
-
-    // 图标名称
-    icon: {
-      type: String,
-      value: ''
-    },
     
     // 图标大小，单位rpx，可接收数字或字符串
     size: {
-      type: null, // 使用null允许接收任意类型
+      type: null,
       value: 40
     },
     
@@ -34,14 +28,8 @@ Component({
       value: ''
     },
     
-    // 点击时是否显示涟漪效果
-    ripple: {
-      type: Boolean,
-      value: false
-    },
-    
     // 额外的样式类
-    extClass: {
+    class: {
       type: String,
       value: ''
     },
@@ -50,6 +38,24 @@ Component({
     outline: {
       type: Boolean,
       value: false
+    },
+    
+    // 是否直接使用图片
+    useImage: {
+      type: Boolean,
+      value: false
+    },
+    
+    // 图片路径
+    imageSrc: {
+      type: String,
+      value: ''
+    },
+    
+    // 图标形状：默认为圆形，可选值为 'square'(方形) 或 'rounded'(圆角矩形)
+    shape: {
+      type: String,
+      value: ''
     }
   },
   
@@ -57,17 +63,11 @@ Component({
     // 转换后的尺寸数字
     sizeNumber: 20,
     
-    // 显示涟漪效果
-    showRipple: false,
-
-    // 微信原生支持的icon type
-    wxIconTypes: [
-      'success', 'success_no_circle', 'info', 'warn', 'waiting', 
-      'cancel', 'download', 'search', 'clear'
-    ],
+    // 是否使用图片 - 内部状态
+    _useImage: false,
     
-    // 防止重复更新
-    updating: false,
+    // 图片路径 - 内部状态
+    _imageSrc: '',
     
     // 图标映射表，将名称映射到/icons/目录下的图片
     iconMap: {
@@ -89,6 +89,7 @@ Component({
       'image': '/icons/image.png',
       'eye': '/icons/eye.png',
       'eye-active': '/icons/eye-active.png',
+      'book': '/icons/book.png',
       
       // 状态图标
       'success': '/icons/success.png',
@@ -139,6 +140,7 @@ Component({
       'txt': '/icons/txt.png',
       'group': '/icons/group.png',
       'voice': '/icons/voice.png',
+      'code': '/icons/code.png',
       
       // 社交平台图标
       'wechat': '/icons/wechat.png',
@@ -153,135 +155,64 @@ Component({
       'avatar1': '/icons/avatar1.png',
       'avatar2': '/icons/avatar2.png',
       'logo': '/icons/logo.png'
-    },
-    
-    // 是否使用图片
-    useImage: false,
-    
-    // 图片路径
-    imageSrc: ''
+    }
   },
 
   lifetimes: {
     attached: function() {
-      // 初始化时设置一次
       this.initializeIcon();
     }
   },
   
   observers: {
-    // 'name,size,icon,type': function(name, size, icon, type) {
-    //   if (this.data.updating) return;
-    //   this.initializeIcon();
-    // },
-    'name': function(name) {
-      // 对name属性单独监听，确保当name变化时立即刷新
-      if (this.data.updating) return;
-      if (name && this.data.iconMap[name]) {
-        this.setData({
-          useImage: true,
-          imageSrc: this.data.iconMap[name],
-          type: '',
-          icon: ''
-        });
-      }
+    'name,type,size,useImage,imageSrc': function() {
+      this.initializeIcon();
     }
-    // 'color': function(color) {
-    //   // 对颜色单独监听
-    //   this.setData({
-    //     color: color
-    //   });
-    // }
   },
   
   methods: {
     // 初始化图标
     initializeIcon() {
-      if (this.data.updating) return;
-      
-      this.data.updating = true;
-      
       const updateData = {};
       
-      // 处理尺寸 - 支持字符串和数字类型
-      if (this.properties.size !== undefined) {
-        let sizeValue = this.properties.size;
-        
-        // 将字符串转换为数字
-        if (typeof sizeValue === 'string') {
-          // 移除可能的单位（如"px"、"rpx"等）
-          sizeValue = parseFloat(sizeValue.replace(/[^0-9.]/g, ''));
-        }
-        
-        // 确保有效数字
-        if (!isNaN(sizeValue) && sizeValue > 0) {
-          updateData.sizeNumber = sizeValue / 2;
-        } else {
-          // 默认大小
-          updateData.sizeNumber = 20;
-        }
+      // 处理尺寸
+      let sizeValue = this.properties.size;
+      if (typeof sizeValue === 'string') {
+        sizeValue = parseFloat(sizeValue.replace(/[^0-9.]/g, ''));
       }
       
-      // 确保color属性不为null
-      if (this.properties.color === null) {
-        updateData.color = '';
-      }
+      updateData.sizeNumber = !isNaN(sizeValue) && sizeValue > 0 ? sizeValue / 2 : 20;
       
-      // 处理图标名称 - 优先级：name > type > icon
-      if (this.properties.name) {
-        // 检查是否存在于图标映射表中
-        if (this.data.iconMap[this.properties.name]) {
-          // 使用图片模式
-          updateData.useImage = true;
-          updateData.imageSrc = this.data.iconMap[this.properties.name];
-          updateData.type = '';
-          updateData.icon = '';
-        } else if (this.data.wxIconTypes.includes(this.properties.name)) {
-          // 如果是微信原生icon，使用type属性
-          updateData.type = this.properties.name;
-          updateData.icon = '';
-          updateData.useImage = false;
-        } else {
-          // 使用自定义图标
-          updateData.icon = this.properties.name;
-          updateData.type = '';
-          updateData.useImage = false;
-        }
+      // 处理图标显示逻辑
+      if (this.properties.useImage) {
+        // 1. 优先使用直接指定的图片
+        updateData._useImage = true;
+        updateData._imageSrc = this.properties.imageSrc;
       } else if (this.properties.type) {
-        // 使用微信原生图标
-        updateData.type = this.properties.type;
-        updateData.icon = '';
-        updateData.useImage = false;
-      } else if (this.properties.icon) {
-        // 使用自定义图标
-        updateData.icon = this.properties.icon;
-        updateData.type = '';
-        updateData.useImage = false;
+        // 2. 如果有type，使用微信原生图标
+        updateData._useImage = false;
+      } else if (this.properties.name) {
+        // 3. 如果有name，查找映射表
+        if (this.data.iconMap[this.properties.name]) {
+          // 如果在映射表中找到对应的图标，使用图片模式
+          updateData._useImage = true;
+          updateData._imageSrc = this.data.iconMap[this.properties.name];
+        } else {
+          // 如果未找到，使用默认路径
+          updateData._useImage = true;
+          updateData._imageSrc = `/icons/${this.properties.name}.png`;
+        }
       }
       
-      // 批量更新数据
-      this.setData(updateData, () => {
-        // 在回调中重置updating标记
-        setTimeout(() => {
-          this.data.updating = false;
-        }, 0);
-      });
+      this.setData(updateData);
     },
     
-    // 点击图标
-    handleTap: function() {
-      // 如果开启了涟漪效果，显示涟漪
-      if (this.properties.ripple) {
-        this.setData({ showRipple: true });
-        
-        // 300ms后隐藏涟漪
-        setTimeout(() => {
-          this.setData({ showRipple: false });
-        }, 300);
-      }
-      
-      // 触发点击事件
-      this.triggerEvent('tap');
+    // 处理点击事件
+    handleTap(e) {
+      this.triggerEvent('tap', {
+        name: this.properties.name,
+        ...e.detail
+      });
     }
   }
 }); 

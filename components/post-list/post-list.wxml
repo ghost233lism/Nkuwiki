@@ -9,7 +9,7 @@
   bindretry="handleRetry"
   bindloadmore="loadMore"
 >
-  <view class="post-list">
+  <view class="post-list" style="{{fadeStyle || ''}}">
     <!-- 帖子列表 -->
     <block wx:for="{{post}}" wx:key="id">
       <post-item 
@@ -21,9 +21,6 @@
         showComment="{{true}}"
         showFollow="{{true}}"
         index="{{index}}"
-        bind:like="handlePostLike"
-        bind:favorite="handlePostFavorite"
-        bind:follow="handlePostFollow"
       />
     </block>
   </view>

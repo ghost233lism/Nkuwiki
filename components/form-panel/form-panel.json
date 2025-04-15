@@ -4,7 +4,6 @@
     "input-field": "/components/input-field/input-field",
     "picker-field": "/components/picker-field/picker-field",
     "image-uploader": "/components/image-uploader/image-uploader",
-    "button": "/components/button/button",
     "text-area": "/components/text-area/text-area"
   }
 } 

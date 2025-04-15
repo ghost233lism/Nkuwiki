@@ -15,14 +15,33 @@
 .user-avatar {
   flex-shrink: 0;
   margin-right: 20rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f6f6f6;
+  border: 1px solid #f0f0f0;
 }
 
+/* 旧的头像样式 - 保留以兼容 */
 .avatar {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
   background-color: #f6f6f6;
   border: 1px solid #f0f0f0;
+}
+
+/* 新的头像图标样式 */
+.avatar-icon {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .user-details {
@@ -57,30 +76,48 @@
   margin-left: 16rpx;
 }
 
-.edit-btn, .follow-btn {
+.edit-btn {
   min-width: 140rpx;
   height: 60rpx;
   line-height: 60rpx;
   font-size: 26rpx;
   padding: 0 20rpx;
   border-radius: 30rpx;
-}
-
-.edit-btn {
   color: #666;
   background-color: #f5f5f5;
   border: 1rpx solid #e0e0e0;
 }
 
-.follow-btn {
-  color: #fff;
-  background-color: #1890ff;
+.follow-button {
+  min-width: 60rpx;
+  max-width: 120rpx;
+  width: auto;
+  height: 52rpx;
+  line-height: 52rpx;
+  border-radius: 26rpx;
+  padding: 0 14rpx;
+  text-align: center;
+  font-size: 24rpx;
+  background-color: #e8f8ed;
+  color: #07c160;
+  border: none;
+  box-sizing: border-box;
+  margin: 0;
 }
 
-.follow-btn.followed {
-  color: #1890ff;
-  background-color: #e6f7ff;
-  border: 1rpx solid #1890ff;
+/* 覆盖按钮的默认样式 */
+.follow-button::after {
+  border: none;
+}
+
+button.follow-button {
+  margin: 0;
+  padding: 0 14rpx;
+}
+
+.follow-button.followed {
+  background-color: #f2f2f2;
+  color: #999;
 }
 
 .user-stats {

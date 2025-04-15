@@ -12,7 +12,7 @@ Component({
 
   data: {
     features: [
-      { icon: 'edit', text: '发帖' },
+      { icon: 'book', text: '发帖' },
       { icon: 'comment', text: '评论' },
       { icon: 'star', text: '收藏' },
       { icon: 'share', text: '分享' }

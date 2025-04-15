@@ -1,37 +1,19 @@
-<!-- 顶部消息提示 -->
-<mp-toptips msg="{{toptipsMsg}}" type="{{toptipsType}}" show="{{toptipsShow}}"></mp-toptips>
+<!-- 顶部导航栏 -->
+<nav-bar title="发布帖子" showBack="{{true}}" />
 
-<!-- 确认对话框 -->
-<mp-dialog 
-  title="{{dialogTitle}}" 
-  show="{{dialogShow}}" 
-  bindbuttontap="tapDialogButton" 
-  buttons="{{dialogButtons}}">
-  <view>{{dialogContent}}</view>
-</mp-dialog>
+
+<tab-bar
+  tabs="{{tabTitles}}"
+  activeTab="{{isMarkdownMode ? 1 : 0}}"
+  equalWidth="{{true}}"
+  fixed="{{true}}"
+  bind:change="onModeTabChange"
+  customStyle="text-align: center;"
+/>
 
 <view class="post-container">
-  <!-- 顶部导航栏 -->
-  <nav-bar 
-    title="发布帖子"
-    showBack="{{true}}"
-    bind:buttonTap="onNavButtonTap">
-    <view slot="center" class="publish-btn-container">
-      <button class="post-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submitForm" disabled="{{!canSubmit || submitting}}">
-        <text wx:if="{{canSubmit}}">发布</text>
-        <text wx:else>请完善内容</text>
-      </button>
-    </view>
-  </nav-bar>
-
   <!-- 表单内容 -->
   <view class="post-form">
-    <!-- 模式切换按钮 -->
-    <view class="mode-switch">
-      <view class="mode-item {{isMarkdownMode ? '' : 'active'}}" bindtap="switchToNormalMode">富文本模式</view>
-      <view class="mode-item {{isMarkdownMode ? 'active' : ''}}" bindtap="switchToMarkdownMode">Markdown</view>
-    </view>
-    
     <!-- 标题输入 - 仅在非markdown模式下显示 -->
     <block wx:if="{{!isMarkdownMode}}">
       <input class="post-title" placeholder="请输入标题" value="{{form.title}}" 
@@ -42,10 +24,9 @@
     <text-area
       value="{{form.content}}"
       placeholder="分享你的想法..."
-      maxlength="5000"
+      maxlength="300"
       height="300"
       showCount="{{true}}"
-      autoHeight="{{true}}"
       markdownMode="{{isMarkdownMode}}"
       showToolbar="{{true}}"
       title="{{form.title}}"
@@ -54,111 +35,110 @@
       bindimagetap="showImageUploader"
       bindpreviewchange="onPreviewChange"
       binderror="_showToptips"
-    ></text-area>
+    />
   </view>
 
-  <!-- 标签栏 -->
-  <view class="tag-section">
-    <view class="section-title">选择话题</view>
+  <!-- 话题选择区域 -->
+  <view class="topic-section">
+    <!-- 标签栏 -->
     <view class="tag-list">
-      <view wx:for="{{['校园生活', '学习交流', '求助']}}" wx:key="*this" 
-            class="tag-item {{tagSelected[item] ? 'active' : ''}}" 
-            bindtap="selectTag" 
-            data-tag="{{item}}">
-        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
+      <view class="tag-item {{tagSelected['校园生活'] ? 'active' : ''}}" bindtap="selectTag" data-tag="校园生活">#校园生活</view>
+      <view class="tag-item {{tagSelected['学习交流'] ? 'active' : ''}}" bindtap="selectTag" data-tag="学习交流">#学习交流</view>
+      <view class="tag-item {{tagSelected['求助'] ? 'active' : ''}}" bindtap="selectTag" data-tag="求助">#求助</view>
+
+      <!-- 自定义标签 -->
+      <view wx:for="{{customTags}}" wx:key="*this"
+            class="tag-item active"
+            bindtap="removeCustomTag"
+            data-tag="{{item}}">#{{item}}</view>
+
+      <!-- 添加标签按钮 -->
+      <view class="tag-add-item" bindtap="showTagInput">
+        <view class="tag-add-btn">#添加话题</view>
       </view>
     </view>
 
-    <view class="tag-input-container">
+    <!-- 标签输入框 -->
+    <view class="tag-input-container" wx:if="{{showCustomTagInput}}">
       <input 
         class="tag-input" 
         placeholder="输入话题名称，回车添加" 
         value="{{tagInputValue}}" 
-        bindinput="onTagInput" 
+        focus="{{showCustomTagInput}}"
+        bindinput="onTagInput"
         bindconfirm="addTag"
+        bindblur="hideTagInput"
       />
-      <view class="tag-add-btn" bindtap="addTag">添加</view>
-    </view>
-    
-    <!-- 自定义标签显示 -->
-    <view class="custom-tag-list" wx:if="{{customTags.length > 0}}">
-      <view wx:for="{{customTags}}" wx:key="*this" class="tag-item" bindtap="removeCustomTag" data-tag="{{item}}">
-        <mp-badge content="{{'#' + item}}" ext-class="{{tagSelected[item] ? 'tag-badge-active' : 'tag-badge'}}"/>
-      </view>
+      <view class="tag-confirm-btn" bindtap="addTag">添加</view>
     </view>
   </view>
 
   <!-- 分类选择 -->
-  <view class="category-section">
-    <view class="section-title">选择分类</view>
-    <view class="category-list">
-      <view class="category-item {{form.category_id === 1 ? 'active' : ''}}" 
-        data-category="1" bindtap="onTopicSelect">
-        <icon name="study" size="40"></icon>
-        <text class="category-text">学习交流</text>
-      </view>
-      <view class="category-item {{form.category_id === 2 ? 'active' : ''}}" 
-        data-category="2" bindtap="onTopicSelect">
-        <icon name="life" size="40"></icon>
-        <text class="category-text">校园生活</text>
-      </view>
-      <view class="category-item {{form.category_id === 3 ? 'active' : ''}}" 
-        data-category="3" bindtap="onTopicSelect">
-        <icon name="job" size="40"></icon>
-        <text class="category-text">就业创业</text>
-      </view>
-      <view class="category-item {{form.category_id === 4 ? 'active' : ''}}" 
-        data-category="4" bindtap="onTopicSelect">
-        <icon name="club" size="40"></icon>
-        <text class="category-text">社团活动</text>
-      </view>
-      <view class="category-item {{form.category_id === 5 ? 'active' : ''}}" 
-        data-category="5" bindtap="onTopicSelect">
-        <icon name="lost" size="40"></icon>
-        <text class="category-text">失物招领</text>
-      </view>
+  <category-tab
+    tabs="{{tabItems}}"
+    categoryId="{{categoryId}}"
+    bind:change="selectCategory"
+  />
+
+  <!-- 底部设置选项和发布按钮放在同一行 -->
+  <view class="setting-options">
+    <view class="setting-option {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
+      <icon name="eye" color="{{form.isPublic ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
+      <text class="setting-text">{{form.isPublic ? '公开' : '匿名'}}</text>
     </view>
-  </view>
-
-  <!-- 底部设置 -->
-  <view class="post-settings">
-    <view class="settings-title">发布设置</view>
-    <view class="setting-group">
-      <view class="setting-item {{form.isPublic ? 'active' : ''}}" bindtap="onSwitchChange" data-field="isPublic" data-value="{{!form.isPublic}}">
-        <icon name="eye" size="20"></icon>
-        <text class="setting-text">公开</text>
-      </view>
-      <view class="setting-item {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
-        <icon name="comment" size="20"></icon>
-        <text class="setting-text">允许评论</text>
-      </view>
-      <view class="setting-item {{form.wikiKnowledge ? 'active' : ''}}" bindtap="onSwitchChange" data-field="wikiKnowledge" data-value="{{!form.wikiKnowledge}}">
-        <icon name="txt" size="20"></icon>
-        <text class="setting-text">wiki小知识</text>
-      </view>
+    <view class="setting-option {{form.allowComment ? 'active' : ''}}" bindtap="onSwitchChange" data-field="allowComment" data-value="{{!form.allowComment}}">
+      <icon name="comment" color="{{form.allowComment ? '#6369e8' : '#ffffff'}}" size="{{22}}"></icon>
+      <text class="setting-text">允许评论</text>
     </view>
-  </view>
-
-  <!-- 底部安全区域，为底部按钮留出空间 -->
-
-  <!-- 底部固定发布按钮 -->
-  <view class="bottom-fixed-button">
-    <button 
-      text="发布"
-      textColor="#ffffff"
-      textSize="32"
-      textBackground="#4a67d6"
+    <button
+      class="setting-option"
       disabled="{{!canSubmit || submitting}}"
       loading="{{submitting}}"
       bindtap="submitForm"
-    ></button>
+      type="primary"
+    >{{canSubmit ? '发布' : '发布'}}</button>
   </view>
 
-  <!-- 加载中状态 -->
-  <view class="loading-mask" wx:if="{{submitting}}">
-    <view class="loading-content">
-      <loading type="circle" color="#5853e2" />
-      <text>发布中...</text>
+  <!-- 联系方式 - 三栏布局 -->
+  <view class="contact-container" wx:if="{{form.isPublic}}">
+    <view class="contact-header">
+      <view class="contact-title">联系方式</view>
+      <view class="auto-fill-btn" bindtap="fillContactInfo">
+        <icon name="refresh" size="32" color="#07c160"></icon>
+        <text>自动填充</text>
+      </view>
+    </view>
+    <view class="contact-column">
+      <view class="contact-item">
+        <view class="contact-label">电话：</view>
+        <input
+          class="contact-input"
+          placeholder="手机"
+          value="{{form.phone}}"
+          data-field="phone"
+          bindinput="onFormChange"
+        />
+      </view>
+      <view class="contact-item">
+        <view class="contact-label">微信号：</view>
+        <input
+          class="contact-input"
+          placeholder="微信"
+          value="{{form.wechat}}"
+          data-field="wechat"
+          bindinput="onFormChange"
+        />
+      </view>
+      <view class="contact-item">
+        <view class="contact-label">QQ号：</view>
+        <input
+          class="contact-input"
+          placeholder="QQ"
+          value="{{form.qq}}"
+          data-field="qq"
+          bindinput="onFormChange"
+        />
+      </view>
     </view>
   </view>
 </view> 

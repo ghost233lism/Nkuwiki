@@ -1,4 +1,4 @@
-const { formatTime } = require('../../utils/util');
+const { formatTime, storage } = require('../../utils/util');
 const baseBehavior = require('../../behaviors/baseBehavior');
 const commentBehavior = require('../../behaviors/commentBehavior');
 
@@ -8,25 +8,21 @@ Component({
   properties: {
     comment: {
       type: Object,
-      value: {}
+      value: null
     },
-    openid: {
-      type: String,
-      value: ''
-    },
-    postId: {
-      type: String,
-      value: ''
+    showActions: {
+      type: Boolean,
+      value: true
     }
   },
 
   observers: {
-    'comment, openid': function(comment, openid) {
-      if (comment && comment.id && openid) {
-        this.setData({
-          formattedComment: this.formatComment(comment, openid)
-        });
-      }
+    'comment': function(comment) {
+      if (!comment || !comment.id) return;
+      
+      this.setData({
+        formattedComment: this.formatComment(comment)
+      });
     }
   },
 
@@ -41,59 +37,50 @@ Component({
 
   methods: {
     // 格式化评论数据
-    formatComment(comment, currentOpenid) {
+    formatComment(comment) {
       if (!comment) return null;
       
+      const openid = storage.get('openid');
       return {
         ...comment,
         create_time_formatted: formatTime(comment.create_time),
-        isLiked: Array.isArray(comment.liked_users) && comment.liked_users.includes(currentOpenid),
-        isOwner: comment.openid === currentOpenid
+        isLiked: Array.isArray(comment.liked_users) && comment.liked_users.includes(openid),
+        isOwner: comment.openid === openid
       };
     },
     
-    // 用户头像点击
-    onTapUser() {
+    // 点击头像或用户名
+    onUserTap() {
       const { openid } = this.data.formattedComment;
-      if (openid) {
-        this.navigateTo({
-          url: `/pages/profile/profile?id=${openid}`
-        });
-      }
+      if (!openid) return;
+      
+      wx.navigateTo({
+        url: `/pages/profile/profile?id=${openid}`,
+        fail: () => {
+          storage.set('temp_profile_openid', openid);
+          wx.redirectTo({
+            url: `/pages/profile/profile?id=${openid}`
+          });
+        }
+      });
     },
     
     // 点赞评论
-    async onTapLike() {
-      if (this._isLiking) return;
+    async onLikeTap() {
       const { id } = this.data.formattedComment;
+      if (!id) return;
+      
+      const openid = storage.get('openid');
+      if (!openid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
       
       try {
-        this._isLiking = true;
-        // 调用API进行点赞
-        const res = await this._likeComment(id);
-        
-        if (res && (res.code === 0 || res.code === 200)) {
-          // 更新本地状态
-          const isLiked = !this.data.formattedComment.isLiked;
-          const likeCount = this.data.formattedComment.like_count + (isLiked ? 1 : -1);
-          
-          // 更新数据
-          this.setData({
-            'formattedComment.isLiked': isLiked,
-            'formattedComment.like_count': Math.max(0, likeCount)
-          });
-          
-          // 通知父组件
-          this.triggerEvent('like', {
-            id,
-            is_liked: isLiked,
-            like_count: Math.max(0, likeCount)
-          });
-        }
+        await this._toggleCommentLike(id);
       } catch (err) {
-        console.debug('点赞评论失败:', err);
-      } finally {
-        this._isLiking = false;
+        console.error('点赞评论失败:', err);
+        this.showToast('点赞失败', 'error');
       }
     },
     
@@ -111,54 +98,31 @@ Component({
     },
     
     // 删除评论
-    onTapDelete() {
-      if (this.data.isProcessing.delete) return;
+    async onDeleteTap() {
+      const { id } = this.data.formattedComment;
+      if (!id) return;
       
-      const { id, isOwner } = this.data.formattedComment;
-      if (!isOwner) return;
+      const openid = storage.get('openid');
+      if (!openid) {
+        this.showToast('请先登录', 'error');
+        return;
+      }
       
-      // 显示确认对话框
-      this.showModal({
-        title: '提示',
-        content: '确定删除这条评论吗？',
-        success: (res) => {
-          if (res.confirm) {
-            this.deleteComment(id);
-          }
-        }
-      });
-    },
-    
-    // 删除评论
-    deleteComment(commentId) {
-      // 设置处理中状态
-      this.setData({
-        'isProcessing.delete': true
-      });
-      
-      // 使用commentBehavior的_deleteComment方法
-      this._deleteComment(commentId)
-        .then(res => {
-          // 显示成功提示
-          this.showToast('删除成功', 'success');
-          
-          // 触发事件通知父组件
-          this.triggerEvent('delete', { 
-            id: commentId,
-            postId: this.data.postId
-          });
-        })
-        .catch(err => {
-          console.error('删除评论失败:', err);
-          
-          // 显示错误提示
-          this.showToast('删除失败，请稍后重试', 'error');
-        })
-        .finally(() => {
-          this.setData({
-            'isProcessing.delete': false
-          });
+      try {
+        const confirmed = await this.showModal({
+          title: '确认删除',
+          content: '确定要删除这条评论吗？',
+          confirmText: '删除'
         });
+        
+        if (confirmed) {
+          await this._deleteComment(id);
+          this.triggerEvent('delete', { id });
+        }
+      } catch (err) {
+        console.error('删除评论失败:', err);
+        this.showToast('删除失败', 'error');
+      }
     },
     
     // 预览图片
